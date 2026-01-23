@@ -1,0 +1,62 @@
+# Node.js / npm
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Environment variables & secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build output / dist folders
+dist/
+build/
+out/
+
+# Editor & OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs & temporary files
+*.log
+*.logs
+*.log.*
+logs/
+temp/
+tmp/
+
+# Frontend build artifacts (if you add Vite/React/Webpack later)
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/node_modules/
+
+# Backend artifacts
+backend/coverage/
+backend/.nyc_output/
+
+# MongoDB / database backups (if any)
+*.dump
+*.bak
+mongodump/
+
+# Testing artifacts
+coverage/
+.nyc_output/
+
+# Optional: ignore local dev databases (if you ever use SQLite/local Mongo)
+*.sqlite
+*.sqlite3
+
+# Keep this if you ever add Docker
+docker-compose.override.yml

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dolphin • Founder Dashboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Professional light theme with enhanced typography, shadows, and transitions */
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-2: #f1f5f9;
+      --primary: #38bdf8;
+      --primary-dark: #0ea5e9;
+      --accent: #6366f1;
+      --text: #0f172a;
+      --text-secondary: #475569;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --border: rgba(0,0,0,0.08);
+      --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+      --shadow-md: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+      --radius: 16px;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 15% 50%, rgba(56,189,248,0.08) 0%, transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(99,102,241,0.06) 0%, transparent 35%);
+      background-attachment: fixed;
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 72px;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      z-index: 1000;
+      padding: 0 3rem; /* Increased padding for professionalism */
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #000, var(--primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .logout-btn {
+      background: transparent;
+      border: 1px solid var(--text-secondary);
+      color: var(--text-secondary);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .logout-btn:hover {
+      background: rgba(0,0,0,0.08);
+      border-color: var(--text);
+      color: #000;
+    }
+
+    /* Sidebar with icons for navigation */
+    .sidebar {
+      position: fixed;
+      top: 72px;
+      left: 0;
+      bottom: 0;
+      width: 260px;
+      background: rgba(255,255,255,0.4);
+      border-right: 1px solid var(--border);
+      padding: 2rem 1rem;
+      overflow-y: auto;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      padding: 12px 1rem;
+      margin-bottom: 0.5rem;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .nav-link:hover, .nav-link.active {
+      background: var(--surface-2);
+      color: var(--primary);
+    }
+
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      fill: currentColor;
+    }
+
+    .main-content {
+      margin-left: 260px;
+      padding: 100px 3rem 2rem; /* Increased padding */
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 2rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-md); /* Enhanced shadow */
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-md), 0 0 0 4px rgba(56,189,248,0.1);
+    }
+
+    h2, h3 {
+      font-weight: 600; /* Professional weight */
+      margin-bottom: 1rem;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-2);
+      color: var(--text);
+      transition: var(--transition);
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.1);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .progress-container {
+      height: 8px;
+      background: var(--surface-2);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      transition: width 0.3s ease;
+    }
+
+    .score-badge {
+      background: var(--surface-2);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--primary);
+    }
+
+    .milestone-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      transition: var(--transition);
+    }
+
+    .milestone-item:hover {
+      background: var(--surface-2);
+    }
+
+    .milestone-item:last-child {
+      border-bottom: none;
+    }
+
+    .milestone-item.completed {
+      color: var(--warning); /* Pending verification */
+    }
+
+    .milestone-item.verified {
+      color: var(--success);
+    }
+
+    .milestone-item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--primary);
+    }
+
+    .milestone-item input:disabled {
+      opacity: 0.5;
+    }
+
+    #analytics-section {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--surface-2);
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    #audit-list {
+      list-style: none;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">Dolphin</div>
+    <button class="logout-btn" id="logout-btn">Logout</button>
+  </header>
+
+  <nav class="sidebar">
+    <a href="#" class="nav-link active">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      Dashboard
+    </a>
+    <a href="marketplace.html" class="nav-link">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
+      Marketplace
+    </a>
+    <a href="#" class="nav-link">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5-16l-7 8v4l7-8V7zm5 0l-7 8v4l7-8V7z"/></svg>
+      Resources
+    </a>
+    <a href="#" class="nav-link">
+      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm0-14c-3.31 0-6 2.69-6 6 0 1.01.25 1.97.7 2.8L12 12.57l5.3 2.23c.45-.83.7-1.79.7-2.8 0-3.31-2.69-6-6-6z"/></svg>
+      Settings
+    </a>
+  </nav>
+
+  <main class="main-content">
+
+    <!-- Create Startup Form -->
+    <div id="create-startup-section" class="card">
+      <h2>Let's Build Your Startup</h2>
+      <p class="subtitle">Describe your core idea — we'll generate a structured validation roadmap.</p>
+      
+      <input type="text" id="s-name" placeholder="Startup Name" />
+      <textarea id="s-thesis" rows="4" placeholder="What big problem are you solving? Who is it for?"></textarea>
+      <button id="create-startup-btn" class="btn-primary">Generate Validation Framework</button>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div id="dashboard-section" class="dashboard-grid hidden">
+      
+      <!-- Main Column -->
+      <div>
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+            <h2 id="startup-name">Your Startup</h2>
+            <span class="score-badge" id="score-text">0% Validated</span>
+          </div>
+
+          <div class="progress-container">
+            <div class="progress-track">
+              <div id="progress-fill" class="progress-fill" style="width:0%"></div>
+            </div>
+          </div>
+
+          <p style="color:var(--text-secondary); font-size:0.9rem; margin-top:0.75rem;">
+            Complete milestones to unlock investor visibility & premium resources
+          </p>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:1.25rem;">Validation Roadmap</h3>
+          <div id="milestone-list"></div>
+        </div>
+
+        <div class="card">
+          <h3>Audit Trails</h3>
+          <ul id="audit-list"></ul>
+        </div>
+      </div>
+
+      <!-- Side Column -->
+      <div>
+        <div class="card" style="border:1px solid rgba(56,189,248,0.3); background:linear-gradient(135deg,rgba(56,189,248,0.08),rgba(99,102,241,0.05))">
+          <h3 style="color:var(--primary); margin-bottom:0.75rem;">Next Recommended Action</h3>
+          <p style="color:var(--text-secondary); line-height:1.5;">
+            Focus on <strong>Problem Definition</strong> — the foundation of everything that follows.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Founder Analytics</h3>
+          <div id="analytics-section"></div>
+        </div>
+
+        <div class="card">
+          <h3>Helpful Resources</h3>
+          <ul style="list-style:none; margin-top:1rem; color:var(--text-secondary); font-size:0.95rem;">
+            <li style="margin:0.75rem 0;">→ <a href="#" style="color:var(--primary);">Lean Canvas Template</a></li>
+            <li style="margin:0.75rem 0;">→ <a href="#" style="color:var(--primary);">Customer Interview Guide</a></li>
+            <li style="margin:0.75rem 0;">→ <a href="#" style="color:var(--primary);">Problem Validation Checklist</a></li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

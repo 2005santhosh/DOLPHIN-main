@@ -1,0 +1,58 @@
+<!-- frontend/index.html (Updated: Light theme CSS enhancements) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dolphin | Startup OS</title>
+    <style>
+        /* Light theme: Inverted colors */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        :root { --primary: #38bdf8; --secondary: #f8fafc; --glass: rgba(0,0,0,0.05); --text: #0f172a; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--secondary); color: var(--text); margin: 0; }
+        header { background: rgba(255,255,255,0.9); padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10; }
+        .logo { font-size: 1.5rem; font-weight: 800; background: linear-gradient(to right, #000, var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .btn { padding: 12px 30px; background: var(--primary); color: #fff; border-radius: 50px; text-decoration: none; font-weight: 700; transition: 0.3s; box-shadow: 0 4px 15px rgba(56,189,248,0.3); }
+        .btn:hover { transform: scale(1.05); box-shadow: 0 6px 25px rgba(56,189,248,0.5); }
+        .hero { text-align: center; padding: 120px 20px; background: radial-gradient(circle at 50% 10%, #ffffff, #f8fafc); animation: fadeIn 1s ease-out; }
+        .hero h1 { font-size: 3.5rem; line-height: 1.1; margin-bottom: 20px; animation: slideInLeft 0.8s ease-out; }
+        .hero p { font-size: 1.25rem; color: #475569; max-width: 600px; margin: 0 auto 40px; animation: slideInRight 0.8s ease-out; }
+        .features { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; margin-top: 50px; }
+        .feature-card { background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.1); padding: 30px; border-radius: 16px; width: 300px; transition: transform 0.3s, box-shadow 0.3s; }
+        .feature-card:hover { transform: translateY(-10px); box-shadow: 0 10px 30px rgba(56,189,248,0.2); }
+        .feature-card h3 { color: var(--primary); margin-bottom: 10px; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-50px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">Dolphin</div>
+        <nav>
+            <a href="login.html" class="btn">Launch Platform</a>
+        </nav>
+    </header>
+
+    <div class="hero">
+        <h1>The Operating System<br>For Entrepreneurship</h1>
+        <p>Turn the chaotic "0-to-1" journey into a measurable, repeatable science. Get funded faster.</p>
+        <a href="login.html" class="btn">Start Your Journey</a>
+
+        <div class="features">
+            <div class="feature-card">
+                <h3>Validation Engine</h3>
+                <p>Structured SOPs to prove your product-market fit before writing code.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Investor Access</h3>
+                <p>Direct pipeline to VCs looking for de-risked, validated startups.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Vetted Resources</h3>
+                <p>Curated marketplace of legal, cloud, and design partners.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
