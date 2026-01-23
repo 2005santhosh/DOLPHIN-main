@@ -3,338 +3,1011 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dolphin • Provider Dashboard</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <style>
-    :root {
-      --bg: #f8fafc;
-      --surface: #ffffff;
-      --surface-2: #f1f5f9;
-      --primary: #38bdf8;
-      --primary-dark: #0ea5e9;
-      --accent: #6366f1;
-      --text: #0f172a;
-      --text-secondary: #475569;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --border: rgba(0,0,0,0.08);
-      --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-      --shadow-md: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-      --radius: 16px;
-      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      background-image: 
-        radial-gradient(circle at 15% 50%, rgba(56,189,248,0.08) 0%, transparent 25%),
-        radial-gradient(circle at 85% 30%, rgba(99,102,241,0.06) 0%, transparent 35%);
-      background-attachment: fixed;
-    }
-
-    header {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      height: 72px;
-      background: rgba(255,255,255,0.95);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      z-index: 1000;
-      padding: 0 3rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .logo { font-size:1.4rem; font-weight:700; background: linear-gradient(90deg,#000,var(--primary)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-
-    .logout-btn {
-      background: transparent;
-      border: 1px solid var(--text-secondary);
-      color: var(--text-secondary);
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-    .logout-btn:hover { background:rgba(0,0,0,0.08); border-color:var(--text); color:#000; }
-
-    .sidebar {
-      position: fixed;
-      top: 72px; left: 0; bottom: 0;
-      width: 260px;
-      background: rgba(255,255,255,0.4);
-      border-right: 1px solid var(--border);
-      padding: 2rem 1rem;
-      overflow-y: auto;
-    }
-
-    .nav-link {
-      display: flex; align-items: center;
-      padding: 12px 1rem; margin-bottom: 0.5rem;
-      border-radius: 8px;
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: var(--transition);
-    }
-    .nav-link:hover, .nav-link.active { background: var(--surface-2); color: var(--primary); }
-
-    .nav-icon { width:20px; height:20px; margin-right:12px; fill:currentColor; }
-
-    .main-content {
-      margin-left: 260px;
-      padding: 100px 3rem 2rem;
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.5rem;
-      box-shadow: var(--shadow-md);
-      margin-bottom: 2rem;
-    }
-
-    h2, h3 { font-weight:600; margin-bottom:1rem; }
-    .subtitle { color:var(--text-secondary); margin-bottom:1.5rem; line-height:1.5; }
-
-    .request-item {
-      padding: 1rem;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .request-item:last-child { border-bottom: none; }
-    .request-item:hover { background: var(--surface-2); }
-
-    .status-pending  { color: var(--warning); font-weight:500; }
-    .status-accepted { color: var(--success);  font-weight:500; }
-    .status-rejected { color: #ef4444;      font-weight:500; }
-
-    .btn {
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: var(--transition);
-      border: none;
-    }
-    .btn-accept { background: var(--success); color: white; }
-    .btn-accept:hover { background: #059669; }
-    .btn-reject  { background: #ef4444; color: white; }
-    .btn-reject:hover  { background: #dc2626; }
-    
-    .error-message {
-      color: #ef4444;
-      background: rgba(239, 68, 68, 0.1);
-      padding: 12px;
-      border-radius: 8px;
-      margin: 1rem 0;
-      display: none;
-    }
-  </style>
+  <title>Provider Dashboard - Dolphin</title>
+  
+  <link rel="stylesheet" href="./css/providerDashboard.css">
 </head>
 <body>
-
-  <header>
-    <div class="logo">Dolphin • Provider</div>
-    <button class="logout-btn" id="logout-btn">Logout</button>
-  </header>
-
-  <nav class="sidebar">
-    <a href="#" class="nav-link active">
-      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-      Dashboard
-    </a>
-    <a href="marketplace.html" class="nav-link">
-      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
-      Marketplace
-    </a>
-    <a href="#" class="nav-link">
-      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
-      Profile & Services
-    </a>
-  </nav>
-
-  <main class="main-content">
-    <div class="card">
-      <h2>Welcome, Service Provider</h2>
-      <p class="subtitle">Manage introduction requests from founders and review your visibility in the marketplace.</p>
-      <div id="auth-error" class="error-message"></div>
-    </div>
-
-    <div class="card">
-      <h3>Pending Introduction Requests</h3>
-      <div id="requests-pending"></div>
-    </div>
-
-    <div class="card">
-      <h3>Accepted / Completed Requests</h3>
-      <div id="requests-accepted"></div>
-    </div>
-
-    <div class="card">
-      <h3>Your Service Stats</h3>
-      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1.5rem; margin-top:1rem;">
-        <div style="padding:1rem; background:var(--surface-2); border-radius:12px; text-align:center;">
-          <div style="font-size:1.8rem; font-weight:700; color:var(--primary);">12</div>
-          <div style="color:var(--text-secondary);">Total Requests</div>
-        </div>
-        <div style="padding:1rem; background:var(--surface-2); border-radius:12px; text-align:center;">
-          <div style="font-size:1.8rem; font-weight:700; color:var(--success);">8</div>
-          <div style="color:var(--text-secondary);">Accepted</div>
-        </div>
-        <div style="padding:1rem; background:var(--surface-2); border-radius:12px; text-align:center;">
-          <div style="font-size:1.8rem; font-weight:700; color:var(--warning);">3</div>
-          <div style="color:var(--text-secondary);">Pending</div>
-        </div>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">Dolphin</div>
+    <div class="header-right">
+      <button class="header-action" id="notification-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span class="notification-badge">3</span>
+      </button>
+      <div class="user-menu">
+        <div class="user-avatar">AJ</div>
+        <span>Alex Johnson</span>
       </div>
     </div>
-  </main>
+  </header>
 
-  <script src="js/api.js"></script>
+  <!-- App Container -->
+  <div class="app-container">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="nav-section">
+        <h3 class="nav-title">Main</h3>
+        <ul class="nav-list">
+          <li><a href="#" class="nav-item active" data-page="dashboard">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            Dashboard
+          </a></li>
+          <li><a href="#" class="nav-item" data-page="profile">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="12" width="7" height="9"></rect>
+              <rect x="14" y="12" width="7" height="9"></rect>
+              <rect x="7" y="5" width="10" height="7"></rect>
+              <line x1="12" y1="11" x2="12" y2="17"></line>
+              <line x1="8" y1="15" x2="16" y2="15"></line>
+            </svg>
+            Profile
+          </a></li>
+          <li><a href="#" class="nav-item" data-page="founders">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Founders
+          </a></li>
+          <li><a href="#" class="nav-item" data-page="requests">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            Requests
+          </a></li>
+        </ul>
+      </div>
+      <div class="nav-section">
+        <h3 class="nav-title">Settings</h3>
+        <ul class="nav-list">
+          <li><a href="#" class="nav-item" data-page="settings">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v6m4.22-10.22l1.42-1.42m-1.42 7.07l1.42 1.42M20 12h-6m-6 0H2m10.22-4.22L10.8 6.36m1.42 7.07l-1.42 1.42"></path>
+            </svg>
+            Settings
+          </a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Dashboard Page -->
+      <div id="dashboard-page" class="page active">
+        <div class="page-header">
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-subtitle">Manage your provider profile and track engagements</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid">
+          <div class="stat-card">
+            <div class="stat-value">8</div>
+            <div class="stat-label">Active Engagements</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">24</div>
+            <div class="stat-label">Eligible Founders</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">92%</div>
+            <div class="stat-label">Response Rate</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">4.8</div>
+            <div class="stat-label">Avg. Rating</div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Recent Activity</h3>
+          </div>
+          <div class="list">
+            <div class="list-item">
+              <div class="list-item-content">
+                <div class="list-item-title">Accepted request from Tech Innovations</div>
+                <div class="list-item-subtitle">2 days ago</div>
+              </div>
+              <span class="list-item-status status-accepted">Accepted</span>
+            </div>
+            <div class="list-item">
+              <div class="list-item-content">
+                <div class="list-item-title">New request from HealthTech Solutions</div>
+                <div class="list-item-subtitle">5 days ago</div>
+              </div>
+              <span class="list-item-status status-pending">Pending</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Page -->
+      <div id="profile-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Provider Profile</h1>
+          <p class="page-subtitle">Update your profile information to help founders understand your expertise</p>
+        </div>
+
+        <div class="card">
+          <form id="profile-form">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" class="form-input" id="provider-name" value="Alex Johnson" required>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Service Category</label>
+              <select class="form-select" id="service-category" required>
+                <option value="mentor">Mentorship</option>
+                <option value="investor">Investment</option>
+                <option value="expert">Expert Consultation</option>
+                <option value="partner">Strategic Partnership</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Experience Level</label>
+              <select class="form-select" id="experience-level" required>
+                <option value="junior">Junior (0-3 years)</option>
+                <option value="mid" selected>Mid-level (3-7 years)</option>
+                <option value="senior">Senior (7-10 years)</option>
+                <option value="executive">Executive (10+ years)</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Specialties</label>
+              <input type="text" class="form-input" id="specialties" value="SaaS, B2B, Product Strategy" placeholder="e.g., SaaS, B2B, Product Strategy">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Bio</label>
+              <textarea class="form-textarea" id="bio" required>Experienced tech executive with 15+ years in B2B SaaS. Previously led product at 3 successful startups and now focused on helping early-stage founders build scalable businesses.</textarea>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Availability</label>
+              <select class="form-select" id="availability" required>
+                <option value="low">Low (1-2 hours/week)</option>
+                <option value="medium" selected>Medium (3-5 hours/week)</option>
+                <option value="high">High (6-10 hours/week)</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Preferred Contact Method</label>
+              <select class="form-select" id="contact-method" required>
+                <option value="email">Email</option>
+                <option value="video">Video Call</option>
+                <option value="in-person">In-person</option>
+                <option value="mixed">Mixed</option>
+              </select>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Save Profile</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Founders Page -->
+      <div id="founders-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Eligible Founders</h1>
+          <p class="page-subtitle">Founders at validation stages that match your expertise</p>
+        </div>
+
+        <div class="card">
+          <div class="filter-group">
+            <div class="filter-item">
+              <label class="form-label">Filter by Stage</label>
+              <select class="form-select" id="stage-filter">
+                <option value="all">All Stages</option>
+                <option value="idea">Idea Validation</option>
+                <option value="problem">Problem Definition</option>
+                <option value="solution">Solution Development</option>
+                <option value="prototype">Prototype Testing</option>
+                <option value="launch">Launch Preparation</option>
+              </select>
+            </div>
+            <div class="filter-item">
+              <label class="form-label">Filter by Industry</label>
+              <select class="form-select" id="industry-filter">
+                <option value="all">All Industries</option>
+                <option value="tech">Technology</option>
+                <option value="health">Healthcare</option>
+                <option value="finance">FinTech</option>
+                <option value="retail">Retail/E-commerce</option>
+              </select>
+            </div>
+          </div>
+          
+          <div id="founders-list">
+            <!-- Founder cards will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Requests Page -->
+      <div id="requests-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Engagement Requests</h1>
+          <p class="page-subtitle">Track your requests to founders and manage your engagement pipeline</p>
+        </div>
+
+        <div class="card">
+          <div class="tabs">
+            <div class="tab active" data-tab="pending">Pending (3)</div>
+            <div class="tab" data-tab="accepted">Accepted (5)</div>
+            <div class="tab" data-tab="rejected">Rejected (2)</div>
+          </div>
+          
+          <div class="tab-content active" id="pending-tab">
+            <div class="list">
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div class="list-item-title">HealthTech Solutions</div>
+                  <div class="list-item-subtitle">Stage: Solution Development • Request sent 5 days ago</div>
+                </div>
+                <div class="request-actions">
+                  <button class="btn btn-success">Accept</button>
+                  <button class="btn btn-danger">Reject</button>
+                </div>
+              </div>
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div class="list-item-title">EcoCommerce</div>
+                  <div class="list-item-subtitle">Stage: Prototype Testing • Request sent 3 days ago</div>
+                </div>
+                <div class="request-actions">
+                  <button class="btn btn-success">Accept</button>
+                  <button class="btn btn-danger">Reject</button>
+                </div>
+              </div>
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div class="list-item-title">FinSecure</div>
+                  <div class="list-item-subtitle">Stage: Problem Definition • Request sent 1 day ago</div>
+                </div>
+                <div class="request-actions">
+                  <button class="btn btn-success">Accept</button>
+                  <button class="btn btn-danger">Reject</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="tab-content" id="accepted-tab">
+            <div class="list">
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div class="list-item-title">Tech Innovations</div>
+                  <div class="list-item-subtitle">Stage: Problem Definition • Accepted 2 days ago</div>
+                </div>
+                <span class="list-item-status status-accepted">Accepted</span>
+              </div>
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div class="list-item-title">DataFlow Analytics</div>
+                  <div class="list-item-subtitle">Stage: Solution Development • Accepted 1 week ago</div>
+                </div>
+                <span class="list-item-status status-accepted">Accepted</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="tab-content" id="rejected-tab">
+            <div class="list">
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div class="list-item-title">SocialConnect</div>
+                  <div class="list-item-subtitle">Stage: Idea Validation • Rejected 5 days ago</div>
+                </div>
+                <span class="list-item-status status-rejected">Rejected</span>
+              </div>
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div class="list-item-title">TravelEase</div>
+                  <div class="list-item-subtitle">Stage: Prototype Testing • Rejected 2 weeks ago</div>
+                </div>
+                <span class="list-item-status status-rejected">Rejected</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Page -->
+      <div id="settings-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Settings</h1>
+          <p class="page-subtitle">Manage your account and preferences</p>
+        </div>
+
+        <!-- Account Settings -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Account Settings</h3>
+          </div>
+          <div class="settings-group">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" class="form-input" id="full-name" value="Alex Johnson">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-input" id="email" value="alex@example.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Role</label>
+              <input type="text" class="form-input" id="role" value="Provider" readonly>
+            </div>
+            <button class="btn btn-primary" id="update-profile-btn">Update Profile</button>
+          </div>
+        </div>
+
+        <!-- Password Settings -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Password</h3>
+          </div>
+          <div class="settings-group">
+            <div class="form-group">
+              <label class="form-label">Current Password</label>
+              <input type="password" class="form-input" id="current-password">
+            </div>
+            <div class="form-group">
+              <label class="form-label">New Password</label>
+              <input type="password" class="form-input" id="new-password">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirm New Password</label>
+              <input type="password" class="form-input" id="confirm-password">
+            </div>
+            <button class="btn btn-primary" id="update-password-btn">Update Password</button>
+          </div>
+        </div>
+
+        <!-- Preferences -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Preferences</h3>
+          </div>
+          <div class="settings-group">
+            <div class="settings-item">
+              <div class="settings-item-content">
+                <div class="settings-item-title">Email Notifications</div>
+                <div class="settings-item-description">Receive email notifications for updates</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="email-notifications" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="settings-item">
+              <div class="settings-item-content">
+                <div class="settings-item-title">Auto-refresh</div>
+                <div class="settings-item-description">Automatically refresh request data</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="auto-refresh" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Danger Zone</h3>
+          </div>
+          <div class="settings-group">
+            <div class="settings-item">
+              <div class="settings-item-content">
+                <div class="settings-item-title">Delete Account</div>
+                <div class="settings-item-description">Permanently delete your account and all data</div>
+              </div>
+              <button class="btn btn-danger" id="delete-account-btn">Delete Account</button>
+            </div>
+            <div class="settings-item">
+              <div class="settings-item-content">
+                <div class="settings-item-title">Logout</div>
+                <div class="settings-item-description">Sign out of your account</div>
+              </div>
+              <button class="btn btn-secondary" id="logout-btn">Logout</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Request Modal -->
+  <div id="request-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Send Engagement Request</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="request-form">
+          <div class="form-group">
+            <label class="form-label">Message to Founder</label>
+            <textarea class="form-textarea" id="request-message" placeholder="Introduce yourself and explain why you'd like to engage..." required></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Proposed Engagement Type</label>
+            <select class="form-select" id="engagement-type" required>
+              <option value="mentorship">Mentorship</option>
+              <option value="consultation">Consultation</option>
+              <option value="investment">Investment</option>
+              <option value="partnership">Partnership</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Preferred Timeline</label>
+            <select class="form-select" id="timeline" required>
+              <option value="immediate">Immediate (this week)</option>
+              <option value="short-term">Short-term (1-4 weeks)</option>
+              <option value="medium-term">Medium-term (1-3 months)</option>
+              <option value="flexible">Flexible</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancel-request">Cancel</button>
+        <button class="btn btn-primary" id="send-request">Send Request</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // Helper functions
-    function getUser() {
-      try {
-        const user = localStorage.getItem('user');
-        return user ? JSON.parse(user) : null;
-      } catch (error) {
-        console.error('Error parsing user data from localStorage:', error);
-        localStorage.removeItem('user');
-        return null;
-      }
-    }
-
-    function isAuthenticated() {
-      return !!localStorage.getItem('token');
-    }
-
-    async function logout() {
-      try {
-        const token = localStorage.getItem('token');
-        if (token) {
-          await fetch('http://localhost:5000/api/auth/logout', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }).catch(err => {
-            console.warn('Server logout failed, proceeding client-side:', err);
-          });
+    // Application State
+    const appState = {
+      user: {
+        id: 'provider-123',
+        name: 'Alex Johnson',
+        email: 'alex@example.com'
+      },
+      profile: {
+        name: 'Alex Johnson',
+        serviceCategory: 'mentor',
+        experienceLevel: 'mid',
+        specialties: 'SaaS, B2B, Product Strategy',
+        bio: 'Experienced tech executive with 15+ years in B2B SaaS. Previously led product at 3 successful startups and now focused on helping early-stage founders build scalable businesses.',
+        availability: 'medium',
+        contactMethod: 'email'
+      },
+      founders: [
+        {
+          id: 1,
+          name: 'Tech Innovations',
+          stage: 'problem',
+          industry: 'tech',
+          validation: 25,
+          description: 'Solving data management inefficiencies for SMBs',
+          location: 'San Francisco, CA',
+          email: 'contact@techinnovations.com'
+        },
+        {
+          id: 2,
+          name: 'HealthTech Solutions',
+          stage: 'solution',
+          industry: 'health',
+          validation: 60,
+          description: 'AI-powered diagnostic platform for clinics',
+          location: 'Boston, MA',
+          email: 'info@healthtechsolutions.com'
+        },
+        {
+          id: 3,
+          name: 'EcoCommerce',
+          stage: 'prototype',
+          industry: 'retail',
+          validation: 75,
+          description: 'Sustainable e-commerce platform',
+          location: 'Portland, OR',
+          email: 'hello@ecocommerce.com'
+        },
+        {
+          id: 4,
+          name: 'FinSecure',
+          stage: 'problem',
+          industry: 'finance',
+          validation: 40,
+          description: 'Security platform for fintech startups',
+          location: 'New York, NY',
+          email: 'support@finsecure.com'
+        },
+        {
+          id: 5,
+          name: 'DataFlow Analytics',
+          stage: 'solution',
+          industry: 'tech',
+          validation: 65,
+          description: 'Real-time data analytics for IoT devices',
+          location: 'Austin, TX',
+          email: 'contact@dataflow.com'
+        },
+        {
+          id: 6,
+          name: 'SocialConnect',
+          stage: 'idea',
+          industry: 'tech',
+          validation: 15,
+          description: 'Professional networking platform',
+          location: 'Los Angeles, CA',
+          email: 'team@socialconnect.io'
         }
-      } catch (err) {
-        console.error('Logout process error:', err);
-      }
-
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      localStorage.clear();
-      window.location.href = 'index.html';
-    }
-
-    // Add event listener for logout button
-    document.addEventListener('DOMContentLoaded', () => {
-      const logoutBtn = document.getElementById('logout-btn');
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', logout);
-      }
-      
-      const user = getUser();
-      const currentPath = window.location.pathname.toLowerCase();
-      const currentPage = currentPath.split('/').pop().replace('.html', '');
-
-      // If not authenticated, redirect
-      if (!isAuthenticated()) {
-        if (currentPage === 'provider-dashboard') {
-          window.location.href = 'index.html';
+      ],
+      requests: [
+        {
+          id: 1,
+          founder: 'Tech Innovations',
+          stage: 'problem',
+          status: 'accepted',
+          date: '2023-05-15'
+        },
+        {
+          id: 2,
+          founder: 'HealthTech Solutions',
+          stage: 'solution',
+          status: 'pending',
+          date: '2023-05-18'
+        },
+        {
+          id: 3,
+          founder: 'EcoCommerce',
+          stage: 'prototype',
+          status: 'pending',
+          date: '2023-05-20'
+        },
+        {
+          id: 4,
+          founder: 'FinSecure',
+          stage: 'problem',
+          status: 'pending',
+          date: '2023-05-22'
+        },
+        {
+          id: 5,
+          founder: 'DataFlow Analytics',
+          stage: 'solution',
+          status: 'accepted',
+          date: '2023-05-10'
+        },
+        {
+          id: 6,
+          founder: 'SocialConnect',
+          stage: 'idea',
+          status: 'rejected',
+          date: '2023-05-05'
+        },
+        {
+          id: 7,
+          founder: 'TravelEase',
+          stage: 'prototype',
+          status: 'rejected',
+          date: '2023-04-28'
         }
-        return;
-      }
+      ],
+      notifications: [
+        { id: 1, title: 'New Request', message: 'You have a new request from HealthTech Solutions', read: false },
+        { id: 2, title: 'Profile Update', message: 'Your profile has been successfully updated', read: true },
+        { id: 3, title: 'Engagement Reminder', message: 'Follow up with Tech Innovations this week', read: false }
+      ]
+    };
 
-      // Check role
-      if (currentPage === 'provider-dashboard' && user.role !== 'provider') {
-        window.location.href = 'index.html';
-      }
-
-      // Load dashboard
-      loadProviderDashboard();
+    // Navigation functionality
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        
+        // Update active nav
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        item.classList.add('active');
+        
+        // Show corresponding page
+        const page = item.dataset.page;
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(`${page}-page`).classList.add('active');
+        
+        // Load page-specific content
+        loadPageContent(page);
+      });
     });
 
-    async function loadProviderDashboard() {
-      try {
-        const requests = await api.getMyRequests();
-
-        const pendingEl = document.getElementById('requests-pending');
-        const acceptedEl = document.getElementById('requests-accepted');
-        const errorEl = document.getElementById('auth-error');
-
-        pendingEl.innerHTML = '';
-        acceptedEl.innerHTML = '';
-        errorEl.style.display = 'none';
-
-        if (!requests || requests.length === 0) {
-          pendingEl.innerHTML = '<p style="color:var(--text-secondary);">No requests at the moment.</p>';
-          return;
-        }
-
-        requests.forEach(r => {
-          const item = document.createElement('div');
-          item.className = 'request-item';
-          item.innerHTML = `
-            <div>
-              <strong>${r.startupId?.name || 'Unnamed Startup'}</strong><br>
-              <small style="color:var(--text-secondary);">
-                Validation: ${r.startupId?.validationScore || '?'}% • 
-                ${new Date(r.createdAt).toLocaleDateString()}
-              </small>
-            </div>
-            <div>
-              <span class="status-${r.status}">${r.status.toUpperCase()}</span>
-              ${r.status === 'pending' ? `
-                <button class="btn btn-accept" onclick="updateRequest('${r._id}', 'accepted')">Accept</button>
-                <button class="btn btn-reject"  onclick="updateRequest('${r._id}', 'rejected')">Reject</button>
-              ` : ''}
-            </div>
-          `;
-
-          if (r.status === 'pending') {
-            pendingEl.appendChild(item);
-          } else {
-            acceptedEl.appendChild(item);
-          }
-        });
-      } catch (err) {
-        console.error('Error loading provider dashboard:', err);
-        const errorEl = document.getElementById('auth-error');
-        errorEl.textContent = 'Failed to load requests. Please try again.';
-        errorEl.style.display = 'block';
+    // Load page content
+    function loadPageContent(page) {
+      switch(page) {
+        case 'dashboard':
+          loadDashboard();
+          break;
+        case 'profile':
+          loadProfile();
+          break;
+        case 'founders':
+          loadFounders();
+          break;
+        case 'requests':
+          loadRequests();
+          break;
+        case 'settings':
+          loadSettings();
+          break;
       }
     }
 
-    window.updateRequest = async function(requestId, newStatus) {
-      if (!confirm(`Are you sure you want to ${newStatus} this request?`)) return;
+    // Dashboard functionality
+    function loadDashboard() {
+      // Dashboard is already populated with static content
+    }
+
+    // Profile functionality
+    function loadProfile() {
+      document.getElementById('provider-name').value = appState.profile.name;
+      document.getElementById('service-category').value = appState.profile.serviceCategory;
+      document.getElementById('experience-level').value = appState.profile.experienceLevel;
+      document.getElementById('specialties').value = appState.profile.specialties;
+      document.getElementById('bio').value = appState.profile.bio;
+      document.getElementById('availability').value = appState.profile.availability;
+      document.getElementById('contact-method').value = appState.profile.contactMethod;
+    }
+
+    document.getElementById('profile-form').addEventListener('submit', (e) => {
+      e.preventDefault();
       
-      try {
-        await api.updateIntroRequest(requestId, newStatus);
-        alert(`Request marked as ${newStatus}!`);
-        loadProviderDashboard(); // refresh
-      } catch (err) {
-        alert('Failed to update request: ' + err.message);
+      // Update app state
+      appState.profile.name = document.getElementById('provider-name').value;
+      appState.profile.serviceCategory = document.getElementById('service-category').value;
+      appState.profile.experienceLevel = document.getElementById('experience-level').value;
+      appState.profile.specialties = document.getElementById('specialties').value;
+      appState.profile.bio = document.getElementById('bio').value;
+      appState.profile.availability = document.getElementById('availability').value;
+      appState.profile.contactMethod = document.getElementById('contact-method').value;
+      
+      // Show success message
+      const successMessage = document.createElement('div');
+      successMessage.className = 'list-item-status status-accepted';
+      successMessage.textContent = 'Profile updated successfully!';
+      successMessage.style.position = 'fixed';
+      successMessage.style.top = '80px';
+      successMessage.style.right = '20px';
+      successMessage.style.zIndex = '1001';
+      document.body.appendChild(successMessage);
+      
+      setTimeout(() => {
+        successMessage.remove();
+      }, 3000);
+    });
+
+    // Founders functionality
+    function loadFounders() {
+      populateFoundersList();
+    }
+
+    function populateFoundersList(filteredFounders = appState.founders) {
+      const foundersList = document.getElementById('founders-list');
+      foundersList.innerHTML = '';
+      
+      filteredFounders.forEach(founder => {
+        const stageLabels = {
+          idea: "Idea Validation",
+          problem: "Problem Definition",
+          solution: "Solution Development",
+          prototype: "Prototype Testing",
+          launch: "Launch Preparation"
+        };
+        
+        const founderCard = document.createElement('div');
+        founderCard.className = 'founder-card';
+        
+        founderCard.innerHTML = `
+          <div class="founder-header">
+            <div class="founder-name">${founder.name}</div>
+            <span class="stage-badge">${stageLabels[founder.stage]}</span>
+          </div>
+          <p style="margin-bottom: 1rem;">${founder.description}</p>
+          <div class="founder-details">
+            <div class="detail-item">
+              <span class="detail-label">Industry</span>
+              <span class="detail-value">${founder.industry}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Validation Score</span>
+              <span class="detail-value">${founder.validation}%</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Location</span>
+              <span class="detail-value">${founder.location}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Contact</span>
+              <span class="detail-value">${founder.email}</span>
+            </div>
+          </div>
+          <div class="request-actions">
+            <button class="btn btn-primary" onclick="openRequestModal('${founder.name}')">Send Request</button>
+            <button class="btn btn-secondary">View Profile</button>
+          </div>
+        `;
+        
+        foundersList.appendChild(founderCard);
+      });
+    }
+
+    // Filter functionality
+    document.getElementById('stage-filter').addEventListener('change', filterFounders);
+    document.getElementById('industry-filter').addEventListener('change', filterFounders);
+
+    function filterFounders() {
+      const stageFilter = document.getElementById('stage-filter').value;
+      const industryFilter = document.getElementById('industry-filter').value;
+      
+      const filtered = appState.founders.filter(founder => {
+        const stageMatch = stageFilter === 'all' || founder.stage === stageFilter;
+        const industryMatch = industryFilter === 'all' || founder.industry === industryFilter;
+        return stageMatch && industryMatch;
+      });
+      
+      populateFoundersList(filtered);
+    }
+
+    // Requests functionality
+    function loadRequests() {
+      // Tab functionality is handled by HTML and CSS
+    }
+
+    // Tab functionality
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Update active tab
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // Show corresponding tab content
+        const tabName = tab.dataset.tab;
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(`${tabName}-tab`).classList.add('active');
+      });
+    });
+
+    // Request actions
+    document.querySelectorAll('.btn-success').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const requestItem = e.target.closest('.list-item');
+        const founderName = requestItem.querySelector('.list-item-title').textContent;
+        
+        // Update status to accepted
+        const request = appState.requests.find(r => r.founder === founderName);
+        if (request) {
+          request.status = 'accepted';
+        }
+        
+        // Update UI
+        requestItem.querySelector('.request-actions').remove();
+        requestItem.innerHTML += '<span class="list-item-status status-accepted">Accepted</span>';
+        
+        // Move to accepted tab
+        document.querySelector('[data-tab="accepted"]').click();
+        
+        // Update pending count
+        const pendingTab = document.querySelector('[data-tab="pending"]');
+        const currentCount = parseInt(pendingTab.textContent.match(/\d+/)[0]);
+        pendingTab.textContent = `Pending (${currentCount - 1})`;
+      });
+    });
+
+    document.querySelectorAll('.btn-danger').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const requestItem = e.target.closest('.list-item');
+        const founderName = requestItem.querySelector('.list-item-title').textContent;
+        
+        // Update status to rejected
+        const request = appState.requests.find(r => r.founder === founderName);
+        if (request) {
+          request.status = 'rejected';
+        }
+        
+        // Update UI
+        requestItem.querySelector('.request-actions').remove();
+        requestItem.innerHTML += '<span class="list-item-status status-rejected">Rejected</span>';
+        
+        // Move to rejected tab
+        document.querySelector('[data-tab="rejected"]').click();
+        
+        // Update pending count
+        const pendingTab = document.querySelector('[data-tab="pending"]');
+        const currentCount = parseInt(pendingTab.textContent.match(/\d+/)[0]);
+        pendingTab.textContent = `Pending (${currentCount - 1})`;
+      });
+    });
+
+    // Settings functionality
+    function loadSettings() {
+      // Set user information
+      document.getElementById('full-name').value = appState.user.name;
+      document.getElementById('email').value = appState.user.email;
+      document.getElementById('role').value = 'Provider';
+      
+      // Load preferences
+      const emailNotifications = localStorage.getItem('emailNotifications') !== 'false';
+      const autoRefresh = localStorage.getItem('autoRefresh') !== 'false';
+      
+      document.getElementById('email-notifications').checked = emailNotifications;
+      document.getElementById('auto-refresh').checked = autoRefresh;
+    }
+
+    // Update profile button
+    document.getElementById('update-profile-btn')?.addEventListener('click', () => {
+      const name = document.getElementById('full-name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      
+      if (!name || !email) {
+        alert('Please fill in all fields');
+        return;
       }
-    };
+      
+      // Update user data
+      appState.user.name = name;
+      appState.user.email = email;
+      
+      // Show success message
+      const successMessage = document.createElement('div');
+      successMessage.className = 'list-item-status status-accepted';
+      successMessage.textContent = 'Profile updated successfully!';
+      successMessage.style.position = 'fixed';
+      successMessage.style.top = '80px';
+      successMessage.style.right = '20px';
+      successMessage.style.zIndex = '1001';
+      document.body.appendChild(successMessage);
+      
+      setTimeout(() => {
+        successMessage.remove();
+      }, 3000);
+    });
+
+    // Update password button
+    document.getElementById('update-password-btn')?.addEventListener('click', () => {
+      const currentPassword = document.getElementById('current-password').value;
+      const newPassword = document.getElementById('new-password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        alert('Please fill in all password fields');
+        return;
+      }
+      
+      if (newPassword !== confirmPassword) {
+        alert('New passwords do not match');
+        return;
+      }
+      
+      if (newPassword.length < 8) {
+        alert('Password must be at least 8 characters long');
+        return;
+      }
+      
+      // Simulate API call
+      setTimeout(() => {
+        alert('Password updated successfully!');
+        
+        // Clear password fields
+        document.getElementById('current-password').value = '';
+        document.getElementById('new-password').value = '';
+        document.getElementById('confirm-password').value = '';
+      }, 500);
+    });
+
+    // Delete account button
+    document.getElementById('delete-account-btn')?.addEventListener('click', () => {
+      if (confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) {
+        if (confirm('This will permanently delete your account and all associated data. Are you really sure?')) {
+          alert('Account deletion would be processed here. In a real app, this would make an API call to delete the account.');
+        }
+      }
+    });
+
+    // Logout button
+    document.getElementById('logout-btn')?.addEventListener('click', () => {
+      if (confirm('Are you sure you want to logout?')) {
+        // Clear all client-side auth data
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.clear();
+        
+        // Redirect to index.html (home/landing page)
+        window.location.href = 'index.html';
+      }
+    });
+
+    // Save preferences
+    document.getElementById('email-notifications')?.addEventListener('change', (e) => {
+      localStorage.setItem('emailNotifications', e.target.checked);
+    });
+
+    document.getElementById('auto-refresh')?.addEventListener('change', (e) => {
+      localStorage.setItem('autoRefresh', e.target.checked);
+    });
+
+    // Request modal functionality
+    const modal = document.getElementById('request-modal');
+    const requestMessage = document.getElementById('request-message');
+    let currentFounder = null;
+
+    function openRequestModal(founderName) {
+      currentFounder = founderName;
+      requestMessage.value = '';
+      modal.classList.add('active');
+    }
+
+    document.getElementById('cancel-request').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+
+    document.querySelector('.modal-close').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+
+    document.getElementById('send-request').addEventListener('click', () => {
+      if (requestMessage.value.trim() === '') {
+        alert('Please enter a message to the founder');
+        return;
+      }
+      
+      // Simulate sending request
+      const successMessage = document.createElement('div');
+      successMessage.className = 'list-item-status status-accepted';
+      successMessage.textContent = `Request sent to ${currentFounder}!`;
+      successMessage.style.position = 'fixed';
+      successMessage.style.top = '80px';
+      successMessage.style.right = '20px';
+      successMessage.style.zIndex = '1001';
+      document.body.appendChild(successMessage);
+      
+      modal.classList.remove('active');
+      
+      setTimeout(() => {
+        successMessage.remove();
+      }, 3000);
+    });
+
+    // Notification functionality
+    document.getElementById('notification-btn').addEventListener('click', () => {
+      const notifications = appState.notifications.map(n => `${n.title}: ${n.message}`).join('\n\n');
+      alert(notifications);
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadDashboard();
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('active')) {
+        modal.classList.remove('active');
+      }
+    });
+
+    // Close modal on outside click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+      }
+    });
   </script>
 </body>
 </html>

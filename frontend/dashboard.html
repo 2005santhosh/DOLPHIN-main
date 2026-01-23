@@ -3,372 +3,918 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dolphin • Founder Dashboard</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <style>
-    /* Professional light theme with enhanced typography, shadows, and transitions */
-    :root {
-      --bg: #f8fafc;
-      --surface: #ffffff;
-      --surface-2: #f1f5f9;
-      --primary: #38bdf8;
-      --primary-dark: #0ea5e9;
-      --accent: #6366f1;
-      --text: #0f172a;
-      --text-secondary: #475569;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --border: rgba(0,0,0,0.08);
-      --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-      --shadow-md: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-      --radius: 16px;
-      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      background-image: 
-        radial-gradient(circle at 15% 50%, rgba(56,189,248,0.08) 0%, transparent 25%),
-        radial-gradient(circle at 85% 30%, rgba(99,102,241,0.06) 0%, transparent 35%);
-      background-attachment: fixed;
-    }
-
-    header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 72px;
-      background: rgba(255,255,255,0.95);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      z-index: 1000;
-      padding: 0 3rem; /* Increased padding for professionalism */
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .logo {
-      font-size: 1.4rem;
-      font-weight: 700;
-      background: linear-gradient(90deg, #000, var(--primary));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      letter-spacing: -0.5px;
-    }
-
-    .logout-btn {
-      background: transparent;
-      border: 1px solid var(--text-secondary);
-      color: var(--text-secondary);
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .logout-btn:hover {
-      background: rgba(0,0,0,0.08);
-      border-color: var(--text);
-      color: #000;
-    }
-
-    /* Sidebar with icons for navigation */
-    .sidebar {
-      position: fixed;
-      top: 72px;
-      left: 0;
-      bottom: 0;
-      width: 260px;
-      background: rgba(255,255,255,0.4);
-      border-right: 1px solid var(--border);
-      padding: 2rem 1rem;
-      overflow-y: auto;
-    }
-
-    .nav-link {
-      display: flex;
-      align-items: center;
-      padding: 12px 1rem;
-      margin-bottom: 0.5rem;
-      border-radius: 8px;
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: var(--transition);
-    }
-
-    .nav-link:hover, .nav-link.active {
-      background: var(--surface-2);
-      color: var(--primary);
-    }
-
-    .nav-icon {
-      width: 20px;
-      height: 20px;
-      margin-right: 12px;
-      fill: currentColor;
-    }
-
-    .main-content {
-      margin-left: 260px;
-      padding: 100px 3rem 2rem; /* Increased padding */
-    }
-
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 2rem;
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.5rem;
-      box-shadow: var(--shadow-md); /* Enhanced shadow */
-      transition: var(--transition);
-    }
-
-    .card:hover {
-      box-shadow: var(--shadow-md), 0 0 0 4px rgba(56,189,248,0.1);
-    }
-
-    h2, h3 {
-      font-weight: 600; /* Professional weight */
-      margin-bottom: 1rem;
-    }
-
-    .subtitle {
-      color: var(--text-secondary);
-      margin-bottom: 1.5rem;
-      line-height: 1.5;
-    }
-
-    input, textarea {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 1rem;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface-2);
-      color: var(--text);
-      transition: var(--transition);
-    }
-
-    input:focus, textarea:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(56,189,248,0.1);
-    }
-
-    .btn-primary {
-      width: 100%;
-      padding: 12px;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .btn-primary:hover {
-      background: var(--primary-dark);
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .progress-container {
-      height: 8px;
-      background: var(--surface-2);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 0.75rem;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--primary), var(--accent));
-      transition: width 0.3s ease;
-    }
-
-    .score-badge {
-      background: var(--surface-2);
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: var(--primary);
-    }
-
-    .milestone-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem;
-      border-bottom: 1px solid var(--border);
-      transition: var(--transition);
-    }
-
-    .milestone-item:hover {
-      background: var(--surface-2);
-    }
-
-    .milestone-item:last-child {
-      border-bottom: none;
-    }
-
-    .milestone-item.completed {
-      color: var(--warning); /* Pending verification */
-    }
-
-    .milestone-item.verified {
-      color: var(--success);
-    }
-
-    .milestone-item input[type="checkbox"] {
-      width: 20px;
-      height: 20px;
-      accent-color: var(--primary);
-    }
-
-    .milestone-item input:disabled {
-      opacity: 0.5;
-    }
-
-    #analytics-section {
-      margin-top: 1rem;
-      padding: 1rem;
-      background: var(--surface-2);
-      border-radius: 8px;
-      font-size: 0.9rem;
-    }
-
-    #audit-list {
-      list-style: none;
-      color: var(--text-secondary);
-      font-size: 0.85rem;
-      line-height: 1.6;
-    }
-  </style>
+  <title>Founder Dashboard - Dolphin</title>
+  
+  <link rel="stylesheet" href="./css/founderDashboard.css">
 </head>
 <body>
-  <header>
+  <!-- Header -->
+  <header class="header">
     <div class="logo">Dolphin</div>
-    <button class="logout-btn" id="logout-btn">Logout</button>
+    <div class="header-right">
+      <button class="header-action" id="notification-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span class="notification-badge">3</span>
+      </button>
+      <div class="user-menu">
+        <div class="user-avatar">JD</div>
+        <span>John Doe</span>
+      </div>
+    </div>
   </header>
 
-  <nav class="sidebar">
-    <a href="#" class="nav-link active">
-      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-      Dashboard
-    </a>
-    <a href="marketplace.html" class="nav-link">
-      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
-      Marketplace
-    </a>
-    <a href="#" class="nav-link">
-      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5-16l-7 8v4l7-8V7zm5 0l-7 8v4l7-8V7z"/></svg>
-      Resources
-    </a>
-    <a href="#" class="nav-link">
-      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm0-14c-3.31 0-6 2.69-6 6 0 1.01.25 1.97.7 2.8L12 12.57l5.3 2.23c.45-.83.7-1.79.7-2.8 0-3.31-2.69-6-6-6z"/></svg>
-      Settings
-    </a>
-  </nav>
+  <!-- App Container -->
+  <div class="app-container">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="nav-section">
+        <h3 class="nav-title">Main</h3>
+        <ul class="nav-list">
+          <li><a href="#" class="nav-item active" data-page="dashboard">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            Dashboard
+          </a></li>
+          <li><a href="#" class="nav-item" data-page="profile">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="12" width="7" height="9"></rect>
+              <rect x="14" y="12" width="7" height="9"></rect>
+              <rect x="7" y="5" width="10" height="7"></rect>
+              <line x1="12" y1="11" x2="12" y2="17"></line>
+              <line x1="8" y1="15" x2="16" y2="15"></line>
+            </svg>
+            Profile
+          </a></li>
+          <li><a href="#" class="nav-item" data-page="stages">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 11 12 14 22 4"></polyline>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+            Validation Stages
+          </a></li>
+        </ul>
+      </div>
+      <div class="nav-section">
+        <h3 class="nav-title">Resources</h3>
+        <ul class="nav-list">
+          <li><a href="#" class="nav-item" data-page="resources">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 0 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            Resources
+          </a></li>
+          <li><a href="#" class="nav-item" data-page="analytics">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+            Analytics
+          </a></li>
+        </ul>
+      </div>
+      <div class="nav-section">
+        <h3 class="nav-title">Settings</h3>
+        <ul class="nav-list">
+          <li><a href="#" class="nav-item" data-page="settings">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v6m4.22-10.22l1.42-1.42m-1.42 7.07l1.42 1.42M20 12h-6m-6 0H2m10.22-4.22L10.8 6.36m1.42 7.07l-1.42 1.42"></path>
+            </svg>
+            Settings
+          </a></li>
+        </ul>
+      </div>
+    </nav>
 
-  <main class="main-content">
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Dashboard Page -->
+      <div id="dashboard-page" class="page active">
+        <div class="page-header">
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-subtitle">Track your startup validation progress</p>
+        </div>
 
-    <!-- Create Startup Form -->
-    <div id="create-startup-section" class="card">
-      <h2>Let's Build Your Startup</h2>
-      <p class="subtitle">Describe your core idea — we'll generate a structured validation roadmap.</p>
-      
-      <input type="text" id="s-name" placeholder="Startup Name" />
-      <textarea id="s-thesis" rows="4" placeholder="What big problem are you solving? Who is it for?"></textarea>
-      <button id="create-startup-btn" class="btn-primary">Generate Validation Framework</button>
-    </div>
-
-    <!-- Dashboard Content -->
-    <div id="dashboard-section" class="dashboard-grid hidden">
-      
-      <!-- Main Column -->
-      <div>
-        <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
-            <h2 id="startup-name">Your Startup</h2>
-            <span class="score-badge" id="score-text">0% Validated</span>
+        <!-- Progress Card -->
+        <div class="card progress-card">
+          <div class="progress-header">
+            <div>
+              <h2 class="progress-title" id="startup-name-display">Tech Innovations</h2>
+              <p class="page-subtitle" id="progress-text">25% Complete</p>
+            </div>
+            <span class="progress-badge" id="progress-badge">25% Validated</span>
           </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill" style="width: 25%"></div>
+          </div>
+        </div>
 
-          <div class="progress-container">
-            <div class="progress-track">
-              <div id="progress-fill" class="progress-fill" style="width:0%"></div>
+        <!-- Stats Grid -->
+        <div class="grid">
+          <div class="stat-card">
+            <div class="stat-value" id="stages-completed">1/5</div>
+            <div class="stat-label">Stages Completed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="tasks-completed">3/15</div>
+            <div class="stat-label">Tasks Completed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="resources-viewed">5</div>
+            <div class="stat-label">Resources Viewed</div>
+          </div>
+        </div>
+
+        <!-- Validation Stages -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Validation Roadmap</h3>
+          </div>
+          <div class="list" id="stages-list">
+            <!-- Stages will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Page -->
+      <div id="profile-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Startup Profile</h1>
+          <p class="page-subtitle">Manage your startup information</p>
+        </div>
+
+        <div class="card">
+          <form id="profile-form">
+            <div class="form-group">
+              <label class="form-label">Startup Name</label>
+              <input type="text" class="form-input" id="startup-name" value="Tech Innovations" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Problem Statement</label>
+              <textarea class="form-textarea" id="problem-statement" required>Solving the problem of inefficient data management for small to medium-sized businesses.</textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Target Users</label>
+              <input type="text" class="form-input" id="target-users" value="Small to medium-sized businesses" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Current Stage</label>
+              <select class="form-select" id="current-stage" required>
+                <option value="idea">Idea Stage</option>
+                <option value="problem" selected>Problem Definition</option>
+                <option value="solution">Solution Development</option>
+                <option value="prototype">Prototype</option>
+                <option value="launch">Launched</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Website</label>
+              <input type="url" class="form-input" id="website" value="https://techinnovations.com">
+            </div>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Stages Page -->
+      <div id="stages-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Validation Stages</h1>
+          <p class="page-subtitle">Complete each stage to validate your startup idea</p>
+        </div>
+
+        <div class="list" id="detailed-stages-list">
+          <!-- Detailed stages will be populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Resources Page -->
+      <div id="resources-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Resources</h1>
+          <p class="page-subtitle">Handpicked resources for your current stage</p>
+        </div>
+
+        <div class="resource-list" id="resources-list">
+          <!-- Resources will be populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Analytics Page -->
+      <div id="analytics-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Analytics</h1>
+          <p class="page-subtitle">Track your progress and performance</p>
+        </div>
+
+        <div class="grid" id="analytics-grid">
+          <!-- Analytics will be populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Settings Page -->
+      <div id="settings-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Settings</h1>
+          <p class="page-subtitle">Manage your account and preferences</p>
+        </div>
+
+        <!-- Account Settings -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Account Settings</h3>
+          </div>
+          <div class="settings-group">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" class="form-input" id="full-name" value="John Doe">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-input" id="email" value="john@example.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Role</label>
+              <input type="text" class="form-input" id="role" value="Founder" readonly>
+            </div>
+            <button class="btn btn-primary" id="update-profile-btn">Update Profile</button>
+          </div>
+        </div>
+
+        <!-- Password Settings -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Password</h3>
+          </div>
+          <div class="settings-group">
+            <div class="form-group">
+              <label class="form-label">Current Password</label>
+              <input type="password" class="form-input" id="current-password">
+            </div>
+            <div class="form-group">
+              <label class="form-label">New Password</label>
+              <input type="password" class="form-input" id="new-password">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirm New Password</label>
+              <input type="password" class="form-input" id="confirm-password">
+            </div>
+            <button class="btn btn-primary" id="update-password-btn">Update Password</button>
+          </div>
+        </div>
+
+        <!-- Preferences -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Preferences</h3>
+          </div>
+          <div class="settings-group">
+            <div class="settings-item">
+              <div class="settings-item-content">
+                <div class="settings-item-title">Email Notifications</div>
+                <div class="settings-item-description">Receive email notifications for updates</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="email-notifications" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="settings-item">
+              <div class="settings-item-content">
+                <div class="settings-item-title">Auto-save</div>
+                <div class="settings-item-description">Automatically save your progress</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="auto-save" checked>
+                <span class="slider"></span>
+              </label>
             </div>
           </div>
-
-          <p style="color:var(--text-secondary); font-size:0.9rem; margin-top:0.75rem;">
-            Complete milestones to unlock investor visibility & premium resources
-          </p>
         </div>
 
+        <!-- Danger Zone -->
         <div class="card">
-          <h3 style="margin-bottom:1.25rem;">Validation Roadmap</h3>
-          <div id="milestone-list"></div>
-        </div>
-
-        <div class="card">
-          <h3>Audit Trails</h3>
-          <ul id="audit-list"></ul>
+          <div class="card-header">
+            <h3 class="card-title">Danger Zone</h3>
+          </div>
+          <div class="settings-group">
+            <div class="settings-item">
+              <div class="settings-item-content">
+                <div class="settings-item-title">Delete Account</div>
+                <div class="settings-item-description">Permanently delete your account and all data</div>
+              </div>
+              <button class="btn btn-danger" id="delete-account-btn">Delete Account</button>
+            </div>
+            <div class="settings-item">
+              <div class="settings-item-content">
+                <div class="settings-item-title">Logout</div>
+                <div class="settings-item-description">Sign out of your account</div>
+              </div>
+              <button class="btn btn-secondary" id="logout-btn">Logout</button>
+            </div>
+          </div>
         </div>
       </div>
+    </main>
+  </div>
 
-      <!-- Side Column -->
-      <div>
-        <div class="card" style="border:1px solid rgba(56,189,248,0.3); background:linear-gradient(135deg,rgba(56,189,248,0.08),rgba(99,102,241,0.05))">
-          <h3 style="color:var(--primary); margin-bottom:0.75rem;">Next Recommended Action</h3>
-          <p style="color:var(--text-secondary); line-height:1.5;">
-            Focus on <strong>Problem Definition</strong> — the foundation of everything that follows.
-          </p>
-        </div>
-
-        <div class="card">
-          <h3>Founder Analytics</h3>
-          <div id="analytics-section"></div>
-        </div>
-
-        <div class="card">
-          <h3>Helpful Resources</h3>
-          <ul style="list-style:none; margin-top:1rem; color:var(--text-secondary); font-size:0.95rem;">
-            <li style="margin:0.75rem 0;">→ <a href="#" style="color:var(--primary);">Lean Canvas Template</a></li>
-            <li style="margin:0.75rem 0;">→ <a href="#" style="color:var(--primary);">Customer Interview Guide</a></li>
-            <li style="margin:0.75rem 0;">→ <a href="#" style="color:var(--primary);">Problem Validation Checklist</a></li>
-          </ul>
-        </div>
+  <!-- Task Submission Modal -->
+  <div id="task-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-title">Submit Task</h3>
+        <button class="modal-close">&times;</button>
       </div>
-
+      <div class="modal-body">
+        <form id="task-form">
+          <div class="form-group">
+            <label class="form-label" id="task-label">Task Description</label>
+            <textarea class="form-textarea" id="task-response" placeholder="Describe how you've completed this task..." required></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Attachments (Optional)</label>
+            <input type="file" class="form-input" id="task-files" multiple>
+          </div>
+          <button type="submit" class="btn btn-primary">Submit Task</button>
+        </form>
+      </div>
     </div>
+  </div>
 
-  </main>
+  <script>
+    // Application State
+    const appState = {
+      user: {
+        id: 'user-123',
+        name: 'John Doe',
+        email: 'john@example.com'
+      },
+      startup: {
+        id: 'startup-456',
+        name: 'Tech Innovations',
+        problem: 'Solving the problem of inefficient data management for small to medium-sized businesses',
+        targetUsers: 'Small to medium-sized businesses',
+        currentStage: 'problem',
+        progress: 25
+      },
+      stages: [
+        {
+          id: 'idea',
+          name: 'Idea Validation',
+          description: 'Validate your initial idea',
+          tasks: [
+            { id: 'idea-1', name: 'Market Research', description: 'Conduct market research', required: true, status: 'approved' },
+            { id: 'idea-2', name: 'Competitor Analysis', description: 'Analyze competitors', required: true, status: 'approved' },
+            { id: 'idea-3', name: 'Problem Statement', description: 'Define the problem', required: true, status: 'approved' }
+          ],
+          completed: true
+        },
+        {
+          id: 'problem',
+          name: 'Problem Definition',
+          description: 'Deep dive into the problem',
+          tasks: [
+            { id: 'problem-1', name: 'Customer Interviews', description: 'Interview potential customers', required: true, status: 'submitted' },
+            { id: 'problem-2', name: 'Problem Documentation', description: 'Document the problem', required: true, status: 'pending' },
+            { id: 'problem-3', name: 'Problem Validation', description: 'Validate the problem', required: true, status: 'pending' }
+          ],
+          completed: false
+        },
+        {
+          id: 'solution',
+          name: 'Solution Development',
+          description: 'Develop your solution',
+          tasks: [
+            { id: 'solution-1', name: 'Solution Design', description: 'Design the solution', required: true, status: 'pending' },
+            { id: 'solution-2', name: 'MVP Development', description: 'Develop MVP', required: true, status: 'pending' },
+            { id: 'solution-3', name: 'Solution Testing', description: 'Test the solution', required: true, status: 'pending' }
+          ],
+          completed: false
+        },
+        {
+          id: 'prototype',
+          name: 'Prototype Testing',
+          description: 'Test your prototype',
+          tasks: [
+            { id: 'prototype-1', name: 'Prototype Development', description: 'Develop prototype', required: true, status: 'pending' },
+            { id: 'prototype-2', name: 'User Testing', description: 'Conduct user testing', required: true, status: 'pending' },
+            { id: 'prototype-3', name: 'Feedback Analysis', description: 'Analyze feedback', required: true, status: 'pending' }
+          ],
+          completed: false
+        },
+        {
+          id: 'launch',
+          name: 'Launch Preparation',
+          description: 'Prepare for launch',
+          tasks: [
+            { id: 'launch-1', name: 'Go-to-Market Strategy', description: 'Develop GTM strategy', required: true, status: 'pending' },
+            { id: 'launch-2', name: 'Marketing Plan', description: 'Create marketing plan', required: true, status: 'pending' },
+            { id: 'launch-3', name: 'Launch Checklist', description: 'Complete launch checklist', required: true, status: 'pending' }
+          ],
+          completed: false
+        }
+      ],
+      notifications: [
+        { id: 1, title: 'Submission Approved', message: 'Your Problem Definition stage has been approved!', read: false },
+        { id: 2, title: 'New Resource', message: 'We\'ve added a new guide to help with Solution Development.', read: false },
+        { id: 3, title: 'Task Reminder', message: 'You have 3 pending tasks in the Solution Development stage.', read: false }
+      ],
+      auditTrail: [
+        { id: 1, action: 'Created startup profile', date: '2023-05-15', user: 'John Doe' },
+        { id: 2, action: 'Submitted Problem Definition', date: '2023-05-18', user: 'John Doe' },
+        { id: 3, action: 'Problem Definition approved', date: '2023-05-20', user: 'Dolphin Team' }
+      ]
+    };
 
-  <script src="js/api.js"></script>
-  <script src="js/app.js"></script>
+    // Resources data
+    const resources = {
+      idea: [
+        { id: 1, title: 'Market Research Guide', description: 'How to conduct effective market research', type: 'guide' },
+        { id: 2, title: 'Competitor Analysis Template', description: 'Template for analyzing competitors', type: 'template' },
+        { id: 3, title: 'Idea Validation Checklist', description: 'Checklist for validating your idea', type: 'checklist' }
+      ],
+      problem: [
+        { id: 1, title: 'Customer Interview Guide', description: 'How to conduct effective customer interviews', type: 'guide' },
+        { id: 2, title: 'Problem Statement Template', description: 'Template for defining your problem statement', type: 'template' },
+        { id: 3, title: 'Problem Validation Framework', description: 'Framework for validating your problem', type: 'framework' }
+      ],
+      solution: [
+        { id: 1, title: 'Solution Design Principles', description: 'Key principles for designing solutions', type: 'guide' },
+        { id: 2, title: 'MVP Development Guide', description: 'How to develop a minimum viable product', type: 'guide' },
+        { id: 3, title: 'Solution Testing Framework', description: 'Framework for testing your solution', type: 'framework' }
+      ],
+      prototype: [
+        { id: 1, title: 'Prototype Development Guide', description: 'How to develop an effective prototype', type: 'guide' },
+        { id: 2, title: 'User Testing Guide', description: 'How to conduct effective user testing', type: 'guide' },
+        { id: 3, title: 'Feedback Analysis Template', description: 'Template for analyzing user feedback', type: 'template' }
+      ],
+      launch: [
+        { id: 1, title: 'Go-to-Market Strategy Guide', description: 'How to develop a go-to-market strategy', type: 'guide' },
+        { id: 2, title: 'Marketing Plan Template', description: 'Template for creating a marketing plan', type: 'template' },
+        { id: 3, title: 'Launch Checklist', description: 'Comprehensive checklist for launching', type: 'checklist' }
+      ]
+    };
+
+    // Navigation functionality
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        
+        // Update active nav
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        item.classList.add('active');
+        
+        // Show corresponding page
+        const page = item.dataset.page;
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(`${page}-page`).classList.add('active');
+        
+        // Load page-specific content
+        loadPageContent(page);
+      });
+    });
+
+    // Load page content
+    function loadPageContent(page) {
+      switch(page) {
+        case 'dashboard':
+          loadDashboard();
+          break;
+        case 'profile':
+          loadProfile();
+          break;
+        case 'stages':
+          loadStages();
+          break;
+        case 'resources':
+          loadResources();
+          break;
+        case 'analytics':
+          loadAnalytics();
+          break;
+        case 'settings':
+          loadSettings();
+          break;
+      }
+    }
+
+    // Dashboard functionality
+    function loadDashboard() {
+      updateProgress();
+      populateStagesList();
+    }
+
+    function updateProgress() {
+      const completedStages = appState.stages.filter(stage => stage.completed).length;
+      const totalStages = appState.stages.length;
+      const progress = Math.round((completedStages / totalStages) * 100);
+      
+      document.getElementById('startup-name-display').textContent = appState.startup.name;
+      document.getElementById('progress-text').textContent = `${progress}% Complete`;
+      document.getElementById('progress-badge').textContent = `${progress}% Validated`;
+      document.getElementById('progress-fill').style.width = `${progress}%`;
+      
+      document.getElementById('stages-completed').textContent = `${completedStages}/${totalStages}`;
+      
+      const completedTasks = appState.stages.reduce((total, stage) => {
+        return total + stage.tasks.filter(task => task.status === 'approved').length;
+      }, 0);
+      const totalTasks = appState.stages.reduce((total, stage) => total + stage.tasks.length, 0);
+      document.getElementById('tasks-completed').textContent = `${completedTasks}/${totalTasks}`;
+    }
+
+    function populateStagesList() {
+      const stagesList = document.getElementById('stages-list');
+      stagesList.innerHTML = '';
+      
+      appState.stages.forEach((stage, index) => {
+        const stageElement = document.createElement('div');
+        stageElement.className = 'list-item';
+        
+        // Determine if stage is locked
+        const isLocked = index > appState.stages.findIndex(s => s.id === appState.startup.currentStage);
+        if (isLocked) stageElement.classList.add('locked');
+        
+        // Calculate stage progress
+        const completedTasks = stage.tasks.filter(task => task.status === 'approved').length;
+        const totalTasks = stage.tasks.length;
+        const stageProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+        
+        stageElement.innerHTML = `
+          <div class="list-item-content">
+            <div class="list-item-title">${stage.name}</div>
+            <div class="list-item-subtitle">${stage.description}</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <span style="font-size: 12px; color: var(--text-secondary);">${stageProgress}%</span>
+            <span class="list-item-status ${getStageStatusClass(stage)}">${getStageStatusText(stage)}</span>
+          </div>
+        `;
+        
+        stagesList.appendChild(stageElement);
+      });
+    }
+
+    function getStageStatusClass(stage) {
+      if (stage.completed) return 'status-approved';
+      if (stage.tasks.some(task => task.status === 'submitted')) return 'status-submitted';
+      if (stage.tasks.some(task => task.status === 'pending')) return 'status-pending';
+      return 'status-pending';
+    }
+
+    function getStageStatusText(stage) {
+      if (stage.completed) return 'Completed';
+      if (stage.tasks.some(task => task.status === 'submitted')) return 'Submitted';
+      if (stage.tasks.some(task => task.status === 'pending')) return 'In Progress';
+      return 'Not Started';
+    }
+
+    // Profile functionality
+    function loadProfile() {
+      document.getElementById('startup-name').value = appState.startup.name;
+      document.getElementById('problem-statement').value = appState.startup.problem;
+      document.getElementById('target-users').value = appState.startup.targetUsers;
+      document.getElementById('current-stage').value = appState.startup.currentStage;
+      document.getElementById('website').value = appState.startup.website || '';
+    }
+
+    document.getElementById('profile-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      // Update app state
+      appState.startup.name = document.getElementById('startup-name').value;
+      appState.startup.problem = document.getElementById('problem-statement').value;
+      appState.startup.targetUsers = document.getElementById('target-users').value;
+      appState.startup.currentStage = document.getElementById('current-stage').value;
+      appState.startup.website = document.getElementById('website').value;
+      
+      // Simulate API call
+      setTimeout(() => {
+        alert('Profile updated successfully!');
+        updateProgress();
+        populateStagesList();
+      }, 500);
+    });
+
+    // Stages functionality
+    function loadStages() {
+      const detailedStagesList = document.getElementById('detailed-stages-list');
+      detailedStagesList.innerHTML = '';
+      
+      appState.stages.forEach((stage, index) => {
+        const stageElement = document.createElement('div');
+        stageElement.className = 'card';
+        
+        // Determine if stage is locked
+        const isLocked = index > appState.stages.findIndex(s => s.id === appState.startup.currentStage);
+        
+        // Calculate stage progress
+        const completedTasks = stage.tasks.filter(task => task.status === 'approved').length;
+        const totalTasks = stage.tasks.length;
+        const stageProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+        
+        stageElement.innerHTML = `
+          <div class="card-header">
+            <h3 class="card-title">
+              ${stage.name}
+              ${isLocked ? '<span style="color: var(--text-secondary); font-size: 0.9rem; margin-left: 8px;">(Locked)</span>' : ''}
+            </h3>
+            <span class="progress-badge" style="background: var(--background);">${stageProgress}% Complete</span>
+          </div>
+          <p style="color: var(--text-secondary); margin-bottom: 1rem;">${stage.description}</p>
+          <div class="progress-bar" style="height: 6px; margin-bottom: 1rem;">
+            <div class="progress-fill" style="width: ${stageProgress}%"></div>
+          </div>
+          <div class="task-list">
+            ${stage.tasks.map(task => `
+              <div class="task-item">
+                <div class="task-content">
+                  <div class="task-title">
+                    ${task.name}
+                    ${task.required ? '<span class="task-required">*</span>' : ''}
+                  </div>
+                  <div class="task-description">${task.description}</div>
+                </div>
+                <span class="task-status ${getTaskStatusClass(task)}">${getTaskStatusText(task)}</span>
+              </div>
+            `).join('')}
+          </div>
+          ${!isLocked ? `
+            <div class="stage-details">
+              <button class="btn btn-primary" onclick="openTaskModal('${stage.id}')">Submit Stage</button>
+            </div>
+          ` : ''}
+        `;
+        
+        detailedStagesList.appendChild(stageElement);
+      });
+    }
+
+    function getTaskStatusClass(task) {
+      if (task.status === 'approved') return 'status-approved';
+      if (task.status === 'submitted') return 'status-submitted';
+      return 'status-pending';
+    }
+
+    function getTaskStatusText(task) {
+      if (task.status === 'approved') return 'Approved';
+      if (task.status === 'submitted') return 'Submitted';
+      return 'Pending';
+    }
+
+    // Task modal functionality
+    const modal = document.getElementById('task-modal');
+    const modalTitle = document.querySelector('.modal-title');
+    const taskResponse = document.getElementById('task-response');
+    const taskLabel = document.getElementById('task-label');
+    let currentStageId = null;
+
+    function openTaskModal(stageId) {
+      currentStageId = stageId;
+      const stage = appState.stages.find(s => s.id === stageId);
+      modalTitle.textContent = `Submit: ${stage.name}`;
+      taskLabel.textContent = `${stage.name} - Submission Details`;
+      taskResponse.value = '';
+      modal.classList.add('active');
+    }
+
+    document.querySelector('.modal-close').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+
+    document.getElementById('task-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      // Update stage status
+      const stage = appState.stages.find(s => s.id === currentStageId);
+      if (stage) {
+        stage.tasks.forEach(task => {
+          if (task.status === 'pending') {
+            task.status = 'submitted';
+          }
+        });
+        
+        // Check if stage is completed
+        const allApproved = stage.tasks.every(task => task.status === 'approved');
+        if (allApproved) {
+          stage.completed = true;
+        }
+      }
+      
+      // Simulate API call
+      setTimeout(() => {
+        alert('Tasks submitted successfully!');
+        modal.classList.remove('active');
+        loadStages();
+        loadDashboard();
+      }, 500);
+    });
+
+    // Resources functionality
+    function loadResources() {
+      const resourcesList = document.getElementById('resources-list');
+      resourcesList.innerHTML = '';
+      
+      const currentResources = resources[appState.startup.currentStage] || [];
+      
+      currentResources.forEach(resource => {
+        const resourceElement = document.createElement('a');
+        resourceElement.href = '#';
+        resourceElement.className = 'resource-item';
+        resourceElement.innerHTML = `
+          <div class="resource-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              ${getResourceIcon(resource.type)}
+            </svg>
+          </div>
+          <div class="resource-content">
+            <div class="resource-title">${resource.title}</div>
+            <div class="resource-description">${resource.description}</div>
+          </div>
+        `;
+        
+        resourceElement.addEventListener('click', (e) => {
+          e.preventDefault();
+          alert(`Opening ${resource.title}...`);
+        });
+        
+        resourcesList.appendChild(resourceElement);
+      });
+    }
+
+    function getResourceIcon(type) {
+      switch (type) {
+        case 'guide': return '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 0 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>';
+        case 'template': return '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline>';
+        case 'checklist': return '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line><line x1="9" y1="19" x2="15" y2="19"></line><polyline points="9 9 12 12 15 9"></polyline>';
+        case 'framework': return '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line>';
+        default: return '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline>';
+      }
+    }
+
+    // Analytics functionality
+    function loadAnalytics() {
+      const analyticsGrid = document.getElementById('analytics-grid');
+      analyticsGrid.innerHTML = '';
+      
+      const completedStages = appState.stages.filter(stage => stage.completed).length;
+      const totalStages = appState.stages.length;
+      const completionPercentage = Math.round((completedStages / totalStages) * 100);
+      
+      const completedTasks = appState.stages.reduce((total, stage) => {
+        return total + stage.tasks.filter(task => task.status === 'approved').length;
+      }, 0);
+      const totalTasks = appState.stages.reduce((total, stage) => total + stage.tasks.length, 0);
+      const taskCompletionPercentage = Math.round((completedTasks / totalTasks) * 100);
+      
+      const analyticsData = [
+        { value: `${completedStages}/${totalStages}`, label: 'Stages Completed' },
+        { value: `${completionPercentage}%`, label: 'Overall Progress' },
+        { value: `${completedTasks}/${totalTasks}`, label: 'Tasks Completed' },
+        { value: `${taskCompletionPercentage}%`, label: 'Task Completion' },
+        { value: '5', label: 'Resources Viewed' },
+        { value: '85%', label: 'Approval Rate' }
+      ];
+      
+      analyticsData.forEach(item => {
+        const statCard = document.createElement('div');
+        statCard.className = 'stat-card';
+        statCard.innerHTML = `
+          <div class="stat-value">${item.value}</div>
+          <div class="stat-label">${item.label}</div>
+        `;
+        analyticsGrid.appendChild(statCard);
+      });
+    }
+
+    // Settings functionality
+    function loadSettings() {
+      // Set user information
+      document.getElementById('full-name').value = appState.user.name;
+      document.getElementById('email').value = appState.user.email;
+      document.getElementById('role').value = 'Founder';
+      
+      // Load preferences
+      const emailNotifications = localStorage.getItem('emailNotifications') !== 'false';
+      const autoSave = localStorage.getItem('autoSave') !== 'false';
+      
+      document.getElementById('email-notifications').checked = emailNotifications;
+      document.getElementById('auto-save').checked = autoSave;
+    }
+
+    // Update profile button
+    document.getElementById('update-profile-btn')?.addEventListener('click', () => {
+      const name = document.getElementById('full-name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      
+      if (!name || !email) {
+        alert('Please fill in all fields');
+        return;
+      }
+      
+      // Update user data
+      appState.user.name = name;
+      appState.user.email = email;
+      
+      // Simulate API call
+      setTimeout(() => {
+        alert('Profile updated successfully!');
+      }, 500);
+    });
+
+    // Update password button
+    document.getElementById('update-password-btn')?.addEventListener('click', () => {
+      const currentPassword = document.getElementById('current-password').value;
+      const newPassword = document.getElementById('new-password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        alert('Please fill in all password fields');
+        return;
+      }
+      
+      if (newPassword !== confirmPassword) {
+        alert('New passwords do not match');
+        return;
+      }
+      
+      if (newPassword.length < 8) {
+        alert('Password must be at least 8 characters long');
+        return;
+      }
+      
+      // Simulate API call
+      setTimeout(() => {
+        alert('Password updated successfully!');
+        
+        // Clear password fields
+        document.getElementById('current-password').value = '';
+        document.getElementById('new-password').value = '';
+        document.getElementById('confirm-password').value = '';
+      }, 500);
+    });
+
+    // Delete account button
+    document.getElementById('delete-account-btn')?.addEventListener('click', () => {
+      if (confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) {
+        if (confirm('This will permanently delete your account and all associated data. Are you really sure?')) {
+          alert('Account deletion would be processed here. In a real app, this would make an API call to delete the account.');
+        }
+      }
+    });
+
+    // Logout button
+    document.getElementById('logout-btn')?.addEventListener('click', () => {
+      if (confirm('Are you sure you want to logout?')) {
+        // Clear all client-side auth data
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.clear();
+        
+        // Redirect to index.html (home/landing page)
+        window.location.href = 'index.html';
+      }
+    });
+
+    // Save preferences
+    document.getElementById('email-notifications')?.addEventListener('change', (e) => {
+      localStorage.setItem('emailNotifications', e.target.checked);
+    });
+
+    document.getElementById('auto-save')?.addEventListener('change', (e) => {
+      localStorage.setItem('autoSave', e.target.checked);
+    });
+
+    // Notification functionality
+    document.getElementById('notification-btn').addEventListener('click', () => {
+      alert('You have 3 new notifications:\n\n1. Your Problem Definition stage has been approved!\n2. New resource available for Solution Development\n3. Reminder: Complete your tasks');
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadDashboard();
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.classList.contains('active')) {
+        modal.classList.remove('active');
+      }
+    });
+
+    // Close modal on outside click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+      }
+    });
+  </script>
 </body>
 </html>

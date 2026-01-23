@@ -4,339 +4,636 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dolphin • Investor Dashboard</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <style>
-    :root {
-      --bg: #f8fafc;
-      --surface: #ffffff;
-      --surface-2: #f1f5f9;
-      --primary: #38bdf8;
-      --primary-dark: #0ea5e9;
-      --accent: #6366f1;
-      --text: #0f172a;
-      --text-secondary: #475569;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --border: rgba(0,0,0,0.08);
-      --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-      --shadow-md: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-      --radius: 16px;
-      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      background-image: 
-        radial-gradient(circle at 15% 50%, rgba(56,189,248,0.08) 0%, transparent 25%),
-        radial-gradient(circle at 85% 30%, rgba(99,102,241,0.06) 0%, transparent 35%);
-      background-attachment: fixed;
-    }
-
-    header {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      height: 72px;
-      background: rgba(255,255,255,0.95);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      z-index: 1000;
-      padding: 0 3rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .logo { font-size:1.4rem; font-weight:700; background: linear-gradient(90deg,#000,var(--primary)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-
-    .logout-btn {
-      background: transparent;
-      border: 1px solid var(--text-secondary);
-      color: var(--text-secondary);
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-    .logout-btn:hover { background:rgba(0,0,0,0.08); border-color:var(--text); color:#000; }
-
-    .sidebar {
-      position: fixed;
-      top: 72px; left: 0; bottom: 0;
-      width: 260px;
-      background: rgba(255,255,255,0.4);
-      border-right: 1px solid var(--border);
-      padding: 2rem 1rem;
-      overflow-y: auto;
-    }
-
-    .nav-link {
-      display: flex; align-items: center;
-      padding: 12px 1rem; margin-bottom: 0.5rem;
-      border-radius: 8px;
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: var(--transition);
-    }
-    .nav-link:hover, .nav-link.active { background: var(--surface-2); color: var(--primary); }
-
-    .nav-icon { width:20px; height:20px; margin-right:12px; fill:currentColor; }
-
-    .main-content {
-      margin-left: 260px;
-      padding: 100px 3rem 2rem;
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.5rem;
-      box-shadow: var(--shadow-md);
-      margin-bottom: 2rem;
-    }
-
-    h2, h3 { font-weight:600; margin-bottom:1rem; }
-    .subtitle { color:var(--text-secondary); margin-bottom:1.5rem; line-height:1.5; }
-
-    .request-item {
-      padding: 1rem;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .request-item:last-child { border-bottom: none; }
-    .request-item:hover { background: var(--surface-2); }
-
-    .status-pending  { color: var(--warning); font-weight:500; }
-    .status-accepted { color: var(--success);  font-weight:500; }
-    .status-rejected { color: #ef4444;      font-weight:500; }
-
-    .btn {
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: var(--transition);
-      border: none;
-    }
-    .btn-accept { background: var(--success); color: white; }
-    .btn-accept:hover { background: #059669; }
-    .btn-reject  { background: #ef4444; color: white; }
-    .btn-reject:hover  { background: #dc2626; }
-    
-    .startup-card {
-      padding: 1.25rem;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      margin-bottom: 1rem;
-      transition: var(--transition);
-    }
-    .startup-card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
-    }
-    .score-high   { color: var(--success); font-weight:700; }
-    .score-medium { color: var(--warning); font-weight:600; }
-    .score-low    { color: #ef4444;     font-weight:500; }
-    
-    .error-message {
-      color: #ef4444;
-      background: rgba(239, 68, 68, 0.1);
-      padding: 12px;
-      border-radius: 8px;
-      margin: 1rem 0;
-      display: none;
-    }
-  </style>
+  
+  <link rel="stylesheet" href="./css/investorDashboard.css">
 </head>
 <body>
-
-  <header>
+  <!-- Header -->
+  <header class="header">
     <div class="logo">Dolphin • Investor</div>
-    <button class="logout-btn" id="logout-btn">Logout</button>
+    <div class="header-right">
+      <button class="header-action" id="notification-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span class="notification-badge">3</span>
+      </button>
+      <div class="user-menu">
+        <div class="user-avatar">AI</div>
+        <span>Investor Account</span>
+      </div>
+    </div>
   </header>
 
-  <nav class="sidebar">
-    <a href="#" class="nav-link active">
-      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-      Dashboard
-    </a>
-    <a href="marketplace.html" class="nav-link">
-      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
-      Validated Startups
-    </a>
-    <a href="#" class="nav-link">
-      <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
-      Watchlist
-    </a>
-  </nav>
-
-  <main class="main-content">
-    <div class="card">
-      <h2>Investor Dashboard</h2>
-      <p class="subtitle">Browse high-potential startups that have reached validation thresholds.</p>
-      <div id="auth-error" class="error-message"></div>
-    </div>
-
-    <div class="card">
-      <h3>Validated Startups (Score ≥ 70%)</h3>
-      <div style="margin:1rem 0;">
-        <input type="text" id="search-startup" placeholder="Search by name or thesis..." style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px;">
+  <!-- App Container -->
+  <div class="app-container">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="nav-section">
+        <h3 class="nav-title">Main</h3>
+        <ul class="nav-list">
+          <li><a href="#" class="nav-item active" data-page="dashboard">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"></path>
+            </svg>
+            Dashboard
+          </a></li>
+          <li><a href="#" class="nav-item" data-page="startups">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"></path>
+            </svg>
+            Validated Startups
+          </a></li>
+          <li><a href="#" class="nav-item" data-page="watchlist">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path>
+            </svg>
+            Watchlist
+          </a></li>
+        </ul>
       </div>
-      <div id="validated-startups"></div>
-    </div>
+      <div class="nav-section">
+        <h3 class="nav-title">Settings</h3>
+        <ul class="nav-list">
+          <li><a href="#" class="nav-item" data-page="settings">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v6m4.22-10.22l1.42-1.42m-1.42 7.07l1.42 1.42M20 12h-6m-6 0H2m10.22-4.22L10.8 6.36m1.42 7.07l-1.42 1.42"></path>
+            </svg>
+            Settings
+          </a></li>
+        </ul>
+      </div>
+    </nav>
 
-    <div class="card">
-      <h3>Quick Stats</h3>
-      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1.5rem; margin-top:1rem;">
-        <div style="padding:1rem; background:var(--surface-2); border-radius:12px; text-align:center;">
-          <div style="font-size:1.8rem; font-weight:700; color:var(--primary);">24</div>
-          <div style="color:var(--text-secondary);">Validated Startups</div>
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Dashboard Page -->
+      <div id="dashboard-page" class="page active">
+        <div class="page-header">
+          <h1 class="page-title">Investor Dashboard</h1>
+          <p class="page-subtitle">Browse high-potential startups that have reached validation thresholds.</p>
         </div>
-        <div style="padding:1rem; background:var(--surface-2); border-radius:12px; text-align:center;">
-          <div style="font-size:1.8rem; font-weight:700; color:var(--success);">≥ 85%</div>
-          <div style="color:var(--text-secondary);">Highest Score</div>
+
+        <div id="auth-error" class="error-message"></div>
+
+        <!-- Quick Stats -->
+        <div class="grid">
+          <div class="stat-card">
+            <div class="stat-value">24</div>
+            <div class="stat-label">Validated Startups</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">≥ 85%</div>
+            <div class="stat-label">Highest Score</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">12</div>
+            <div class="stat-label">Watchlist</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">3</div>
+            <div class="stat-label">New This Week</div>
+          </div>
+        </div>
+
+        <!-- Validated Startups -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Validated Startups (Score ≥ 70%)</h3>
+          </div>
+          <div class="form-group">
+            <input type="text" class="form-input" id="search-startup" placeholder="Search by name or thesis...">
+          </div>
+          <div id="validated-startups">
+            <!-- Startup cards will be populated by JavaScript -->
+          </div>
         </div>
       </div>
-    </div>
-  </main>
 
-  <script src="js/api.js"></script>
+      <!-- Startups Page -->
+      <div id="startups-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Validated Startups</h1>
+          <p class="page-subtitle">Browse all startups that have reached validation thresholds</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">All Validated Startups</h3>
+          </div>
+          <div class="form-group">
+            <input type="text" class="form-input" id="search-all-startups" placeholder="Search by name or industry...">
+          </div>
+          <div id="all-startups">
+            <!-- All startup cards will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Watchlist Page -->
+      <div id="watchlist-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">My Watchlist</h1>
+          <p class="page-subtitle">Startups you're tracking for potential investment</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Tracked Startups</h3>
+          </div>
+          <div id="watchlist-startups">
+            <!-- Watchlist items will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Page -->
+      <div id="settings-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Settings</h1>
+          <p class="page-subtitle">Manage your account and preferences</p>
+        </div>
+
+        <!-- Account Settings -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Account Settings</h3>
+          </div>
+          <div class="settings-group">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" class="form-input" id="full-name" value="Investor Account">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-input" id="email" value="investor@example.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Role</label>
+              <input type="text" class="form-input" id="role" value="Investor" readonly>
+            </div>
+            <button class="btn btn-primary" id="update-profile-btn">Update Profile</button>
+          </div>
+        </div>
+
+        <!-- Password Settings -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Password</h3>
+          </div>
+          <div class="settings-group">
+            <div class="form-group">
+              <label class="form-label">Current Password</label>
+              <input type="password" class="form-input" id="current-password">
+            </div>
+            <div class="form-group">
+              <label class="form-label">New Password</label>
+              <input type="password" class="form-input" id="new-password">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirm New Password</label>
+              <input type="password" class="form-input" id="confirm-password">
+            </div>
+            <button class="btn btn-primary" id="update-password-btn">Update Password</button>
+          </div>
+        </div>
+
+        <!-- Preferences -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Preferences</h3>
+          </div>
+          <div class="settings-group">
+            <div class="settings-item">
+              <div class="settings-item-content">
+                <div class="settings-item-title">Email Notifications</div>
+                <div class="settings-item-description">Receive email notifications for updates</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="email-notifications" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="settings-item">
+              <div class="settings-item-content">
+                <div class="settings-item-title">Auto-refresh</div>
+                <div class="settings-item-description">Automatically refresh startup data</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="auto-refresh" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Danger Zone</h3>
+          </div>
+          <div class="settings-group">
+            <div class="settings-item">
+              <div class="settings-item-content">
+                <div class="settings-item-title">Delete Account</div>
+                <div class="settings-item-description">Permanently delete your account and all data</div>
+              </div>
+              <button class="btn btn-danger" id="delete-account-btn">Delete Account</button>
+            </div>
+            <div class="settings-item">
+              <div class="settings-item-content">
+                <div class="settings-item-title">Logout</div>
+                <div class="settings-item-description">Sign out of your account</div>
+              </div>
+              <button class="btn btn-secondary" id="logout-btn">Logout</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
   <script>
-    // Helper functions
-    function getUser() {
-      try {
-        const user = localStorage.getItem('user');
-        return user ? JSON.parse(user) : null;
-      } catch (error) {
-        console.error('Error parsing user data from localStorage:', error);
-        localStorage.removeItem('user');
-        return null;
-      }
-    }
-
-    function isAuthenticated() {
-      return !!localStorage.getItem('token');
-    }
-
-    async function logout() {
-      try {
-        const token = localStorage.getItem('token');
-        if (token) {
-          await fetch('http://localhost:5000/api/auth/logout', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }).catch(err => {
-            console.warn('Server logout failed, proceeding client-side:', err);
-          });
+    // Application State
+    const appState = {
+      user: {
+        id: 'investor-123',
+        name: 'Investor Account',
+        email: 'investor@example.com'
+      },
+      startups: [
+        {
+          id: 1,
+          name: 'HealthTech Solutions',
+          stage: 'solution',
+          industry: 'health',
+          validationScore: 85,
+          thesis: 'AI-powered diagnostic platform for clinics to improve efficiency and accuracy',
+          location: 'Boston, MA',
+          website: 'https://healthtechsolutions.com',
+          funding: '$750K',
+          status: 'watchlisted'
+        },
+        {
+          id: 2,
+          name: 'EcoCommerce',
+          stage: 'prototype',
+          industry: 'retail',
+          validationScore: 92,
+          thesis: 'Sustainable e-commerce platform that reduces carbon footprint for online retailers',
+          location: 'Portland, OR',
+          website: 'https://ecocommerce.com',
+          funding: '$1.2M',
+          status: 'watchlisted'
+        },
+        {
+          id: 3,
+          name: 'FinSecure',
+          stage: 'solution',
+          industry: 'finance',
+          validationScore: 78,
+          thesis: 'Security platform for fintech startups to protect customer data and transactions',
+          location: 'New York, NY',
+          website: 'https://finsecure.com',
+          funding: '$500K',
+          status: 'new'
+        },
+        {
+          id: 4,
+          name: 'DataFlow Analytics',
+          stage: 'launch',
+          industry: 'tech',
+          validationScore: 88,
+          thesis: 'Real-time data analytics for IoT devices to optimize industrial processes',
+          location: 'Austin, TX',
+          website: 'https://dataflow.com',
+          funding: '$2M',
+          status: 'watchlisted'
+        },
+        {
+          id: 5,
+          name: 'SocialConnect',
+          stage: 'solution',
+          industry: 'tech',
+          validationScore: 75,
+          thesis: 'Professional networking platform with AI-powered matching for career opportunities',
+          location: 'Los Angeles, CA',
+          website: 'https://socialconnect.io',
+          funding: '$350K',
+          status: 'new'
+        },
+        {
+          id: 6,
+          name: 'GreenEnergy',
+          stage: 'prototype',
+          industry: 'tech',
+          validationScore: 90,
+          thesis: 'Renewable energy management system for smart buildings to reduce energy consumption',
+          location: 'San Francisco, CA',
+          website: 'https://greenenergy.com',
+          funding: '$1M',
+          status: 'new'
         }
-      } catch (err) {
-        console.error('Logout process error:', err);
-      }
+      ],
+      watchlist: [1, 2, 4],
+      notifications: [
+        { id: 1, title: 'New Startup', message: 'GreenEnergy has reached 90% validation', read: false },
+        { id: 2, title: 'Update', message: 'HealthTech Solutions has updated their pitch deck', read: false },
+        { id: 3, title: 'Reminder', message: 'EcoCommerce is seeking funding next month', read: true }
+      ]
+    };
 
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      localStorage.clear();
-      window.location.href = 'index.html';
-    }
-
-    // Add event listener for logout button
-    document.addEventListener('DOMContentLoaded', () => {
-      const logoutBtn = document.getElementById('logout-btn');
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', logout);
-      }
-      
-      const user = getUser();
-      const currentPath = window.location.pathname.toLowerCase();
-      const currentPage = currentPath.split('/').pop().replace('.html', '');
-
-      // If not authenticated, redirect
-      if (!isAuthenticated()) {
-        if (currentPage === 'investor-dashboard') {
-          window.location.href = 'index.html';
-        }
-        return;
-      }
-
-      // Check role
-      if (currentPage === 'investor-dashboard' && user.role !== 'investor') {
-        window.location.href = 'index.html';
-      }
-
-      // Load dashboard
-      loadInvestorDashboard();
+    // Navigation functionality
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        
+        // Update active nav
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        item.classList.add('active');
+        
+        // Show corresponding page
+        const page = item.dataset.page;
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(`${page}-page`).classList.add('active');
+        
+        // Load page content
+        loadPageContent(page);
+      });
     });
 
-    async function loadInvestorDashboard() {
-      try {
-        const startups = await api.getValidatedStartups();
-
-        const container = document.getElementById('validated-startups');
-        const errorEl = document.getElementById('auth-error');
-        
-        if (!container) return;
-
-        container.innerHTML = '';
-        errorEl.style.display = 'none';
-
-        if (!startups || startups.length === 0) {
-          container.innerHTML = '<p style="color:var(--text-secondary);">No validated startups available yet.</p>';
-          return;
-        }
-
-        startups.forEach(s => {
-          const card = document.createElement('div');
-          card.className = 'startup-card';
-          const scoreClass = s.validationScore >= 85 ? 'score-high' : s.validationScore >= 70 ? 'score-medium' : 'score-low';
-
-          card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <strong style="font-size:1.1rem;">${s.name}</strong>
-              <span class="${scoreClass}">${s.validationScore}%</span>
-            </div>
-            <p style="margin:0.5rem 0; color:var(--text-secondary);">
-              ${s.thesis?.substring(0, 120)}${s.thesis?.length > 120 ? '...' : ''}
-            </p>
-            <small style="color:var(--text-secondary);">Industry: ${s.industry || 'Not specified'}</small>
-          `;
-          container.appendChild(card);
-        });
-      } catch (err) {
-        console.error('Failed to load validated startups:', err);
-        const container = document.getElementById('validated-startups');
-        const errorEl = document.getElementById('auth-error');
-        
-        if (container) {
-          container.innerHTML = '<p style="color:red;">Failed to load startups.</p>';
-        }
-        
-        errorEl.textContent = 'Authentication error or server issue. Please try again.';
-        errorEl.style.display = 'block';
+    // Load page content
+    function loadPageContent(page) {
+      switch(page) {
+        case 'dashboard':
+          loadDashboard();
+          break;
+        case 'startups':
+          loadStartups();
+          break;
+        case 'watchlist':
+          loadWatchlist();
+          break;
+        case 'settings':
+          loadSettings();
+          break;
       }
     }
 
-    // Search filter
-    document.getElementById('search-startup')?.addEventListener('input', e => {
-      const term = e.target.value.toLowerCase();
-      document.querySelectorAll('.startup-card').forEach(card => {
-        const text = card.textContent.toLowerCase();
-        card.style.display = text.includes(term) ? '' : 'none';
+    // Dashboard functionality
+    function loadDashboard() {
+      const startupsContainer = document.getElementById('validated-startups');
+      startupsContainer.innerHTML = '';
+      
+      // Filter startups with score >= 70
+      const validatedStartups = appState.startups.filter(s => s.validationScore >= 70);
+      
+      validatedStartups.forEach(startup => {
+        const startupCard = createStartupCard(startup);
+        startupsContainer.appendChild(startupCard);
       });
+      
+      // Add search functionality
+      document.getElementById('search-startup').addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        document.querySelectorAll('.startup-card').forEach(card => {
+          const text = card.textContent.toLowerCase();
+          card.style.display = text.includes(term) ? '' : 'none';
+        });
+      });
+    }
+
+    // Startups page functionality
+    function loadStartups() {
+      const startupsContainer = document.getElementById('all-startups');
+      startupsContainer.innerHTML = '';
+      
+      // Show all startups
+      appState.startups.forEach(startup => {
+        const startupCard = createStartupCard(startup);
+        startupsContainer.appendChild(startupCard);
+      });
+      
+      // Add search functionality
+      document.getElementById('search-all-startups').addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        document.querySelectorAll('.startup-card').forEach(card => {
+          const text = card.textContent.toLowerCase();
+          card.style.display = text.includes(term) ? '' : 'none';
+        });
+      });
+    }
+
+    // Watchlist functionality
+    function loadWatchlist() {
+      const watchlistContainer = document.getElementById('watchlist-startups');
+      watchlistContainer.innerHTML = '';
+      
+      // Get watchlist startups
+      const watchlistStartups = appState.startups.filter(s => appState.watchlist.includes(s.id));
+      
+      if (watchlistStartups.length === 0) {
+        watchlistContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Your watchlist is empty. Add startups from the validated list.</p>';
+        return;
+      }
+      
+      watchlistStartups.forEach(startup => {
+        const watchlistItem = createWatchlistItem(startup);
+        watchlistContainer.appendChild(watchlistItem);
+      });
+    }
+
+    // Settings functionality
+    function loadSettings() {
+      // Set user information
+      document.getElementById('full-name').value = appState.user.name;
+      document.getElementById('email').value = appState.user.email;
+      document.getElementById('role').value = 'Investor';
+      
+      // Load preferences
+      const emailNotifications = localStorage.getItem('emailNotifications') !== 'false';
+      const autoRefresh = localStorage.getItem('autoRefresh') !== 'false';
+      
+      document.getElementById('email-notifications').checked = emailNotifications;
+      document.getElementById('auto-refresh').checked = autoRefresh;
+    }
+
+    // Update profile button
+    document.getElementById('update-profile-btn')?.addEventListener('click', () => {
+      const name = document.getElementById('full-name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      
+      if (!name || !email) {
+        alert('Please fill in all fields');
+        return;
+      }
+      
+      // Update user data
+      appState.user.name = name;
+      appState.user.email = email;
+      
+      // Simulate API call
+      setTimeout(() => {
+        alert('Profile updated successfully!');
+      }, 500);
+    });
+
+    // Update password button
+    document.getElementById('update-password-btn')?.addEventListener('click', () => {
+      const currentPassword = document.getElementById('current-password').value;
+      const newPassword = document.getElementById('new-password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        alert('Please fill in all password fields');
+        return;
+      }
+      
+      if (newPassword !== confirmPassword) {
+        alert('New passwords do not match');
+        return;
+      }
+      
+      if (newPassword.length < 8) {
+        alert('Password must be at least 8 characters long');
+        return;
+      }
+      
+      // Simulate API call
+      setTimeout(() => {
+        alert('Password updated successfully!');
+        
+        // Clear password fields
+        document.getElementById('current-password').value = '';
+        document.getElementById('new-password').value = '';
+        document.getElementById('confirm-password').value = '';
+      }, 500);
+    });
+
+    // Delete account button
+    document.getElementById('delete-account-btn')?.addEventListener('click', () => {
+      if (confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) {
+        if (confirm('This will permanently delete your account and all associated data. Are you really sure?')) {
+          alert('Account deletion would be processed here. In a real app, this would make an API call to delete the account.');
+        }
+      }
+    });
+
+    // Logout button
+    document.getElementById('logout-btn')?.addEventListener('click', () => {
+      if (confirm('Are you sure you want to logout?')) {
+        // Clear all client-side auth data
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.clear();
+        
+        // Redirect to index.html (home/landing page)
+        window.location.href = 'index.html';
+      }
+    });
+
+    // Save preferences
+    document.getElementById('email-notifications')?.addEventListener('change', (e) => {
+      localStorage.setItem('emailNotifications', e.target.checked);
+    });
+
+    document.getElementById('auto-refresh')?.addEventListener('change', (e) => {
+      localStorage.setItem('autoRefresh', e.target.checked);
+    });
+
+    // Create startup card
+    function createStartupCard(startup) {
+      const card = document.createElement('div');
+      card.className = 'startup-card';
+      
+      const scoreClass = startup.validationScore >= 85 ? 'score-high' : 
+                        startup.validationScore >= 70 ? 'score-medium' : 'score-low';
+      
+      const isInWatchlist = appState.watchlist.includes(startup.id);
+      
+      card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+          <div>
+            <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">${startup.name}</h3>
+            <span class="${scoreClass}" style="font-size: 1rem; font-weight: 600;">${startup.validationScore}% Validation</span>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-secondary" onclick="toggleWatchlist(${startup.id})">
+              ${isInWatchlist ? 'Remove' : 'Add to Watchlist'}
+            </button>
+            <button class="btn btn-primary">View Details</button>
+          </div>
+        </div>
+        <p style="color: var(--text-secondary); margin-bottom: 1rem;">${startup.thesis}</p>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span style="color: var(--text-secondary); font-size: 0.9rem;">Industry: ${startup.industry}</span>
+            <span style="color: var(--text-secondary); font-size: 0.9rem; margin-left: 1rem;">Stage: ${startup.stage}</span>
+          </div>
+          <div>
+            <span style="color: var(--text-secondary); font-size: 0.9rem;">Funding: ${startup.funding}</span>
+          </div>
+        </div>
+      `;
+      
+      return card;
+    }
+
+    // Create watchlist item
+    function createWatchlistItem(startup) {
+      const item = document.createElement('div');
+      item.className = 'list-item';
+      
+      item.innerHTML = `
+        <div class="list-item-content">
+          <div class="list-item-title">${startup.name}</div>
+          <div class="list-item-subtitle">
+            ${startup.industry} • ${startup.stage} • ${startup.funding}
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <span class="list-item-status status-${startup.status}">${startup.status.charAt(0).toUpperCase() + startup.status.slice(1)}</span>
+          <button class="btn btn-danger" onclick="removeFromWatchlist(${startup.id})">Remove</button>
+        </div>
+      `;
+      
+      return item;
+    }
+
+    // Toggle watchlist
+    function toggleWatchlist(startupId) {
+      const index = appState.watchlist.indexOf(startupId);
+      if (index === -1) {
+        appState.watchlist.push(startupId);
+      } else {
+        appState.watchlist.splice(index, 1);
+      }
+      
+      // Reload current page
+      const activePage = document.querySelector('.nav-item.active').dataset.page;
+      loadPageContent(activePage);
+    }
+
+    // Remove from watchlist
+    function removeFromWatchlist(startupId) {
+      const index = appState.watchlist.indexOf(startupId);
+      if (index !== -1) {
+        appState.watchlist.splice(index, 1);
+        loadWatchlist();
+      }
+    }
+
+    // Notification functionality
+    document.getElementById('notification-btn').addEventListener('click', () => {
+      const notifications = appState.notifications.map(n => `${n.title}: ${n.message}`).join('\n\n');
+      alert(notifications);
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadDashboard();
     });
   </script>
 </body>
