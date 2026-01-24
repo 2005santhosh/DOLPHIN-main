@@ -91,6 +91,9 @@
         </div>
     </div>
     
+    <!-- Include API Client -->
+    <script src="./js/api.js"></script>
+    
     <script>
         // Password toggle functionality
         const passwordInput = document.getElementById('password');
@@ -135,27 +138,8 @@
             submitButton.disabled = true;
             
             try {
-                // Call the backend API
-                const response = await fetch('http://localhost:5000/api/auth/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ email, password })
-                });
-                
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.message || 'Login failed');
-                }
-                
-                // Store authentication data
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
-                
-                // Show success message
-                alert('Login successful!');
+                // Use centralized API client
+                const data = await api.login(email, password);
                 
                 // Redirect based on user role
                 if (data.user.role === 'investor') {
@@ -175,7 +159,7 @@
             }
         });
         
-        // Google login handler
+        // Google login button
         const googleLoginBtn = document.getElementById('google-login-btn');
         
         googleLoginBtn.addEventListener('click', () => {

@@ -1,4 +1,3 @@
-// models/Provider.js (New: Real model for providers replacing mock)
 const mongoose = require('mongoose');
 
 const providerSchema = new mongoose.Schema({
@@ -7,7 +6,7 @@ const providerSchema = new mongoose.Schema({
   category: { type: String, required: true },
   description: { type: String, required: true },
   verified: { type: Boolean, default: false },
-  stageCategories: [{ type: Number }], // Array of stage orders (1-7)
+  stageCategories: [{ type: Number }],
   createdAt: { type: Date, default: Date.now }
 });
 

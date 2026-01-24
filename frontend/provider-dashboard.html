@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Provider Dashboard - Dolphin</title>
-  
   <link rel="stylesheet" href="./css/providerDashboard.css">
 </head>
 <body>
@@ -21,7 +20,7 @@
       </button>
       <div class="user-menu">
         <div class="user-avatar">AJ</div>
-        <span>Alex Johnson</span>
+        <span id="user-name">Alex Johnson</span>
       </div>
     </div>
   </header>
@@ -91,19 +90,19 @@
         <!-- Stats Grid -->
         <div class="grid">
           <div class="stat-card">
-            <div class="stat-value">8</div>
+            <div class="stat-value" id="active-engagements">0</div>
             <div class="stat-label">Active Engagements</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">24</div>
+            <div class="stat-value" id="eligible-founders">0</div>
             <div class="stat-label">Eligible Founders</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">92%</div>
+            <div class="stat-value" id="response-rate">0%</div>
             <div class="stat-label">Response Rate</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">4.8</div>
+            <div class="stat-value" id="avg-rating">0</div>
             <div class="stat-label">Avg. Rating</div>
           </div>
         </div>
@@ -113,21 +112,8 @@
           <div class="card-header">
             <h3 class="card-title">Recent Activity</h3>
           </div>
-          <div class="list">
-            <div class="list-item">
-              <div class="list-item-content">
-                <div class="list-item-title">Accepted request from Tech Innovations</div>
-                <div class="list-item-subtitle">2 days ago</div>
-              </div>
-              <span class="list-item-status status-accepted">Accepted</span>
-            </div>
-            <div class="list-item">
-              <div class="list-item-content">
-                <div class="list-item-title">New request from HealthTech Solutions</div>
-                <div class="list-item-subtitle">5 days ago</div>
-              </div>
-              <span class="list-item-status status-pending">Pending</span>
-            </div>
+          <div class="list" id="recent-activity">
+            <!-- Activity items will be populated by JavaScript -->
           </div>
         </div>
       </div>
@@ -143,7 +129,7 @@
           <form id="profile-form">
             <div class="form-group">
               <label class="form-label">Full Name</label>
-              <input type="text" class="form-input" id="provider-name" value="Alex Johnson" required>
+              <input type="text" class="form-input" id="provider-name" required>
             </div>
             
             <div class="form-group">
@@ -168,12 +154,12 @@
             
             <div class="form-group">
               <label class="form-label">Specialties</label>
-              <input type="text" class="form-input" id="specialties" value="SaaS, B2B, Product Strategy" placeholder="e.g., SaaS, B2B, Product Strategy">
+              <input type="text" class="form-input" id="specialties" placeholder="e.g., SaaS, B2B, Product Strategy">
             </div>
             
             <div class="form-group">
               <label class="form-label">Bio</label>
-              <textarea class="form-textarea" id="bio" required>Experienced tech executive with 15+ years in B2B SaaS. Previously led product at 3 successful startups and now focused on helping early-stage founders build scalable businesses.</textarea>
+              <textarea class="form-textarea" id="bio" required></textarea>
             </div>
             
             <div class="form-group">
@@ -247,81 +233,26 @@
 
         <div class="card">
           <div class="tabs">
-            <div class="tab active" data-tab="pending">Pending (3)</div>
-            <div class="tab" data-tab="accepted">Accepted (5)</div>
-            <div class="tab" data-tab="rejected">Rejected (2)</div>
+            <div class="tab active" data-tab="pending">Pending (0)</div>
+            <div class="tab" data-tab="accepted">Accepted (0)</div>
+            <div class="tab" data-tab="rejected">Rejected (0)</div>
           </div>
           
           <div class="tab-content active" id="pending-tab">
-            <div class="list">
-              <div class="list-item">
-                <div class="list-item-content">
-                  <div class="list-item-title">HealthTech Solutions</div>
-                  <div class="list-item-subtitle">Stage: Solution Development • Request sent 5 days ago</div>
-                </div>
-                <div class="request-actions">
-                  <button class="btn btn-success">Accept</button>
-                  <button class="btn btn-danger">Reject</button>
-                </div>
-              </div>
-              <div class="list-item">
-                <div class="list-item-content">
-                  <div class="list-item-title">EcoCommerce</div>
-                  <div class="list-item-subtitle">Stage: Prototype Testing • Request sent 3 days ago</div>
-                </div>
-                <div class="request-actions">
-                  <button class="btn btn-success">Accept</button>
-                  <button class="btn btn-danger">Reject</button>
-                </div>
-              </div>
-              <div class="list-item">
-                <div class="list-item-content">
-                  <div class="list-item-title">FinSecure</div>
-                  <div class="list-item-subtitle">Stage: Problem Definition • Request sent 1 day ago</div>
-                </div>
-                <div class="request-actions">
-                  <button class="btn btn-success">Accept</button>
-                  <button class="btn btn-danger">Reject</button>
-                </div>
-              </div>
+            <div class="list" id="pending-requests">
+              <!-- Pending requests will be populated by JavaScript -->
             </div>
           </div>
           
           <div class="tab-content" id="accepted-tab">
-            <div class="list">
-              <div class="list-item">
-                <div class="list-item-content">
-                  <div class="list-item-title">Tech Innovations</div>
-                  <div class="list-item-subtitle">Stage: Problem Definition • Accepted 2 days ago</div>
-                </div>
-                <span class="list-item-status status-accepted">Accepted</span>
-              </div>
-              <div class="list-item">
-                <div class="list-item-content">
-                  <div class="list-item-title">DataFlow Analytics</div>
-                  <div class="list-item-subtitle">Stage: Solution Development • Accepted 1 week ago</div>
-                </div>
-                <span class="list-item-status status-accepted">Accepted</span>
-              </div>
+            <div class="list" id="accepted-requests">
+              <!-- Accepted requests will be populated by JavaScript -->
             </div>
           </div>
           
           <div class="tab-content" id="rejected-tab">
-            <div class="list">
-              <div class="list-item">
-                <div class="list-item-content">
-                  <div class="list-item-title">SocialConnect</div>
-                  <div class="list-item-subtitle">Stage: Idea Validation • Rejected 5 days ago</div>
-                </div>
-                <span class="list-item-status status-rejected">Rejected</span>
-              </div>
-              <div class="list-item">
-                <div class="list-item-content">
-                  <div class="list-item-title">TravelEase</div>
-                  <div class="list-item-subtitle">Stage: Prototype Testing • Rejected 2 weeks ago</div>
-                </div>
-                <span class="list-item-status status-rejected">Rejected</span>
-              </div>
+            <div class="list" id="rejected-requests">
+              <!-- Rejected requests will be populated by JavaScript -->
             </div>
           </div>
         </div>
@@ -474,141 +405,12 @@
   </div>
 
   <script>
-    // Application State
-    const appState = {
-      user: {
-        id: 'provider-123',
-        name: 'Alex Johnson',
-        email: 'alex@example.com'
-      },
-      profile: {
-        name: 'Alex Johnson',
-        serviceCategory: 'mentor',
-        experienceLevel: 'mid',
-        specialties: 'SaaS, B2B, Product Strategy',
-        bio: 'Experienced tech executive with 15+ years in B2B SaaS. Previously led product at 3 successful startups and now focused on helping early-stage founders build scalable businesses.',
-        availability: 'medium',
-        contactMethod: 'email'
-      },
-      founders: [
-        {
-          id: 1,
-          name: 'Tech Innovations',
-          stage: 'problem',
-          industry: 'tech',
-          validation: 25,
-          description: 'Solving data management inefficiencies for SMBs',
-          location: 'San Francisco, CA',
-          email: 'contact@techinnovations.com'
-        },
-        {
-          id: 2,
-          name: 'HealthTech Solutions',
-          stage: 'solution',
-          industry: 'health',
-          validation: 60,
-          description: 'AI-powered diagnostic platform for clinics',
-          location: 'Boston, MA',
-          email: 'info@healthtechsolutions.com'
-        },
-        {
-          id: 3,
-          name: 'EcoCommerce',
-          stage: 'prototype',
-          industry: 'retail',
-          validation: 75,
-          description: 'Sustainable e-commerce platform',
-          location: 'Portland, OR',
-          email: 'hello@ecocommerce.com'
-        },
-        {
-          id: 4,
-          name: 'FinSecure',
-          stage: 'problem',
-          industry: 'finance',
-          validation: 40,
-          description: 'Security platform for fintech startups',
-          location: 'New York, NY',
-          email: 'support@finsecure.com'
-        },
-        {
-          id: 5,
-          name: 'DataFlow Analytics',
-          stage: 'solution',
-          industry: 'tech',
-          validation: 65,
-          description: 'Real-time data analytics for IoT devices',
-          location: 'Austin, TX',
-          email: 'contact@dataflow.com'
-        },
-        {
-          id: 6,
-          name: 'SocialConnect',
-          stage: 'idea',
-          industry: 'tech',
-          validation: 15,
-          description: 'Professional networking platform',
-          location: 'Los Angeles, CA',
-          email: 'team@socialconnect.io'
-        }
-      ],
-      requests: [
-        {
-          id: 1,
-          founder: 'Tech Innovations',
-          stage: 'problem',
-          status: 'accepted',
-          date: '2023-05-15'
-        },
-        {
-          id: 2,
-          founder: 'HealthTech Solutions',
-          stage: 'solution',
-          status: 'pending',
-          date: '2023-05-18'
-        },
-        {
-          id: 3,
-          founder: 'EcoCommerce',
-          stage: 'prototype',
-          status: 'pending',
-          date: '2023-05-20'
-        },
-        {
-          id: 4,
-          founder: 'FinSecure',
-          stage: 'problem',
-          status: 'pending',
-          date: '2023-05-22'
-        },
-        {
-          id: 5,
-          founder: 'DataFlow Analytics',
-          stage: 'solution',
-          status: 'accepted',
-          date: '2023-05-10'
-        },
-        {
-          id: 6,
-          founder: 'SocialConnect',
-          stage: 'idea',
-          status: 'rejected',
-          date: '2023-05-05'
-        },
-        {
-          id: 7,
-          founder: 'TravelEase',
-          stage: 'prototype',
-          status: 'rejected',
-          date: '2023-04-28'
-        }
-      ],
-      notifications: [
-        { id: 1, title: 'New Request', message: 'You have a new request from HealthTech Solutions', read: false },
-        { id: 2, title: 'Profile Update', message: 'Your profile has been successfully updated', read: true },
-        { id: 3, title: 'Engagement Reminder', message: 'Follow up with Tech Innovations this week', read: false }
-      ]
-    };
+    // Get user from localStorage
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const token = localStorage.getItem('token');
+
+    // Update user name in header
+    document.getElementById('user-name').textContent = user.name || 'User';
 
     // Navigation functionality
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -651,124 +453,282 @@
     }
 
     // Dashboard functionality
-    function loadDashboard() {
-      // Dashboard is already populated with static content
+    async function loadDashboard() {
+      try {
+        // Get provider's requests
+        const requests = await api.getMyRequests();
+        
+        // Update stats
+        const activeEngagements = requests.filter(r => r.status === 'accepted').length;
+        const pendingRequests = requests.filter(r => r.status === 'pending').length;
+        const acceptedRequests = requests.filter(r => r.status === 'accepted').length;
+        const rejectedRequests = requests.filter(r => r.status === 'rejected').length;
+        
+        document.getElementById('active-engagements').textContent = activeEngagements;
+        document.getElementById('eligible-founders').textContent = '24'; // Placeholder
+        document.getElementById('response-rate').textContent = '92%'; // Placeholder
+        document.getElementById('avg-rating').textContent = '4.8'; // Placeholder
+        
+        // Update tab counts
+        document.querySelector('[data-tab="pending"]').textContent = `Pending (${pendingRequests})`;
+        document.querySelector('[data-tab="accepted"]').textContent = `Accepted (${acceptedRequests})`;
+        document.querySelector('[data-tab="rejected"]').textContent = `Rejected (${rejectedRequests})`;
+        
+        // Populate recent activity
+        const recentActivity = document.getElementById('recent-activity');
+        recentActivity.innerHTML = '';
+        
+        if (requests.length === 0) {
+          recentActivity.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No recent activity.</p>';
+        } else {
+          // Show last 3 activities
+          const recentRequests = requests.slice(0, 3);
+          
+          recentRequests.forEach(request => {
+            const activityItem = document.createElement('div');
+            activityItem.className = 'list-item';
+            
+            const statusClass = request.status === 'accepted' ? 'status-accepted' : 
+                               request.status === 'rejected' ? 'status-rejected' : 'status-pending';
+            
+            activityItem.innerHTML = `
+              <div class="list-item-content">
+                <div class="list-item-title">${request.startupId?.name || 'Unnamed Startup'}</div>
+                <div class="list-item-subtitle">${new Date(request.createdAt).toLocaleDateString()}</div>
+              </div>
+              <span class="list-item-status ${statusClass}">${request.status.toUpperCase()}</span>
+            `;
+            
+            recentActivity.appendChild(activityItem);
+          });
+        }
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+        document.getElementById('recent-activity').innerHTML = 
+          '<p style="text-align: center; color: red;">Failed to load activity.</p>';
+      }
     }
 
     // Profile functionality
     function loadProfile() {
-      document.getElementById('provider-name').value = appState.profile.name;
-      document.getElementById('service-category').value = appState.profile.serviceCategory;
-      document.getElementById('experience-level').value = appState.profile.experienceLevel;
-      document.getElementById('specialties').value = appState.profile.specialties;
-      document.getElementById('bio').value = appState.profile.bio;
-      document.getElementById('availability').value = appState.profile.availability;
-      document.getElementById('contact-method').value = appState.profile.contactMethod;
+      // Load profile from localStorage or API
+      const profile = JSON.parse(localStorage.getItem('providerProfile') || '{}');
+      
+      document.getElementById('provider-name').value = profile.name || user.name || '';
+      document.getElementById('service-category').value = profile.serviceCategory || 'mentor';
+      document.getElementById('experience-level').value = profile.experienceLevel || 'mid';
+      document.getElementById('specialties').value = profile.specialties || '';
+      document.getElementById('bio').value = profile.bio || '';
+      document.getElementById('availability').value = profile.availability || 'medium';
+      document.getElementById('contact-method').value = profile.contactMethod || 'email';
     }
 
-    document.getElementById('profile-form').addEventListener('submit', (e) => {
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       
-      // Update app state
-      appState.profile.name = document.getElementById('provider-name').value;
-      appState.profile.serviceCategory = document.getElementById('service-category').value;
-      appState.profile.experienceLevel = document.getElementById('experience-level').value;
-      appState.profile.specialties = document.getElementById('specialties').value;
-      appState.profile.bio = document.getElementById('bio').value;
-      appState.profile.availability = document.getElementById('availability').value;
-      appState.profile.contactMethod = document.getElementById('contact-method').value;
+      const profileData = {
+        name: document.getElementById('provider-name').value,
+        serviceCategory: document.getElementById('service-category').value,
+        experienceLevel: document.getElementById('experience-level').value,
+        specialties: document.getElementById('specialties').value,
+        bio: document.getElementById('bio').value,
+        availability: document.getElementById('availability').value,
+        contactMethod: document.getElementById('contact-method').value
+      };
       
-      // Show success message
-      const successMessage = document.createElement('div');
-      successMessage.className = 'list-item-status status-accepted';
-      successMessage.textContent = 'Profile updated successfully!';
-      successMessage.style.position = 'fixed';
-      successMessage.style.top = '80px';
-      successMessage.style.right = '20px';
-      successMessage.style.zIndex = '1001';
-      document.body.appendChild(successMessage);
-      
-      setTimeout(() => {
-        successMessage.remove();
-      }, 3000);
+      try {
+        // Save to localStorage for now
+        localStorage.setItem('providerProfile', JSON.stringify(profileData));
+        
+        alert('Profile updated successfully!');
+      } catch (error) {
+        alert(`Failed to update profile: ${error.message}`);
+      }
     });
 
     // Founders functionality
-    function loadFounders() {
-      populateFoundersList();
+    async function loadFounders() {
+      try {
+        // Get verified providers (this will show founders for providers)
+        const providers = await api.getProviders();
+        
+        // For demo purposes, we'll create mock founder data
+        const founders = [
+          {
+            id: 1,
+            name: 'Tech Innovations',
+            stage: 'problem',
+            industry: 'tech',
+            validation: 25,
+            description: 'Solving data management inefficiencies for SMBs',
+            location: 'San Francisco, CA',
+            email: 'contact@techinnovations.com'
+          },
+          {
+            id: 2,
+            name: 'HealthTech Solutions',
+            stage: 'solution',
+            industry: 'health',
+            validation: 60,
+            description: 'AI-powered diagnostic platform for clinics',
+            location: 'Boston, MA',
+            email: 'info@healthtechsolutions.com'
+          },
+          {
+            id: 3,
+            name: 'EcoCommerce',
+            stage: 'prototype',
+            industry: 'retail',
+            validation: 75,
+            description: 'Sustainable e-commerce platform',
+            location: 'Portland, OR',
+            email: 'hello@ecocommerce.com'
+          }
+        ];
+        
+        const foundersList = document.getElementById('founders-list');
+        foundersList.innerHTML = '';
+        
+        founders.forEach(founder => {
+          const founderCard = createFounderCard(founder);
+          foundersList.appendChild(founderCard);
+        });
+        
+        // Add filter functionality
+        document.getElementById('stage-filter').addEventListener('change', filterFounders);
+        document.getElementById('industry-filter').addEventListener('change', filterFounders);
+      } catch (error) {
+        console.error('Error loading founders:', error);
+        document.getElementById('founders-list').innerHTML = 
+          '<p style="text-align: center; color: red;">Failed to load founders.</p>';
+      }
     }
 
-    function populateFoundersList(filteredFounders = appState.founders) {
-      const foundersList = document.getElementById('founders-list');
-      foundersList.innerHTML = '';
+    function createFounderCard(founder) {
+      const card = document.createElement('div');
+      card.className = 'founder-card';
       
-      filteredFounders.forEach(founder => {
-        const stageLabels = {
-          idea: "Idea Validation",
-          problem: "Problem Definition",
-          solution: "Solution Development",
-          prototype: "Prototype Testing",
-          launch: "Launch Preparation"
-        };
-        
-        const founderCard = document.createElement('div');
-        founderCard.className = 'founder-card';
-        
-        founderCard.innerHTML = `
-          <div class="founder-header">
-            <div class="founder-name">${founder.name}</div>
-            <span class="stage-badge">${stageLabels[founder.stage]}</span>
+      const stageLabels = {
+        idea: "Idea Validation",
+        problem: "Problem Definition",
+        solution: "Solution Development",
+        prototype: "Prototype Testing",
+        launch: "Launch Preparation"
+      };
+      
+      card.innerHTML = `
+        <div class="founder-header">
+          <div class="founder-name">${founder.name}</div>
+          <span class="stage-badge">${stageLabels[founder.stage]}</span>
+        </div>
+        <p style="margin-bottom: 1rem;">${founder.description}</p>
+        <div class="founder-details">
+          <div class="detail-item">
+            <span class="detail-label">Industry</span>
+            <span class="detail-value">${founder.industry}</span>
           </div>
-          <p style="margin-bottom: 1rem;">${founder.description}</p>
-          <div class="founder-details">
-            <div class="detail-item">
-              <span class="detail-label">Industry</span>
-              <span class="detail-value">${founder.industry}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Validation Score</span>
-              <span class="detail-value">${founder.validation}%</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Location</span>
-              <span class="detail-value">${founder.location}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Contact</span>
-              <span class="detail-value">${founder.email}</span>
-            </div>
+          <div class="detail-item">
+            <span class="detail-label">Validation Score</span>
+            <span class="detail-value">${founder.validation}%</span>
           </div>
-          <div class="request-actions">
-            <button class="btn btn-primary" onclick="openRequestModal('${founder.name}')">Send Request</button>
-            <button class="btn btn-secondary">View Profile</button>
+          <div class="detail-item">
+            <span class="detail-label">Location</span>
+            <span class="detail-value">${founder.location}</span>
           </div>
-        `;
-        
-        foundersList.appendChild(founderCard);
-      });
+          <div class="detail-item">
+            <span class="detail-label">Contact</span>
+            <span class="detail-value">${founder.email}</span>
+          </div>
+        </div>
+        <div class="request-actions">
+          <button class="btn btn-primary" onclick="openRequestModal('${founder.name}')">Send Request</button>
+          <button class="btn btn-secondary">View Profile</button>
+        </div>
+      `;
+      
+      return card;
     }
-
-    // Filter functionality
-    document.getElementById('stage-filter').addEventListener('change', filterFounders);
-    document.getElementById('industry-filter').addEventListener('change', filterFounders);
 
     function filterFounders() {
       const stageFilter = document.getElementById('stage-filter').value;
       const industryFilter = document.getElementById('industry-filter').value;
       
-      const filtered = appState.founders.filter(founder => {
-        const stageMatch = stageFilter === 'all' || founder.stage === stageFilter;
-        const industryMatch = industryFilter === 'all' || founder.industry === industryFilter;
-        return stageMatch && industryMatch;
-      });
-      
-      populateFoundersList(filtered);
+      // In a real app, this would filter the actual data
+      console.log('Filtering by:', stageFilter, industryFilter);
     }
 
     // Requests functionality
-    function loadRequests() {
-      // Tab functionality is handled by HTML and CSS
+    async function loadRequests() {
+      try {
+        const requests = await api.getMyRequests();
+        
+        const pendingContainer = document.getElementById('pending-requests');
+        const acceptedContainer = document.getElementById('accepted-requests');
+        const rejectedContainer = document.getElementById('rejected-requests');
+        
+        // Clear containers
+        pendingContainer.innerHTML = '';
+        acceptedContainer.innerHTML = '';
+        rejectedContainer.innerHTML = '';
+        
+        if (requests.length === 0) {
+          pendingContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No requests at the moment.</p>';
+        } else {
+          requests.forEach(request => {
+            const requestItem = createRequestItem(request);
+            
+            if (request.status === 'pending') {
+              pendingContainer.appendChild(requestItem);
+            } else if (request.status === 'accepted') {
+              acceptedContainer.appendChild(requestItem);
+            } else if (request.status === 'rejected') {
+              rejectedContainer.appendChild(requestItem);
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error loading requests:', error);
+        document.getElementById('pending-requests').innerHTML = 
+          '<p style="text-align: center; color: red;">Failed to load requests.</p>';
+      }
     }
+
+    function createRequestItem(request) {
+      const item = document.createElement('div');
+      item.className = 'list-item';
+      
+      item.innerHTML = `
+        <div class="list-item-content">
+          <div class="list-item-title">${request.startupId?.name || 'Unnamed Startup'}</div>
+          <div class="list-item-subtitle">
+            Validation: ${request.startupId?.validationScore || '?'}% • 
+            ${new Date(request.createdAt).toLocaleDateString()}
+          </div>
+        </div>
+        <div>
+          <span class="status-${request.status}">${request.status.toUpperCase()}</span>
+          ${request.status === 'pending' ? `
+            <button class="btn btn-accept" onclick="updateRequest('${request._id}', 'accepted')">Accept</button>
+            <button class="btn btn-reject" onclick="updateRequest('${request._id}', 'rejected')">Reject</button>
+          ` : ''}
+        </div>
+      `;
+      
+      return item;
+    }
+
+    window.updateRequest = async function(requestId, newStatus) {
+      if (!confirm(`Are you sure you want to ${newStatus} this request?`)) return;
+      
+      try {
+        await api.updateIntroRequest(requestId, newStatus);
+        alert(`Request marked as ${newStatus}!`);
+        loadRequests();
+        loadDashboard(); // Update dashboard counts
+      } catch (error) {
+        alert('Failed to update request: ' + error.message);
+      }
+    };
 
     // Tab functionality
     document.querySelectorAll('.tab').forEach(tab => {
@@ -784,62 +744,41 @@
       });
     });
 
-    // Request actions
-    document.querySelectorAll('.btn-success').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const requestItem = e.target.closest('.list-item');
-        const founderName = requestItem.querySelector('.list-item-title').textContent;
-        
-        // Update status to accepted
-        const request = appState.requests.find(r => r.founder === founderName);
-        if (request) {
-          request.status = 'accepted';
-        }
-        
-        // Update UI
-        requestItem.querySelector('.request-actions').remove();
-        requestItem.innerHTML += '<span class="list-item-status status-accepted">Accepted</span>';
-        
-        // Move to accepted tab
-        document.querySelector('[data-tab="accepted"]').click();
-        
-        // Update pending count
-        const pendingTab = document.querySelector('[data-tab="pending"]');
-        const currentCount = parseInt(pendingTab.textContent.match(/\d+/)[0]);
-        pendingTab.textContent = `Pending (${currentCount - 1})`;
-      });
+    // Request modal functionality
+    const modal = document.getElementById('request-modal');
+    const requestMessage = document.getElementById('request-message');
+    let currentFounder = null;
+
+    function openRequestModal(founderName) {
+      currentFounder = founderName;
+      requestMessage.value = '';
+      modal.classList.add('active');
+    }
+
+    document.getElementById('cancel-request').addEventListener('click', () => {
+      modal.classList.remove('active');
     });
 
-    document.querySelectorAll('.btn-danger').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const requestItem = e.target.closest('.list-item');
-        const founderName = requestItem.querySelector('.list-item-title').textContent;
-        
-        // Update status to rejected
-        const request = appState.requests.find(r => r.founder === founderName);
-        if (request) {
-          request.status = 'rejected';
-        }
-        
-        // Update UI
-        requestItem.querySelector('.request-actions').remove();
-        requestItem.innerHTML += '<span class="list-item-status status-rejected">Rejected</span>';
-        
-        // Move to rejected tab
-        document.querySelector('[data-tab="rejected"]').click();
-        
-        // Update pending count
-        const pendingTab = document.querySelector('[data-tab="pending"]');
-        const currentCount = parseInt(pendingTab.textContent.match(/\d+/)[0]);
-        pendingTab.textContent = `Pending (${currentCount - 1})`;
-      });
+    document.querySelector('.modal-close').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+
+    document.getElementById('send-request').addEventListener('click', () => {
+      if (requestMessage.value.trim() === '') {
+        alert('Please enter a message to the founder');
+        return;
+      }
+      
+      // In a real app, this would call an API to send the request
+      alert(`Request sent to ${currentFounder}!`);
+      modal.classList.remove('active');
     });
 
     // Settings functionality
     function loadSettings() {
       // Set user information
-      document.getElementById('full-name').value = appState.user.name;
-      document.getElementById('email').value = appState.user.email;
+      document.getElementById('full-name').value = user.name || '';
+      document.getElementById('email').value = user.email || '';
       document.getElementById('role').value = 'Provider';
       
       // Load preferences
@@ -851,7 +790,7 @@
     }
 
     // Update profile button
-    document.getElementById('update-profile-btn')?.addEventListener('click', () => {
+    document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
       const name = document.getElementById('full-name').value.trim();
       const email = document.getElementById('email').value.trim();
       
@@ -860,27 +799,16 @@
         return;
       }
       
-      // Update user data
-      appState.user.name = name;
-      appState.user.email = email;
-      
-      // Show success message
-      const successMessage = document.createElement('div');
-      successMessage.className = 'list-item-status status-accepted';
-      successMessage.textContent = 'Profile updated successfully!';
-      successMessage.style.position = 'fixed';
-      successMessage.style.top = '80px';
-      successMessage.style.right = '20px';
-      successMessage.style.zIndex = '1001';
-      document.body.appendChild(successMessage);
-      
-      setTimeout(() => {
-        successMessage.remove();
-      }, 3000);
+      try {
+        // In a real app, this would call an API to update user profile
+        alert('Profile updated successfully!');
+      } catch (error) {
+        alert(`Failed to update profile: ${error.message}`);
+      }
     });
 
     // Update password button
-    document.getElementById('update-password-btn')?.addEventListener('click', () => {
+    document.getElementById('update-password-btn')?.addEventListener('click', async () => {
       const currentPassword = document.getElementById('current-password').value;
       const newPassword = document.getElementById('new-password').value;
       const confirmPassword = document.getElementById('confirm-password').value;
@@ -900,15 +828,17 @@
         return;
       }
       
-      // Simulate API call
-      setTimeout(() => {
+      try {
+        // In a real app, this would call an API to update password
         alert('Password updated successfully!');
         
         // Clear password fields
         document.getElementById('current-password').value = '';
         document.getElementById('new-password').value = '';
         document.getElementById('confirm-password').value = '';
-      }, 500);
+      } catch (error) {
+        alert(`Failed to update password: ${error.message}`);
+      }
     });
 
     // Delete account button
@@ -940,54 +870,6 @@
 
     document.getElementById('auto-refresh')?.addEventListener('change', (e) => {
       localStorage.setItem('autoRefresh', e.target.checked);
-    });
-
-    // Request modal functionality
-    const modal = document.getElementById('request-modal');
-    const requestMessage = document.getElementById('request-message');
-    let currentFounder = null;
-
-    function openRequestModal(founderName) {
-      currentFounder = founderName;
-      requestMessage.value = '';
-      modal.classList.add('active');
-    }
-
-    document.getElementById('cancel-request').addEventListener('click', () => {
-      modal.classList.remove('active');
-    });
-
-    document.querySelector('.modal-close').addEventListener('click', () => {
-      modal.classList.remove('active');
-    });
-
-    document.getElementById('send-request').addEventListener('click', () => {
-      if (requestMessage.value.trim() === '') {
-        alert('Please enter a message to the founder');
-        return;
-      }
-      
-      // Simulate sending request
-      const successMessage = document.createElement('div');
-      successMessage.className = 'list-item-status status-accepted';
-      successMessage.textContent = `Request sent to ${currentFounder}!`;
-      successMessage.style.position = 'fixed';
-      successMessage.style.top = '80px';
-      successMessage.style.right = '20px';
-      successMessage.style.zIndex = '1001';
-      document.body.appendChild(successMessage);
-      
-      modal.classList.remove('active');
-      
-      setTimeout(() => {
-        successMessage.remove();
-      }, 3000);
-    });
-
-    // Notification functionality
-    document.getElementById('notification-btn').addEventListener('click', () => {
-      const notifications = appState.notifications.map(n => `${n.title}: ${n.message}`).join('\n\n');
-      alert(notifications);
     });
 
     // Initialize

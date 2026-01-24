@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dolphin • Investor Dashboard</title>
-  
   <link rel="stylesheet" href="./css/investorDashboard.css">
 </head>
 <body>
@@ -21,7 +20,7 @@
       </button>
       <div class="user-menu">
         <div class="user-avatar">AI</div>
-        <span>Investor Account</span>
+        <span id="user-name">Investor Account</span>
       </div>
     </div>
   </header>
@@ -76,24 +75,22 @@
           <p class="page-subtitle">Browse high-potential startups that have reached validation thresholds.</p>
         </div>
 
-        <div id="auth-error" class="error-message"></div>
-
         <!-- Quick Stats -->
         <div class="grid">
           <div class="stat-card">
-            <div class="stat-value">24</div>
+            <div class="stat-value" id="total-startups">0</div>
             <div class="stat-label">Validated Startups</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">≥ 85%</div>
+            <div class="stat-value" id="highest-score">0%</div>
             <div class="stat-label">Highest Score</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">12</div>
+            <div class="stat-value" id="watchlist-count">0</div>
             <div class="stat-label">Watchlist</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">3</div>
+            <div class="stat-value" id="new-this-week">0</div>
             <div class="stat-label">New This Week</div>
           </div>
         </div>
@@ -256,94 +253,15 @@
   </div>
 
   <script>
-    // Application State
-    const appState = {
-      user: {
-        id: 'investor-123',
-        name: 'Investor Account',
-        email: 'investor@example.com'
-      },
-      startups: [
-        {
-          id: 1,
-          name: 'HealthTech Solutions',
-          stage: 'solution',
-          industry: 'health',
-          validationScore: 85,
-          thesis: 'AI-powered diagnostic platform for clinics to improve efficiency and accuracy',
-          location: 'Boston, MA',
-          website: 'https://healthtechsolutions.com',
-          funding: '$750K',
-          status: 'watchlisted'
-        },
-        {
-          id: 2,
-          name: 'EcoCommerce',
-          stage: 'prototype',
-          industry: 'retail',
-          validationScore: 92,
-          thesis: 'Sustainable e-commerce platform that reduces carbon footprint for online retailers',
-          location: 'Portland, OR',
-          website: 'https://ecocommerce.com',
-          funding: '$1.2M',
-          status: 'watchlisted'
-        },
-        {
-          id: 3,
-          name: 'FinSecure',
-          stage: 'solution',
-          industry: 'finance',
-          validationScore: 78,
-          thesis: 'Security platform for fintech startups to protect customer data and transactions',
-          location: 'New York, NY',
-          website: 'https://finsecure.com',
-          funding: '$500K',
-          status: 'new'
-        },
-        {
-          id: 4,
-          name: 'DataFlow Analytics',
-          stage: 'launch',
-          industry: 'tech',
-          validationScore: 88,
-          thesis: 'Real-time data analytics for IoT devices to optimize industrial processes',
-          location: 'Austin, TX',
-          website: 'https://dataflow.com',
-          funding: '$2M',
-          status: 'watchlisted'
-        },
-        {
-          id: 5,
-          name: 'SocialConnect',
-          stage: 'solution',
-          industry: 'tech',
-          validationScore: 75,
-          thesis: 'Professional networking platform with AI-powered matching for career opportunities',
-          location: 'Los Angeles, CA',
-          website: 'https://socialconnect.io',
-          funding: '$350K',
-          status: 'new'
-        },
-        {
-          id: 6,
-          name: 'GreenEnergy',
-          stage: 'prototype',
-          industry: 'tech',
-          validationScore: 90,
-          thesis: 'Renewable energy management system for smart buildings to reduce energy consumption',
-          location: 'San Francisco, CA',
-          website: 'https://greenenergy.com',
-          funding: '$1M',
-          status: 'new'
-        }
-      ],
-      watchlist: [1, 2, 4],
-      notifications: [
-        { id: 1, title: 'New Startup', message: 'GreenEnergy has reached 90% validation', read: false },
-        { id: 2, title: 'Update', message: 'HealthTech Solutions has updated their pitch deck', read: false },
-        { id: 3, title: 'Reminder', message: 'EcoCommerce is seeking funding next month', read: true }
-      ]
-    };
+    // Get user from localStorage
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const token = localStorage.getItem('token');
+
+    // Update user name in header
+    document.getElementById('user-name').textContent = user.name || 'User';
+
+    // Watchlist data stored in localStorage
+    let watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
 
     // Navigation functionality
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -359,7 +277,7 @@
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(`${page}-page`).classList.add('active');
         
-        // Load page content
+        // Load page-specific content
         loadPageContent(page);
       });
     });
@@ -383,47 +301,78 @@
     }
 
     // Dashboard functionality
-    function loadDashboard() {
-      const startupsContainer = document.getElementById('validated-startups');
-      startupsContainer.innerHTML = '';
-      
-      // Filter startups with score >= 70
-      const validatedStartups = appState.startups.filter(s => s.validationScore >= 70);
-      
-      validatedStartups.forEach(startup => {
-        const startupCard = createStartupCard(startup);
-        startupsContainer.appendChild(startupCard);
-      });
-      
-      // Add search functionality
-      document.getElementById('search-startup').addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        document.querySelectorAll('.startup-card').forEach(card => {
-          const text = card.textContent.toLowerCase();
-          card.style.display = text.includes(term) ? '' : 'none';
+    async function loadDashboard() {
+      try {
+        // Get validated startups
+        const startups = await api.getValidatedStartups();
+        
+        // Update stats
+        document.getElementById('total-startups').textContent = startups.length;
+        
+        if (startups.length > 0) {
+          const highestScore = Math.max(...startups.map(s => s.validationScore));
+          document.getElementById('highest-score').textContent = `${highestScore}%`;
+        } else {
+          document.getElementById('highest-score').textContent = '0%';
+        }
+        
+        document.getElementById('watchlist-count').textContent = watchlist.length;
+        
+        // Calculate new startups this week (placeholder)
+        document.getElementById('new-this-week').textContent = '3';
+        
+        // Populate validated startups
+        const startupsContainer = document.getElementById('validated-startups');
+        startupsContainer.innerHTML = '';
+        
+        startups.forEach(startup => {
+          const startupCard = createStartupCard(startup);
+          startupsContainer.appendChild(startupCard);
         });
-      });
+        
+        // Add search functionality
+        document.getElementById('search-startup').addEventListener('input', (e) => {
+          const term = e.target.value.toLowerCase();
+          document.querySelectorAll('.startup-card').forEach(card => {
+            const text = card.textContent.toLowerCase();
+            card.style.display = text.includes(term) ? '' : 'none';
+          });
+        });
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+        document.getElementById('validated-startups').innerHTML = 
+          '<p style="text-align: center; color: red;">Failed to load startups.</p>';
+      }
     }
 
     // Startups page functionality
-    function loadStartups() {
-      const startupsContainer = document.getElementById('all-startups');
-      startupsContainer.innerHTML = '';
-      
-      // Show all startups
-      appState.startups.forEach(startup => {
-        const startupCard = createStartupCard(startup);
-        startupsContainer.appendChild(startupCard);
-      });
-      
-      // Add search functionality
-      document.getElementById('search-all-startups').addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        document.querySelectorAll('.startup-card').forEach(card => {
-          const text = card.textContent.toLowerCase();
-          card.style.display = text.includes(term) ? '' : 'none';
+    async function loadStartups() {
+      try {
+        // Get all startups
+        const startups = await api.getValidatedStartups();
+        
+        const startupsContainer = document.getElementById('all-startups');
+        startupsContainer.innerHTML = '';
+        
+        // Show all startups
+        startups.forEach(startup => {
+          const startupCard = createStartupCard(startup);
+          startupsContainer.appendChild(startupCard);
         });
-      });
+        
+        // Add search functionality
+        document.getElementById('search-all-startups').addEventListener('input', (e) => {
+          const term = e.target.value.toLowerCase();
+          document.querySelectorAll('.startup-card').forEach(card => {
+            const text = card.textContent.toLowerCase();
+            card.style.display = text.includes(term) ? '' : 'none';
+          });
+        });
+      } catch (error) {
+        console.error('Error loading startups:', error);
+        document.getElementById('all-startups').innerHTML = 
+          '<p style="text-align: center; color: red;">Failed to load startups.</p>';
+      }
     }
 
     // Watchlist functionality
@@ -431,8 +380,18 @@
       const watchlistContainer = document.getElementById('watchlist-startups');
       watchlistContainer.innerHTML = '';
       
-      // Get watchlist startups
-      const watchlistStartups = appState.startups.filter(s => appState.watchlist.includes(s.id));
+      // Get watchlist startups from the full list
+      // In a real app, this would be an API call
+      const watchlistStartups = watchlist.map(id => {
+        // This is a placeholder - in a real app, you'd fetch the full startup data
+        return {
+          id,
+          name: `Startup ${id}`,
+          industry: 'Technology',
+          validationScore: 75 + Math.random() * 20,
+          funding: '$' + (Math.floor(Math.random() * 5) + 1) + 'M'
+        };
+      });
       
       if (watchlistStartups.length === 0) {
         watchlistContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Your watchlist is empty. Add startups from the validated list.</p>';
@@ -445,11 +404,111 @@
       });
     }
 
+    // Create startup card
+    function createStartupCard(startup) {
+      const card = document.createElement('div');
+      card.className = 'startup-card';
+      
+      const scoreClass = startup.validationScore >= 85 ? 'score-high' : 
+                        startup.validationScore >= 70 ? 'score-medium' : 'score-low';
+      
+      const isInWatchlist = watchlist.includes(startup._id || startup.id);
+      
+      card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+          <div>
+            <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">${startup.name}</h3>
+            <span class="${scoreClass}" style="font-size: 1rem; font-weight: 600;">${startup.validationScore}% Validation</span>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-secondary" onclick="toggleWatchlist('${startup._id || startup.id}')">
+              ${isInWatchlist ? 'Remove' : 'Add to Watchlist'}
+            </button>
+            <button class="btn btn-primary">View Details</button>
+          </div>
+        </div>
+        <p style="color: var(--text-secondary); margin-bottom: 1rem;">${startup.thesis}</p>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span style="color: var(--text-secondary); font-size: 0.9rem;">Industry: ${startup.industry || 'Not specified'}</span>
+            <span style="color: var(--text-secondary); font-size: 0.9rem; margin-left: 1rem;">Stage: ${getStageLabel(startup.currentStage || 1)}</span>
+          </div>
+          <div>
+            <span style="color: var(--text-secondary); font-size: 0.9rem;">Funding: ${startup.funding || 'Not specified'}</span>
+          </div>
+        </div>
+      `;
+      
+      return card;
+    }
+
+    // Create watchlist item
+    function createWatchlistItem(startup) {
+      const item = document.createElement('div');
+      item.className = 'list-item';
+      
+      item.innerHTML = `
+        <div class="list-item-content">
+          <div class="list-item-title">${startup.name}</div>
+          <div class="list-item-subtitle">
+            ${startup.industry} • ${getStageLabel(startup.currentStage || 1)} • ${startup.funding}
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <span class="list-item-status status-watchlisted">Watchlisted</span>
+          <button class="btn btn-danger" onclick="removeFromWatchlist('${startup.id}')">Remove</button>
+        </div>
+      `;
+      
+      return item;
+    }
+
+    // Toggle watchlist
+    function toggleWatchlist(startupId) {
+      const index = watchlist.indexOf(startupId);
+      if (index === -1) {
+        watchlist.push(startupId);
+        alert('Added to watchlist!');
+      } else {
+        watchlist.splice(index, 1);
+        alert('Removed from watchlist!');
+      }
+      
+      // Save to localStorage
+      localStorage.setItem('watchlist', JSON.stringify(watchlist));
+      
+      // Reload current page
+      const activePage = document.querySelector('.nav-item.active').dataset.page;
+      loadPageContent(activePage);
+    }
+
+    // Remove from watchlist
+    function removeFromWatchlist(startupId) {
+      const index = watchlist.indexOf(startupId);
+      if (index !== -1) {
+        watchlist.splice(index, 1);
+        localStorage.setItem('watchlist', JSON.stringify(watchlist));
+        loadWatchlist();
+      }
+    }
+
+    // Get stage label
+    function getStageLabel(stage) {
+      const stages = {
+        1: 'Idea Validation',
+        2: 'Problem Definition',
+        3: 'Solution Development',
+        4: 'Prototype Testing',
+        5: 'Launch Preparation'
+      };
+      return stages[stage] || `Stage ${stage}`;
+    }
+
     // Settings functionality
     function loadSettings() {
       // Set user information
-      document.getElementById('full-name').value = appState.user.name;
-      document.getElementById('email').value = appState.user.email;
+      document.getElementById('full-name').value = user.name || '';
+      document.getElementById('email').value = user.email || '';
       document.getElementById('role').value = 'Investor';
       
       // Load preferences
@@ -461,7 +520,7 @@
     }
 
     // Update profile button
-    document.getElementById('update-profile-btn')?.addEventListener('click', () => {
+    document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
       const name = document.getElementById('full-name').value.trim();
       const email = document.getElementById('email').value.trim();
       
@@ -470,18 +529,16 @@
         return;
       }
       
-      // Update user data
-      appState.user.name = name;
-      appState.user.email = email;
-      
-      // Simulate API call
-      setTimeout(() => {
+      try {
+        // In a real app, this would call an API to update user profile
         alert('Profile updated successfully!');
-      }, 500);
+      } catch (error) {
+        alert(`Failed to update profile: ${error.message}`);
+      }
     });
 
     // Update password button
-    document.getElementById('update-password-btn')?.addEventListener('click', () => {
+    document.getElementById('update-password-btn')?.addEventListener('click', async () => {
       const currentPassword = document.getElementById('current-password').value;
       const newPassword = document.getElementById('new-password').value;
       const confirmPassword = document.getElementById('confirm-password').value;
@@ -501,15 +558,17 @@
         return;
       }
       
-      // Simulate API call
-      setTimeout(() => {
+      try {
+        // In a real app, this would call an API to update password
         alert('Password updated successfully!');
         
         // Clear password fields
         document.getElementById('current-password').value = '';
         document.getElementById('new-password').value = '';
         document.getElementById('confirm-password').value = '';
-      }, 500);
+      } catch (error) {
+        alert(`Failed to update password: ${error.message}`);
+      }
     });
 
     // Delete account button
@@ -541,94 +600,6 @@
 
     document.getElementById('auto-refresh')?.addEventListener('change', (e) => {
       localStorage.setItem('autoRefresh', e.target.checked);
-    });
-
-    // Create startup card
-    function createStartupCard(startup) {
-      const card = document.createElement('div');
-      card.className = 'startup-card';
-      
-      const scoreClass = startup.validationScore >= 85 ? 'score-high' : 
-                        startup.validationScore >= 70 ? 'score-medium' : 'score-low';
-      
-      const isInWatchlist = appState.watchlist.includes(startup.id);
-      
-      card.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-          <div>
-            <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">${startup.name}</h3>
-            <span class="${scoreClass}" style="font-size: 1rem; font-weight: 600;">${startup.validationScore}% Validation</span>
-          </div>
-          <div style="display: flex; gap: 0.5rem;">
-            <button class="btn btn-secondary" onclick="toggleWatchlist(${startup.id})">
-              ${isInWatchlist ? 'Remove' : 'Add to Watchlist'}
-            </button>
-            <button class="btn btn-primary">View Details</button>
-          </div>
-        </div>
-        <p style="color: var(--text-secondary); margin-bottom: 1rem;">${startup.thesis}</p>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <span style="color: var(--text-secondary); font-size: 0.9rem;">Industry: ${startup.industry}</span>
-            <span style="color: var(--text-secondary); font-size: 0.9rem; margin-left: 1rem;">Stage: ${startup.stage}</span>
-          </div>
-          <div>
-            <span style="color: var(--text-secondary); font-size: 0.9rem;">Funding: ${startup.funding}</span>
-          </div>
-        </div>
-      `;
-      
-      return card;
-    }
-
-    // Create watchlist item
-    function createWatchlistItem(startup) {
-      const item = document.createElement('div');
-      item.className = 'list-item';
-      
-      item.innerHTML = `
-        <div class="list-item-content">
-          <div class="list-item-title">${startup.name}</div>
-          <div class="list-item-subtitle">
-            ${startup.industry} • ${startup.stage} • ${startup.funding}
-          </div>
-        </div>
-        <div style="display: flex; gap: 0.5rem;">
-          <span class="list-item-status status-${startup.status}">${startup.status.charAt(0).toUpperCase() + startup.status.slice(1)}</span>
-          <button class="btn btn-danger" onclick="removeFromWatchlist(${startup.id})">Remove</button>
-        </div>
-      `;
-      
-      return item;
-    }
-
-    // Toggle watchlist
-    function toggleWatchlist(startupId) {
-      const index = appState.watchlist.indexOf(startupId);
-      if (index === -1) {
-        appState.watchlist.push(startupId);
-      } else {
-        appState.watchlist.splice(index, 1);
-      }
-      
-      // Reload current page
-      const activePage = document.querySelector('.nav-item.active').dataset.page;
-      loadPageContent(activePage);
-    }
-
-    // Remove from watchlist
-    function removeFromWatchlist(startupId) {
-      const index = appState.watchlist.indexOf(startupId);
-      if (index !== -1) {
-        appState.watchlist.splice(index, 1);
-        loadWatchlist();
-      }
-    }
-
-    // Notification functionality
-    document.getElementById('notification-btn').addEventListener('click', () => {
-      const notifications = appState.notifications.map(n => `${n.title}: ${n.message}`).join('\n\n');
-      alert(notifications);
     });
 
     // Initialize

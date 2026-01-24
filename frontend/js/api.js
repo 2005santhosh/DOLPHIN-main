@@ -1,6 +1,3 @@
-// frontend/js/api.js
-// Centralized API client with proper token handling and error management
-
 const API_URL = 'http://localhost:5000/api';
 
 const api = {
@@ -23,6 +20,14 @@ const api = {
 
     try {
       const res = await fetch(`${API_URL}${endpoint}`, mergedOptions);
+      
+      // Handle non-JSON responses (like HTML error pages)
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        throw new Error(`Server returned ${res.status}: ${text.substring(0, 100)}...`);
+      }
+      
       const data = await res.json();
 
       if (res.status === 401) {
@@ -71,9 +76,9 @@ const api = {
     return data;
   },
 
-  // Startup endpoints
+  // Startup endpoints - UPDATED to match backend
   async createStartup(startupData) {
-    return this.request('/startups', {
+    return this.request('/founder', {
       method: 'POST',
       body: JSON.stringify(startupData)
     });
@@ -81,28 +86,30 @@ const api = {
 
   async getStartup() {
     try {
-      const res = await fetch(`${API_URL}/startups/my-startup`, {
-        headers: this.getAuthHeader()
-      });
-      if (res.status === 404) return null;
-      const data = await res.json();
-      if (res.ok) return data;
-      throw new Error(data.message || 'Failed to fetch startup');
+      const data = await this.request('/founder/my-startup');
+      if (data && data.message && data.message.includes('No startup found')) {
+        return null;
+      }
+      return data;
     } catch (error) {
+      if (error.message.includes('No startup found')) {
+        return null;
+      }
       console.error('Get startup error:', error);
       throw error;
     }
   },
 
-  async updateMilestone(startupId, milestoneId, isCompleted) {
-    return this.request(`/startups/${startupId}/milestones`, {
+  // FIXED: Update milestone endpoint to match backend
+  async updateMilestone(milestoneId, isCompleted) {
+    return this.request('/founder/milestones', {
       method: 'PUT',
       body: JSON.stringify({ milestoneId, isCompleted })
     });
   },
 
   async getValidatedStartups() {
-    return this.request('/startups/validated');
+    return this.request('/investor/validated-startups');
   },
 
   // Provider endpoints
@@ -114,6 +121,39 @@ const api = {
     return this.request(`/providers/requests/${requestId}`, {
       method: 'PUT',
       body: JSON.stringify({ status: newStatus })
+    });
+  },
+
+  // Admin endpoints
+  async getUsers() {
+    return this.request('/admin/users');
+  },
+
+  async approveUser(userId) {
+    return this.request('/admin/approve-user', {
+      method: 'POST',
+      body: JSON.stringify({ userId })
+    });
+  },
+
+  async rejectUser(userId) {
+    return this.request('/admin/reject-user', {
+      method: 'POST',
+      body: JSON.stringify({ userId })
+    });
+  },
+
+  async moveStage(userId) {
+    return this.request('/admin/move-stage', {
+      method: 'POST',
+      body: JSON.stringify({ userId })
+    });
+  },
+
+  async blockUser(userId) {
+    return this.request('/admin/block-user', {
+      method: 'POST',
+      body: JSON.stringify({ userId })
     });
   }
 };

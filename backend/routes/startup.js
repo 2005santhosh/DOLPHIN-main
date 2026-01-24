@@ -1,23 +1,17 @@
 // routes/startup.js
-// Handles startup-related endpoints with role-based access control
-// Includes enforced gating for milestones, audit logging, and verification logic
-// Validation score is calculated based on verified milestones only
-
 const express = require('express');
 const router = express.Router();
 const Startup = require('../models/Startup');
 const Log = require('../models/Log');
 const { protect } = require('../middleware/authMiddleware');
+const checkStageGating = require('../middleware/stageGating');
 
 /**
  * GET /api/startups/my-startup
  * Fetches the startup associated with the authenticated founder
- * @returns {Object} The startup document or null if not found
+ * Requires user to be in APPROVED state
  */
-router.get('/my-startup', protect, async (req, res) => {
-  if (req.user.role !== 'founder') {
-    return res.status(403).json({ message: 'Only founders can access their startups' });
-  }
+router.get('/my-startup', protect, checkStageGating('APPROVED'), async (req, res) => {
   try {
     const startup = await Startup.findOne({ founderId: req.user.id }).populate('auditLogs');
     if (!startup) {
@@ -34,15 +28,8 @@ router.get('/my-startup', protect, async (req, res) => {
  * POST /api/startups
  * Creates a new startup for the authenticated founder
  * Initializes with default 7-stage milestones
- * @param {String} name - Startup name
- * @param {String} thesis - Core problem/thesis
- * @param {String} industry - Industry category
- * @returns {Object} The created startup document
  */
-router.post('/', protect, async (req, res) => {
-  if (req.user.role !== 'founder') {
-    return res.status(403).json({ message: 'Only founders can create startups' });
-  }
+router.post('/', protect, checkStageGating('APPROVED'), async (req, res) => {
   const { name, thesis, industry } = req.body;
 
   if (!name || !thesis) {
@@ -90,14 +77,8 @@ router.post('/', protect, async (req, res) => {
  * Updates a milestone's completion status (founder only)
  * Enforces gating: Cannot complete out-of-order
  * Resets verification on change
- * @param {String} milestoneId - ID of the milestone to update
- * @param {Boolean} isCompleted - New completion status
- * @returns {Object} Updated startup document
  */
-router.put('/:id/milestones', protect, async (req, res) => {
-  if (req.user.role !== 'founder') {
-    return res.status(403).json({ message: 'Only founders can update milestones' });
-  }
+router.put('/:id/milestones', protect, checkStageGating('APPROVED'), async (req, res) => {
   const { milestoneId, isCompleted } = req.body;
 
   if (milestoneId === undefined || isCompleted === undefined) {
@@ -120,13 +101,16 @@ router.put('/:id/milestones', protect, async (req, res) => {
     // Gating enforcement
     if (isCompleted && milestone.order > 1) {
       const prevMilestone = startup.milestones.find(m => m.order === milestone.order - 1);
-      if (!prevMilestone || !prevMilestone.verified) {  // Now requires previous to be verified
-        return res.status(400).json({ message: 'Complete and verify previous milestone first' });
+      if (!prevMilestone || !prevMilestone.verified) {
+        return res.status(400).json({ 
+          message: 'Complete and verify previous milestone first',
+          reason: 'Stage gating requires all previous milestones to be verified'
+        });
       }
     }
 
     milestone.isCompleted = isCompleted;
-    milestone.verified = false;  // Reset verification on founder update
+    milestone.verified = false; // Reset verification on founder update
 
     // Recalculate score based on verified only
     const verifiedCount = startup.milestones.filter(m => m.verified).length;

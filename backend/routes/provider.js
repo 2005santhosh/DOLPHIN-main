@@ -1,170 +1,157 @@
-// routes/provider.js
-// Handles provider-related endpoints with role-based access control
-// Uses real Provider model instead of mock data
-
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
-const Provider = require('../models/Provider');
+const checkStageAccess = require('../middleware/stageGating');
 const Startup = require('../models/Startup');
+const Provider = require('../models/Provider');
 const IntroRequest = require('../models/IntroRequest');
 
-/**
- * GET /api/providers
- * Returns list of verified providers
- * - Founders get contextual (stage-based) recommendations
- * - Investors & Providers see full verified list
- */
+// Get verified providers
 router.get('/', protect, async (req, res) => {
-  if (!['founder', 'investor', 'provider'].includes(req.user.role)) {
-    return res.status(403).json({ message: 'Access denied' });
-  }
-
   try {
-    // Base query: only show verified providers
     let query = { verified: true };
 
-    let providers = await Provider.find(query)
-      .select('name category description stageCategories verified')
-      .lean(); // faster, plain JS objects
-
-    // Contextual matching ONLY for founders
+    // Contextual matching for founders
     if (req.user.role === 'founder') {
       const startup = await Startup.findOne({ founderId: req.user.id });
-
+      
       if (startup && startup.milestones?.length > 0) {
         const nextMilestone = startup.milestones.find(m => !m.isCompleted);
-        const currentStage = nextMilestone ? nextMilestone.order : 7;
+        const currentStage = nextMilestone ? nextMilestone.order : 3;
 
-        providers = providers.filter(p =>
-          p.stageCategories.some(stage => stage === currentStage)
-        );
+        query = { ...query, stageCategories: currentStage };
       }
     }
 
-    // Optional: sort by name or relevance
-    providers.sort((a, b) => a.name.localeCompare(b.name));
+    const providers = await Provider.find(query)
+      .populate('userId', 'name email state stage')
+      .sort({ name: 1 });
 
-    res.status(200).json(providers);
-  } catch (err) {
-    console.error('Error fetching providers:', err);
-    res.status(500).json({ message: 'Failed to fetch providers' });
+    res.json(providers);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-/**
- * POST /api/providers/request-intro
- * Allows founders to request introduction to a provider
- */
-router.post('/request-intro', protect, async (req, res) => {
-  if (req.user.role !== 'founder') {
-    return res.status(403).json({ message: 'Only founders can request introductions' });
-  }
-
-  const { providerId } = req.body;
-
-  if (!providerId) {
-    return res.status(400).json({ message: 'providerId is required' });
-  }
-
+// Request introduction
+router.post('/request-intro', protect, checkStageAccess, async (req, res) => {
   try {
-    // Verify the provider exists and is verified
+    const { providerId } = req.body;
+
+    if (!providerId) {
+      return res.status(400).json({ 
+        message: 'providerId is required',
+        nextSteps: 'Select a provider to request introduction'
+      });
+    }
+
+    // Verify provider exists and is verified
     const provider = await Provider.findById(providerId);
     if (!provider || !provider.verified) {
-      return res.status(404).json({ message: 'Provider not found or not verified' });
+      return res.status(404).json({ 
+        message: 'Provider not found or not verified',
+        nextSteps: 'Select a verified provider'
+      });
     }
 
     const startup = await Startup.findOne({ founderId: req.user.id });
     if (!startup) {
-      return res.status(404).json({ message: 'No startup found for this founder' });
+      return res.status(404).json({ 
+        message: 'No startup found',
+        nextSteps: 'Create a startup first'
+      });
+    }
+
+    // Check for duplicate requests
+    const existingRequest = await IntroRequest.findOne({
+      providerId: provider.userId,
+      founderId: req.user.id,
+      startupId: startup._id,
+      status: { $in: ['pending', 'accepted'] }
+    });
+
+    if (existingRequest) {
+      return res.status(409).json({ 
+        message: 'Introduction request already exists',
+        reason: 'You already have a pending or accepted request with this provider',
+        nextSteps: 'Wait for response or choose a different provider'
+      });
     }
 
     // Create intro request
     const request = await IntroRequest.create({
-      providerId: provider.userId,   // store the User _id of provider
+      providerId: provider.userId,
       founderId: req.user.id,
       startupId: startup._id,
       status: 'pending'
     });
 
-    console.log(`[INTRO REQUEST CREATED] Founder ${req.user.id} → Provider ${providerId}`);
-
-    // TODO: send email notification (nodemailer / sendgrid)
-
     res.status(201).json({
       message: 'Introduction request sent successfully',
       requestId: request._id,
-      status: 'pending'
+      status: 'pending',
+      nextSteps: 'Wait for provider to respond to your request'
     });
-  } catch (err) {
-    console.error('Error processing intro request:', err);
-    res.status(500).json({ message: 'Server error while sending request' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-/**
- * GET /api/providers/my-requests
- * Returns all intro requests sent to this provider
- * (Used in provider-dashboard)
- */
+// Get provider's requests
 router.get('/my-requests', protect, async (req, res) => {
-  if (req.user.role !== 'provider') {
-    return res.status(403).json({ message: 'Only providers can view their requests' });
-  }
-
   try {
     const requests = await IntroRequest.find({ providerId: req.user.id })
       .populate('startupId', 'name thesis validationScore')
       .populate('founderId', 'name email')
-      .sort({ createdAt: -1 })
-      .lean();
+      .sort({ createdAt: -1 });
 
-    res.status(200).json(requests);
-  } catch (err) {
-    console.error('Error fetching provider requests:', err);
-    res.status(500).json({ message: 'Failed to load requests' });
+    res.json(requests);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-/**
- * PUT /api/providers/requests/:id
- * Updates the status of an intro request
- */
+// Update request status
 router.put('/requests/:id', protect, async (req, res) => {
-  if (req.user.role !== 'provider') {
-    return res.status(403).json({ message: 'Only providers can update requests' });
-  }
-
-  const { id } = req.params;
-  const { status } = req.body;
-
-  if (!['accepted', 'rejected'].includes(status)) {
-    return res.status(400).json({ message: 'Invalid status' });
-  }
-
   try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['accepted', 'rejected'].includes(status)) {
+      return res.status(400).json({ 
+        message: 'Invalid status',
+        nextSteps: 'Status must be either "accepted" or "rejected"'
+      });
+    }
+
     const request = await IntroRequest.findById(id);
     if (!request) {
-      return res.status(404).json({ message: 'Request not found' });
+      return res.status(404).json({ 
+        message: 'Request not found',
+        nextSteps: 'Check the request ID and try again'
+      });
     }
 
     // Ensure the request belongs to this provider
     if (request.providerId.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Access denied' });
+      return res.status(403).json({ 
+        message: 'Access denied',
+        nextSteps: 'You can only manage your own requests'
+      });
     }
 
     request.status = status;
     await request.save();
 
-    // TODO: send email notification to founder
-
-    res.status(200).json({
-      message: 'Request updated successfully',
-      status: request.status
+    res.json({
+      message: `Request ${status} successfully`,
+      status: request.status,
+      nextSteps: status === 'accepted' 
+        ? 'Introduction has been approved. Contact information will be shared.' 
+        : 'Introduction request has been rejected.'
     });
-  } catch (err) {
-    console.error('Error updating request:', err);
-    res.status(500).json({ message: 'Server error while updating request' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

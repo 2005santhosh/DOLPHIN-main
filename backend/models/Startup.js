@@ -1,12 +1,11 @@
-// models/Startup.js (Updated: Enhanced validation logic - added adminVerified field, compute score only if verified)
 const mongoose = require('mongoose');
 
 const milestoneSchema = new mongoose.Schema({
-  title: String,
-  description: String,
+  title: { type: String, required: true },
+  description: { type: String, required: true },
   isCompleted: { type: Boolean, default: false },
-  verified: { type: Boolean, default: false }, // Founder marks complete, admin verifies
-  order: { type: Number, required: true } // For gating
+  verified: { type: Boolean, default: false },
+  order: { type: Number, required: true }
 });
 
 const startupSchema = new mongoose.Schema({
@@ -15,7 +14,7 @@ const startupSchema = new mongoose.Schema({
   thesis: { type: String },
   industry: { type: String },
   milestones: [milestoneSchema],
-  validationScore: { type: Number, default: 0 }, // Only based on verified milestones
+  validationScore: { type: Number, default: 0 },
   auditLogs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Log' }]
 });
 

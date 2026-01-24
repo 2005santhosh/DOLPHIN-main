@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Founder Dashboard - Dolphin</title>
-  
   <link rel="stylesheet" href="./css/founderDashboard.css">
 </head>
 <body>
@@ -21,7 +20,7 @@
       </button>
       <div class="user-menu">
         <div class="user-avatar">JD</div>
-        <span>John Doe</span>
+        <span id="user-name">John Doe</span>
       </div>
     </div>
   </header>
@@ -106,28 +105,28 @@
         <div class="card progress-card">
           <div class="progress-header">
             <div>
-              <h2 class="progress-title" id="startup-name-display">Tech Innovations</h2>
-              <p class="page-subtitle" id="progress-text">25% Complete</p>
+              <h2 class="progress-title" id="startup-name-display">Loading...</h2>
+              <p class="page-subtitle" id="progress-text">0% Complete</p>
             </div>
-            <span class="progress-badge" id="progress-badge">25% Validated</span>
+            <span class="progress-badge" id="progress-badge">0% Validated</span>
           </div>
           <div class="progress-bar">
-            <div class="progress-fill" id="progress-fill" style="width: 25%"></div>
+            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
           </div>
         </div>
 
         <!-- Stats Grid -->
         <div class="grid">
           <div class="stat-card">
-            <div class="stat-value" id="stages-completed">1/5</div>
+            <div class="stat-value" id="stages-completed">0/5</div>
             <div class="stat-label">Stages Completed</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value" id="tasks-completed">3/15</div>
+            <div class="stat-value" id="tasks-completed">0/15</div>
             <div class="stat-label">Tasks Completed</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value" id="resources-viewed">5</div>
+            <div class="stat-value" id="resources-viewed">0</div>
             <div class="stat-label">Resources Viewed</div>
           </div>
         </div>
@@ -154,29 +153,19 @@
           <form id="profile-form">
             <div class="form-group">
               <label class="form-label">Startup Name</label>
-              <input type="text" class="form-input" id="startup-name" value="Tech Innovations" required>
+              <input type="text" class="form-input" id="startup-name" required>
             </div>
             <div class="form-group">
               <label class="form-label">Problem Statement</label>
-              <textarea class="form-textarea" id="problem-statement" required>Solving the problem of inefficient data management for small to medium-sized businesses.</textarea>
+              <textarea class="form-textarea" id="problem-statement" required></textarea>
             </div>
             <div class="form-group">
               <label class="form-label">Target Users</label>
-              <input type="text" class="form-input" id="target-users" value="Small to medium-sized businesses" required>
+              <input type="text" class="form-input" id="target-users" required>
             </div>
             <div class="form-group">
-              <label class="form-label">Current Stage</label>
-              <select class="form-select" id="current-stage" required>
-                <option value="idea">Idea Stage</option>
-                <option value="problem" selected>Problem Definition</option>
-                <option value="solution">Solution Development</option>
-                <option value="prototype">Prototype</option>
-                <option value="launch">Launched</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Website</label>
-              <input type="url" class="form-input" id="website" value="https://techinnovations.com">
+              <label class="form-label">Industry</label>
+              <input type="text" class="form-input" id="industry" required>
             </div>
             <button type="submit" class="btn btn-primary">Save Changes</button>
           </form>
@@ -234,11 +223,11 @@
           <div class="settings-group">
             <div class="form-group">
               <label class="form-label">Full Name</label>
-              <input type="text" class="form-input" id="full-name" value="John Doe">
+              <input type="text" class="form-input" id="full-name" required>
             </div>
             <div class="form-group">
               <label class="form-label">Email</label>
-              <input type="email" class="form-input" id="email" value="john@example.com">
+              <input type="email" class="form-input" id="email" required>
             </div>
             <div class="form-group">
               <label class="form-label">Role</label>
@@ -338,129 +327,27 @@
             <label class="form-label" id="task-label">Task Description</label>
             <textarea class="form-textarea" id="task-response" placeholder="Describe how you've completed this task..." required></textarea>
           </div>
-          <div class="form-group">
-            <label class="form-label">Attachments (Optional)</label>
-            <input type="file" class="form-input" id="task-files" multiple>
-          </div>
           <button type="submit" class="btn btn-primary">Submit Task</button>
         </form>
       </div>
     </div>
   </div>
 
+  <!-- Include API Client -->
+  <script src="./js/api.js"></script>
+  
   <script>
-    // Application State
-    const appState = {
-      user: {
-        id: 'user-123',
-        name: 'John Doe',
-        email: 'john@example.com'
-      },
-      startup: {
-        id: 'startup-456',
-        name: 'Tech Innovations',
-        problem: 'Solving the problem of inefficient data management for small to medium-sized businesses',
-        targetUsers: 'Small to medium-sized businesses',
-        currentStage: 'problem',
-        progress: 25
-      },
-      stages: [
-        {
-          id: 'idea',
-          name: 'Idea Validation',
-          description: 'Validate your initial idea',
-          tasks: [
-            { id: 'idea-1', name: 'Market Research', description: 'Conduct market research', required: true, status: 'approved' },
-            { id: 'idea-2', name: 'Competitor Analysis', description: 'Analyze competitors', required: true, status: 'approved' },
-            { id: 'idea-3', name: 'Problem Statement', description: 'Define the problem', required: true, status: 'approved' }
-          ],
-          completed: true
-        },
-        {
-          id: 'problem',
-          name: 'Problem Definition',
-          description: 'Deep dive into the problem',
-          tasks: [
-            { id: 'problem-1', name: 'Customer Interviews', description: 'Interview potential customers', required: true, status: 'submitted' },
-            { id: 'problem-2', name: 'Problem Documentation', description: 'Document the problem', required: true, status: 'pending' },
-            { id: 'problem-3', name: 'Problem Validation', description: 'Validate the problem', required: true, status: 'pending' }
-          ],
-          completed: false
-        },
-        {
-          id: 'solution',
-          name: 'Solution Development',
-          description: 'Develop your solution',
-          tasks: [
-            { id: 'solution-1', name: 'Solution Design', description: 'Design the solution', required: true, status: 'pending' },
-            { id: 'solution-2', name: 'MVP Development', description: 'Develop MVP', required: true, status: 'pending' },
-            { id: 'solution-3', name: 'Solution Testing', description: 'Test the solution', required: true, status: 'pending' }
-          ],
-          completed: false
-        },
-        {
-          id: 'prototype',
-          name: 'Prototype Testing',
-          description: 'Test your prototype',
-          tasks: [
-            { id: 'prototype-1', name: 'Prototype Development', description: 'Develop prototype', required: true, status: 'pending' },
-            { id: 'prototype-2', name: 'User Testing', description: 'Conduct user testing', required: true, status: 'pending' },
-            { id: 'prototype-3', name: 'Feedback Analysis', description: 'Analyze feedback', required: true, status: 'pending' }
-          ],
-          completed: false
-        },
-        {
-          id: 'launch',
-          name: 'Launch Preparation',
-          description: 'Prepare for launch',
-          tasks: [
-            { id: 'launch-1', name: 'Go-to-Market Strategy', description: 'Develop GTM strategy', required: true, status: 'pending' },
-            { id: 'launch-2', name: 'Marketing Plan', description: 'Create marketing plan', required: true, status: 'pending' },
-            { id: 'launch-3', name: 'Launch Checklist', description: 'Complete launch checklist', required: true, status: 'pending' }
-          ],
-          completed: false
-        }
-      ],
-      notifications: [
-        { id: 1, title: 'Submission Approved', message: 'Your Problem Definition stage has been approved!', read: false },
-        { id: 2, title: 'New Resource', message: 'We\'ve added a new guide to help with Solution Development.', read: false },
-        { id: 3, title: 'Task Reminder', message: 'You have 3 pending tasks in the Solution Development stage.', read: false }
-      ],
-      auditTrail: [
-        { id: 1, action: 'Created startup profile', date: '2023-05-15', user: 'John Doe' },
-        { id: 2, action: 'Submitted Problem Definition', date: '2023-05-18', user: 'John Doe' },
-        { id: 3, action: 'Problem Definition approved', date: '2023-05-20', user: 'Dolphin Team' }
-      ]
-    };
+    // Get user from localStorage
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const token = localStorage.getItem('token');
 
-    // Resources data
-    const resources = {
-      idea: [
-        { id: 1, title: 'Market Research Guide', description: 'How to conduct effective market research', type: 'guide' },
-        { id: 2, title: 'Competitor Analysis Template', description: 'Template for analyzing competitors', type: 'template' },
-        { id: 3, title: 'Idea Validation Checklist', description: 'Checklist for validating your idea', type: 'checklist' }
-      ],
-      problem: [
-        { id: 1, title: 'Customer Interview Guide', description: 'How to conduct effective customer interviews', type: 'guide' },
-        { id: 2, title: 'Problem Statement Template', description: 'Template for defining your problem statement', type: 'template' },
-        { id: 3, title: 'Problem Validation Framework', description: 'Framework for validating your problem', type: 'framework' }
-      ],
-      solution: [
-        { id: 1, title: 'Solution Design Principles', description: 'Key principles for designing solutions', type: 'guide' },
-        { id: 2, title: 'MVP Development Guide', description: 'How to develop a minimum viable product', type: 'guide' },
-        { id: 3, title: 'Solution Testing Framework', description: 'Framework for testing your solution', type: 'framework' }
-      ],
-      prototype: [
-        { id: 1, title: 'Prototype Development Guide', description: 'How to develop an effective prototype', type: 'guide' },
-        { id: 2, title: 'User Testing Guide', description: 'How to conduct effective user testing', type: 'guide' },
-        { id: 3, title: 'Feedback Analysis Template', description: 'Template for analyzing user feedback', type: 'template' }
-      ],
-      launch: [
-        { id: 1, title: 'Go-to-Market Strategy Guide', description: 'How to develop a go-to-market strategy', type: 'guide' },
-        { id: 2, title: 'Marketing Plan Template', description: 'Template for creating a marketing plan', type: 'template' },
-        { id: 3, title: 'Launch Checklist', description: 'Comprehensive checklist for launching', type: 'checklist' }
-      ]
-    };
+    // Update user name in header
+    document.getElementById('user-name').textContent = user.name || 'User';
+
+    // Check if user is authenticated
+    if (!token) {
+      window.location.href = 'login.html';
+    }
 
     // Navigation functionality
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -506,55 +393,83 @@
     }
 
     // Dashboard functionality
-    function loadDashboard() {
-      updateProgress();
-      populateStagesList();
+    async function loadDashboard() {
+      try {
+        const startup = await api.getStartup();
+        
+        if (startup) {
+          // Update progress
+          const completedStages = startup.milestones.filter(m => m.verified).length;
+          const totalStages = startup.milestones.length;
+          const progress = Math.round((completedStages / totalStages) * 100);
+          
+          document.getElementById('startup-name-display').textContent = startup.name;
+          document.getElementById('progress-text').textContent = `${progress}% Complete`;
+          document.getElementById('progress-badge').textContent = `${progress}% Validated`;
+          document.getElementById('progress-fill').style.width = `${progress}%`;
+          
+          document.getElementById('stages-completed').textContent = `${completedStages}/${totalStages}`;
+          
+          const completedTasks = startup.milestones.filter(m => m.isCompleted).length;
+          const totalTasks = startup.milestones.length;
+          document.getElementById('tasks-completed').textContent = `${completedTasks}/${totalTasks}`;
+          
+          // Populate stages list
+          populateStagesList(startup.milestones);
+        } else {
+          // Show create startup option
+          document.getElementById('startup-name-display').textContent = 'No Startup Found';
+          document.getElementById('progress-text').textContent = 'Create a startup to get started';
+          document.getElementById('progress-fill').style.width = '0%';
+          document.getElementById('stages-completed').textContent = '0/5';
+          document.getElementById('tasks-completed').textContent = '0/15';
+          
+          // Add create startup button
+          const createButton = document.createElement('button');
+          createButton.textContent = 'Create Startup';
+          createButton.className = 'btn btn-primary';
+          createButton.style.marginTop = '1rem';
+          createButton.onclick = () => {
+            // Navigate to profile page
+            document.querySelector('[data-page="profile"]').click();
+          };
+          
+          const progressCard = document.querySelector('.progress-card');
+          progressCard.appendChild(createButton);
+        }
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+        document.getElementById('startup-name-display').textContent = 'Error';
+        document.getElementById('progress-text').textContent = 'Failed to load data';
+      }
     }
 
-    function updateProgress() {
-      const completedStages = appState.stages.filter(stage => stage.completed).length;
-      const totalStages = appState.stages.length;
-      const progress = Math.round((completedStages / totalStages) * 100);
-      
-      document.getElementById('startup-name-display').textContent = appState.startup.name;
-      document.getElementById('progress-text').textContent = `${progress}% Complete`;
-      document.getElementById('progress-badge').textContent = `${progress}% Validated`;
-      document.getElementById('progress-fill').style.width = `${progress}%`;
-      
-      document.getElementById('stages-completed').textContent = `${completedStages}/${totalStages}`;
-      
-      const completedTasks = appState.stages.reduce((total, stage) => {
-        return total + stage.tasks.filter(task => task.status === 'approved').length;
-      }, 0);
-      const totalTasks = appState.stages.reduce((total, stage) => total + stage.tasks.length, 0);
-      document.getElementById('tasks-completed').textContent = `${completedTasks}/${totalTasks}`;
-    }
-
-    function populateStagesList() {
+    function populateStagesList(milestones) {
       const stagesList = document.getElementById('stages-list');
       stagesList.innerHTML = '';
       
-      appState.stages.forEach((stage, index) => {
+      milestones.sort((a, b) => a.order - b.order).forEach(milestone => {
         const stageElement = document.createElement('div');
         stageElement.className = 'list-item';
         
-        // Determine if stage is locked
-        const isLocked = index > appState.stages.findIndex(s => s.id === appState.startup.currentStage);
-        if (isLocked) stageElement.classList.add('locked');
+        // Determine status
+        if (milestone.verified) {
+          stageElement.classList.add('verified');
+        } else if (milestone.isCompleted) {
+          stageElement.classList.add('submitted');
+        }
         
-        // Calculate stage progress
-        const completedTasks = stage.tasks.filter(task => task.status === 'approved').length;
-        const totalTasks = stage.tasks.length;
-        const stageProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+        // Calculate progress
+        const stageProgress = milestone.isCompleted ? 100 : 0;
         
         stageElement.innerHTML = `
           <div class="list-item-content">
-            <div class="list-item-title">${stage.name}</div>
-            <div class="list-item-subtitle">${stage.description}</div>
+            <div class="list-item-title">${milestone.title}</div>
+            <div class="list-item-subtitle">${milestone.description}</div>
           </div>
           <div style="display: flex; align-items: center; gap: 16px;">
             <span style="font-size: 12px; color: var(--text-secondary);">${stageProgress}%</span>
-            <span class="list-item-status ${getStageStatusClass(stage)}">${getStageStatusText(stage)}</span>
+            <span class="list-item-status ${getStatusClass(milestone)}">${getStatusText(milestone)}</span>
           </div>
         `;
         
@@ -562,171 +477,160 @@
       });
     }
 
-    function getStageStatusClass(stage) {
-      if (stage.completed) return 'status-approved';
-      if (stage.tasks.some(task => task.status === 'submitted')) return 'status-submitted';
-      if (stage.tasks.some(task => task.status === 'pending')) return 'status-pending';
+    function getStatusClass(milestone) {
+      if (milestone.verified) return 'status-approved';
+      if (milestone.isCompleted) return 'status-submitted';
       return 'status-pending';
     }
 
-    function getStageStatusText(stage) {
-      if (stage.completed) return 'Completed';
-      if (stage.tasks.some(task => task.status === 'submitted')) return 'Submitted';
-      if (stage.tasks.some(task => task.status === 'pending')) return 'In Progress';
-      return 'Not Started';
-    }
-
-    // Profile functionality
-    function loadProfile() {
-      document.getElementById('startup-name').value = appState.startup.name;
-      document.getElementById('problem-statement').value = appState.startup.problem;
-      document.getElementById('target-users').value = appState.startup.targetUsers;
-      document.getElementById('current-stage').value = appState.startup.currentStage;
-      document.getElementById('website').value = appState.startup.website || '';
-    }
-
-    document.getElementById('profile-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      
-      // Update app state
-      appState.startup.name = document.getElementById('startup-name').value;
-      appState.startup.problem = document.getElementById('problem-statement').value;
-      appState.startup.targetUsers = document.getElementById('target-users').value;
-      appState.startup.currentStage = document.getElementById('current-stage').value;
-      appState.startup.website = document.getElementById('website').value;
-      
-      // Simulate API call
-      setTimeout(() => {
-        alert('Profile updated successfully!');
-        updateProgress();
-        populateStagesList();
-      }, 500);
-    });
-
-    // Stages functionality
-    function loadStages() {
-      const detailedStagesList = document.getElementById('detailed-stages-list');
-      detailedStagesList.innerHTML = '';
-      
-      appState.stages.forEach((stage, index) => {
-        const stageElement = document.createElement('div');
-        stageElement.className = 'card';
-        
-        // Determine if stage is locked
-        const isLocked = index > appState.stages.findIndex(s => s.id === appState.startup.currentStage);
-        
-        // Calculate stage progress
-        const completedTasks = stage.tasks.filter(task => task.status === 'approved').length;
-        const totalTasks = stage.tasks.length;
-        const stageProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-        
-        stageElement.innerHTML = `
-          <div class="card-header">
-            <h3 class="card-title">
-              ${stage.name}
-              ${isLocked ? '<span style="color: var(--text-secondary); font-size: 0.9rem; margin-left: 8px;">(Locked)</span>' : ''}
-            </h3>
-            <span class="progress-badge" style="background: var(--background);">${stageProgress}% Complete</span>
-          </div>
-          <p style="color: var(--text-secondary); margin-bottom: 1rem;">${stage.description}</p>
-          <div class="progress-bar" style="height: 6px; margin-bottom: 1rem;">
-            <div class="progress-fill" style="width: ${stageProgress}%"></div>
-          </div>
-          <div class="task-list">
-            ${stage.tasks.map(task => `
-              <div class="task-item">
-                <div class="task-content">
-                  <div class="task-title">
-                    ${task.name}
-                    ${task.required ? '<span class="task-required">*</span>' : ''}
-                  </div>
-                  <div class="task-description">${task.description}</div>
-                </div>
-                <span class="task-status ${getTaskStatusClass(task)}">${getTaskStatusText(task)}</span>
-              </div>
-            `).join('')}
-          </div>
-          ${!isLocked ? `
-            <div class="stage-details">
-              <button class="btn btn-primary" onclick="openTaskModal('${stage.id}')">Submit Stage</button>
-            </div>
-          ` : ''}
-        `;
-        
-        detailedStagesList.appendChild(stageElement);
-      });
-    }
-
-    function getTaskStatusClass(task) {
-      if (task.status === 'approved') return 'status-approved';
-      if (task.status === 'submitted') return 'status-submitted';
-      return 'status-pending';
-    }
-
-    function getTaskStatusText(task) {
-      if (task.status === 'approved') return 'Approved';
-      if (task.status === 'submitted') return 'Submitted';
+    function getStatusText(milestone) {
+      if (milestone.verified) return 'Verified';
+      if (milestone.isCompleted) return 'Submitted';
       return 'Pending';
     }
 
-    // Task modal functionality
-    const modal = document.getElementById('task-modal');
-    const modalTitle = document.querySelector('.modal-title');
-    const taskResponse = document.getElementById('task-response');
-    const taskLabel = document.getElementById('task-label');
-    let currentStageId = null;
-
-    function openTaskModal(stageId) {
-      currentStageId = stageId;
-      const stage = appState.stages.find(s => s.id === stageId);
-      modalTitle.textContent = `Submit: ${stage.name}`;
-      taskLabel.textContent = `${stage.name} - Submission Details`;
-      taskResponse.value = '';
-      modal.classList.add('active');
+    // Profile functionality
+    async function loadProfile() {
+      try {
+        const startup = await api.getStartup();
+        
+        if (startup) {
+          document.getElementById('startup-name').value = startup.name;
+          document.getElementById('problem-statement').value = startup.thesis || '';
+          document.getElementById('target-users').value = 'Your target users';
+          document.getElementById('industry').value = startup.industry || '';
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      }
     }
 
-    document.querySelector('.modal-close').addEventListener('click', () => {
-      modal.classList.remove('active');
-    });
-
-    document.getElementById('task-form').addEventListener('submit', (e) => {
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       
-      // Update stage status
-      const stage = appState.stages.find(s => s.id === currentStageId);
-      if (stage) {
-        stage.tasks.forEach(task => {
-          if (task.status === 'pending') {
-            task.status = 'submitted';
-          }
-        });
+      const startupData = {
+        name: document.getElementById('startup-name').value,
+        thesis: document.getElementById('problem-statement').value,
+        industry: document.getElementById('industry').value,
+        targetUsers: document.getElementById('target-users').value
+      };
+      
+      try {
+        await api.createStartup(startupData);
+        alert('Profile updated successfully!');
+        loadDashboard();
+      } catch (error) {
+        alert(`Failed to update profile: ${error.message}`);
+      }
+    });
+
+    // Stages functionality - FIXED
+    async function loadStages() {
+      try {
+        const startup = await api.getStartup();
         
-        // Check if stage is completed
-        const allApproved = stage.tasks.every(task => task.status === 'approved');
-        if (allApproved) {
-          stage.completed = true;
+        if (!startup) {
+          document.getElementById('detailed-stages-list').innerHTML = 
+            '<p style="text-align: center; color: var(--text-secondary);">Create a startup first to access validation stages.</p>';
+          return;
         }
+        
+        const detailedStagesList = document.getElementById('detailed-stages-list');
+        detailedStagesList.innerHTML = '';
+        
+        startup.milestones.sort((a, b) => a.order - b.order).forEach(milestone => {
+          const stageElement = document.createElement('div');
+          stageElement.className = 'card';
+          
+          // Determine if milestone is locked
+          const isLocked = milestone.order > 1 && 
+            !startup.milestones.find(m => m.order === milestone.order - 1)?.verified;
+          
+          // Calculate milestone progress
+          const milestoneProgress = milestone.isCompleted ? 100 : 0;
+          
+          // Create a unique ID for the checkbox
+          const checkboxId = `milestone-checkbox-${milestone._id}`;
+          
+          stageElement.innerHTML = `
+            <div class="card-header">
+              <h3 class="card-title">
+                ${milestone.title}
+                ${isLocked ? '<span style="color: var(--text-secondary); font-size: 0.9rem; margin-left: 8px;">(Locked)</span>' : ''}
+              </h3>
+              <span class="progress-badge" style="background: var(--background);">${milestoneProgress}% Complete</span>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">${milestone.description}</p>
+            <div class="progress-bar" style="height: 6px; margin-bottom: 1rem;">
+              <div class="progress-fill" style="width: ${milestoneProgress}%"></div>
+            </div>
+            <div class="task-list">
+              <div class="task-item">
+                <div class="task-content">
+                  <div class="task-title">${milestone.title}</div>
+                  <div class="task-description">${milestone.description}</div>
+                </div>
+                <span class="task-status ${getStatusClass(milestone)}">${getStatusText(milestone)}</span>
+              </div>
+            </div>
+            ${!isLocked ? `
+              <div class="stage-details">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <input type="checkbox" 
+                    id="${checkboxId}" 
+                    class="milestone-checkbox" 
+                    ${milestone.isCompleted ? 'checked' : ''}
+                    onchange="toggleMilestone(null, '${milestone._id}', this)">
+                  <label for="${checkboxId}" style="cursor: pointer;">
+                    ${milestone.isCompleted ? 'Mark as Incomplete' : 'Mark as Complete'}
+                  </label>
+                </div>
+              </div>
+            ` : ''}
+          `;
+          
+          detailedStagesList.appendChild(stageElement);
+        });
+      } catch (error) {
+        console.error('Error loading stages:', error);
+        document.getElementById('detailed-stages-list').innerHTML = 
+          '<p style="text-align: center; color: red;">Failed to load validation stages.</p>';
+      }
+    }
+
+    // FIXED: toggleMilestone function
+    window.toggleMilestone = async (startupId, milestoneId, checkbox) => {
+      // FIXED: Use the checkbox parameter passed from the event
+      if (!checkbox) {
+        console.error(`Checkbox not found for milestoneId: ${milestoneId}`);
+        return;
       }
       
-      // Simulate API call
-      setTimeout(() => {
-        alert('Tasks submitted successfully!');
-        modal.classList.remove('active');
+      try {
+        // Removed startupId parameter as it's not needed in backend
+        const updatedStartup = await api.updateMilestone(milestoneId, checkbox.checked);
         loadStages();
         loadDashboard();
-      }, 500);
-    });
+      } catch (err) {
+        checkbox.checked = !checkbox.checked;
+        alert(err.message);
+      }
+    };
 
     // Resources functionality
     function loadResources() {
       const resourcesList = document.getElementById('resources-list');
       resourcesList.innerHTML = '';
       
-      const currentResources = resources[appState.startup.currentStage] || [];
+      // Placeholder resources - in a real app, these would come from the backend
+      const resources = [
+        { id: 1, title: 'Market Research Guide', description: 'How to conduct effective market research', type: 'guide' },
+        { id: 2, title: 'Competitor Analysis Template', description: 'Template for analyzing competitors', type: 'template' },
+        { id: 3, title: 'Idea Validation Checklist', description: 'Checklist for validating your idea', type: 'checklist' }
+      ];
       
-      currentResources.forEach(resource => {
-        const resourceElement = document.createElement('a');
-        resourceElement.href = '#';
+      resources.forEach(resource => {
+        const resourceElement = document.createElement('div');
         resourceElement.className = 'resource-item';
         resourceElement.innerHTML = `
           <div class="resource-icon">
@@ -742,6 +646,7 @@
         
         resourceElement.addEventListener('click', (e) => {
           e.preventDefault();
+          console.log(`Opening ${resource.title}...`);
           alert(`Opening ${resource.title}...`);
         });
         
@@ -754,7 +659,6 @@
         case 'guide': return '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 0 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>';
         case 'template': return '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline>';
         case 'checklist': return '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line><line x1="9" y1="19" x2="15" y2="19"></line><polyline points="9 9 12 12 15 9"></polyline>';
-        case 'framework': return '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="15" x2="15" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line>';
         default: return '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline>';
       }
     }
@@ -764,21 +668,12 @@
       const analyticsGrid = document.getElementById('analytics-grid');
       analyticsGrid.innerHTML = '';
       
-      const completedStages = appState.stages.filter(stage => stage.completed).length;
-      const totalStages = appState.stages.length;
-      const completionPercentage = Math.round((completedStages / totalStages) * 100);
-      
-      const completedTasks = appState.stages.reduce((total, stage) => {
-        return total + stage.tasks.filter(task => task.status === 'approved').length;
-      }, 0);
-      const totalTasks = appState.stages.reduce((total, stage) => total + stage.tasks.length, 0);
-      const taskCompletionPercentage = Math.round((completedTasks / totalTasks) * 100);
-      
+      // Placeholder analytics data
       const analyticsData = [
-        { value: `${completedStages}/${totalStages}`, label: 'Stages Completed' },
-        { value: `${completionPercentage}%`, label: 'Overall Progress' },
-        { value: `${completedTasks}/${totalTasks}`, label: 'Tasks Completed' },
-        { value: `${taskCompletionPercentage}%`, label: 'Task Completion' },
+        { value: '1/5', label: 'Stages Completed' },
+        { value: '25%', label: 'Overall Progress' },
+        { value: '3/15', label: 'Tasks Completed' },
+        { value: '20%', label: 'Task Completion' },
         { value: '5', label: 'Resources Viewed' },
         { value: '85%', label: 'Approval Rate' }
       ];
@@ -797,8 +692,8 @@
     // Settings functionality
     function loadSettings() {
       // Set user information
-      document.getElementById('full-name').value = appState.user.name;
-      document.getElementById('email').value = appState.user.email;
+      document.getElementById('full-name').value = user.name || '';
+      document.getElementById('email').value = user.email || '';
       document.getElementById('role').value = 'Founder';
       
       // Load preferences
@@ -810,7 +705,7 @@
     }
 
     // Update profile button
-    document.getElementById('update-profile-btn')?.addEventListener('click', () => {
+    document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
       const name = document.getElementById('full-name').value.trim();
       const email = document.getElementById('email').value.trim();
       
@@ -819,18 +714,16 @@
         return;
       }
       
-      // Update user data
-      appState.user.name = name;
-      appState.user.email = email;
-      
-      // Simulate API call
-      setTimeout(() => {
+      try {
+        // In a real app, this would call an API to update user profile
         alert('Profile updated successfully!');
-      }, 500);
+      } catch (error) {
+        alert(`Failed to update profile: ${error.message}`);
+      }
     });
 
     // Update password button
-    document.getElementById('update-password-btn')?.addEventListener('click', () => {
+    document.getElementById('update-password-btn')?.addEventListener('click', async () => {
       const currentPassword = document.getElementById('current-password').value;
       const newPassword = document.getElementById('new-password').value;
       const confirmPassword = document.getElementById('confirm-password').value;
@@ -850,15 +743,17 @@
         return;
       }
       
-      // Simulate API call
-      setTimeout(() => {
+      try {
+        // In a real app, this would call an API to update password
         alert('Password updated successfully!');
         
         // Clear password fields
         document.getElementById('current-password').value = '';
         document.getElementById('new-password').value = '';
         document.getElementById('confirm-password').value = '';
-      }, 500);
+      } catch (error) {
+        alert(`Failed to update password: ${error.message}`);
+      }
     });
 
     // Delete account button
@@ -879,7 +774,7 @@
         localStorage.clear();
         
         // Redirect to index.html (home/landing page)
-        window.location.href = 'index.html';
+        window.location.href = 'login.html';
       }
     });
 
@@ -892,9 +787,36 @@
       localStorage.setItem('autoSave', e.target.checked);
     });
 
-    // Notification functionality
-    document.getElementById('notification-btn').addEventListener('click', () => {
-      alert('You have 3 new notifications:\n\n1. Your Problem Definition stage has been approved!\n2. New resource available for Solution Development\n3. Reminder: Complete your tasks');
+    // Task modal functionality
+    const modal = document.getElementById('task-modal');
+    const modalTitle = document.querySelector('.modal-title');
+    const taskResponse = document.getElementById('task-response');
+    let currentMilestone = null;
+
+    function openTaskModal(milestone) {
+      currentMilestone = milestone;
+      modalTitle.textContent = `Submit: ${milestone.title}`;
+      taskResponse.value = '';
+      modal.classList.add('active');
+    }
+
+    document.querySelector('.modal-close').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+
+    document.getElementById('task-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      if (taskResponse.value.trim() === '') {
+        alert('Please enter a response');
+        return;
+      }
+      
+      // In a real app, this would call an API to submit the task
+      alert('Task submitted successfully!');
+      modal.classList.remove('active');
+      loadStages();
+      loadDashboard();
     });
 
     // Initialize
