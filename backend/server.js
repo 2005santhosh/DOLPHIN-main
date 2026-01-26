@@ -5,11 +5,15 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const connectDB = require('./config/db');
+const { securePage } = require('./middleware/securePage');
 
 dotenv.config();
 connectDB();
 
 const app = express();
+
+// Initialize token blacklist
+app.locals.tokenBlacklist = new Set();
 
 // Security middleware
 app.use(helmet({
@@ -46,6 +50,40 @@ app.use(express.json());
 
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, '../frontend')));
+
+// Public routes (no authentication required)
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
+
+app.get('/login.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/login.html'));
+});
+
+app.get('/register.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/register.html'));
+});
+
+// Protected HTML routes with role-based access
+app.get('/dashboard.html', securePage(['founder']), (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dashboard.html'));
+});
+
+app.get('/investor-dashboard.html', securePage(['investor']), (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/investor-dashboard.html'));
+});
+
+app.get('/admin-dashboard.html', securePage(['investor']), (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/admin-dashboard.html'));
+});
+
+app.get('/provider-dashboard.html', securePage(['provider']), (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/provider-dashboard.html'));
+});
+
+app.get('/marketplace.html', securePage(['founder', 'investor', 'provider']), (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/marketplace.html'));
+});
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));

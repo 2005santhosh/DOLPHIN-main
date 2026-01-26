@@ -18,7 +18,7 @@
         </svg>
         <span class="notification-badge">3</span>
       </button>
-      <div class="user-menu">
+      <div class="user-menu" id="user-menu">
         <div class="user-avatar">JD</div>
         <span id="user-name">John Doe</span>
       </div>
@@ -179,8 +179,160 @@
           <p class="page-subtitle">Complete each stage to validate your startup idea</p>
         </div>
 
-        <div class="list" id="detailed-stages-list">
-          <!-- Detailed stages will be populated by JavaScript -->
+          <div id="validation-roadmap" class="list">
+          <div id="validation-roadmap-message" style="display:none; margin-bottom: 1rem; color: var(--text-secondary); text-align:center;"></div>
+          <div id="overall-validation-summary" class="card" style="margin-bottom: 1.25rem; display:none;">
+            <div class="card-header">
+              <h3 class="card-title">Overall Validation Score</h3>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 0;">
+              <span id="overall-validation-summary-text">Pending</span>
+            </p>
+          </div>
+          <!-- Stage 1: Idea Validation -->
+          <div id="stage-card-idea" class="card" style="margin-bottom: 1.25rem;">
+            <div class="card-header">
+              <h3 class="card-title">
+                💡 Idea Validation
+                <span id="stage-status-idea" style="font-size: 0.85rem; margin-left: 10px; padding: 4px 8px; background: #fef3c7; color: #92400e; border-radius: 4px;">Not Started</span>
+              </h3>
+              <span id="stage-lock-idea" style="display:none; color: var(--text-secondary); font-size: 0.9rem;">(Locked)</span>
+            </div>
+            <div id="stage-summary-idea" style="display:none; margin-bottom: 1rem;">
+              <div style="background: #f9fafb; border-radius: 12px; padding: 1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap: 1rem;">
+                  <div>
+                    <strong>Score:</strong> <span id="stage-score-idea">--</span>
+                    <span style="margin-left: 0.75rem;"><strong>Completed:</strong> <span id="stage-date-idea">--</span></span>
+                  </div>
+                  <div style="font-weight: 700;" id="stage-badge-idea">--</div>
+                </div>
+              </div>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+              Evaluate your startup idea via 10 questions. Score ≥ 70% to unlock the next stage.
+            </p>
+            <div style="display: flex; gap: 1rem;">
+              <button id="stage-start-idea" onclick="openStageValidationModal('idea')" class="btn btn-primary" style="flex: 1;">Start</button>
+              <button id="stage-results-idea" onclick="showStageValidationResults('idea')" class="btn btn-secondary" style="flex: 1; display: none;">View Results</button>
+            </div>
+          </div>
+
+          <!-- Stage 2: Problem Definition -->
+          <div id="stage-card-problem" class="card" style="margin-bottom: 1.25rem;">
+            <div class="card-header">
+              <h3 class="card-title">
+                🧩 Problem Definition
+                <span id="stage-status-problem" style="font-size: 0.85rem; margin-left: 10px; padding: 4px 8px; background: #fef3c7; color: #92400e; border-radius: 4px;">Locked</span>
+              </h3>
+              <span id="stage-lock-problem" style="display:none; color: var(--text-secondary); font-size: 0.9rem;">(Locked)</span>
+            </div>
+            <div id="stage-summary-problem" style="display:none; margin-bottom: 1rem;">
+              <div style="background: #f9fafb; border-radius: 12px; padding: 1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap: 1rem;">
+                  <div>
+                    <strong>Score:</strong> <span id="stage-score-problem">--</span>
+                    <span style="margin-left: 0.75rem;"><strong>Completed:</strong> <span id="stage-date-problem">--</span></span>
+                  </div>
+                  <div style="font-weight: 700;" id="stage-badge-problem">--</div>
+                </div>
+              </div>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+              Validate that the problem is real, painful, frequent, and backed by evidence.
+            </p>
+            <div style="display: flex; gap: 1rem;">
+              <button id="stage-start-problem" onclick="openStageValidationModal('problem')" class="btn btn-primary" style="flex: 1;">Start</button>
+              <button id="stage-results-problem" onclick="showStageValidationResults('problem')" class="btn btn-secondary" style="flex: 1; display: none;">View Results</button>
+            </div>
+          </div>
+
+          <!-- Stage 3: Solution Development -->
+          <div id="stage-card-solution" class="card" style="margin-bottom: 1.25rem;">
+            <div class="card-header">
+              <h3 class="card-title">
+                🛠️ Solution Development
+                <span id="stage-status-solution" style="font-size: 0.85rem; margin-left: 10px; padding: 4px 8px; background: #fef3c7; color: #92400e; border-radius: 4px;">Locked</span>
+              </h3>
+              <span id="stage-lock-solution" style="display:none; color: var(--text-secondary); font-size: 0.9rem;">(Locked)</span>
+            </div>
+            <div id="stage-summary-solution" style="display:none; margin-bottom: 1rem;">
+              <div style="background: #f9fafb; border-radius: 12px; padding: 1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap: 1rem;">
+                  <div>
+                    <strong>Score:</strong> <span id="stage-score-solution">--</span>
+                    <span style="margin-left: 0.75rem;"><strong>Completed:</strong> <span id="stage-date-solution">--</span></span>
+                  </div>
+                  <div style="font-weight: 700;" id="stage-badge-solution">--</div>
+                </div>
+              </div>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+              Validate the solution approach, MVP scope, differentiators, and feasibility.
+            </p>
+            <div style="display: flex; gap: 1rem;">
+              <button id="stage-start-solution" onclick="openStageValidationModal('solution')" class="btn btn-primary" style="flex: 1;">Start</button>
+              <button id="stage-results-solution" onclick="showStageValidationResults('solution')" class="btn btn-secondary" style="flex: 1; display: none;">View Results</button>
+            </div>
+          </div>
+
+          <!-- Stage 4: Market Validation -->
+          <div id="stage-card-market" class="card" style="margin-bottom: 1.25rem;">
+            <div class="card-header">
+              <h3 class="card-title">
+                📈 Market Validation
+                <span id="stage-status-market" style="font-size: 0.85rem; margin-left: 10px; padding: 4px 8px; background: #fef3c7; color: #92400e; border-radius: 4px;">Locked</span>
+              </h3>
+              <span id="stage-lock-market" style="display:none; color: var(--text-secondary); font-size: 0.9rem;">(Locked)</span>
+            </div>
+            <div id="stage-summary-market" style="display:none; margin-bottom: 1rem;">
+              <div style="background: #f9fafb; border-radius: 12px; padding: 1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap: 1rem;">
+                  <div>
+                    <strong>Score:</strong> <span id="stage-score-market">--</span>
+                    <span style="margin-left: 0.75rem;"><strong>Completed:</strong> <span id="stage-date-market">--</span></span>
+                  </div>
+                  <div style="font-weight: 700;" id="stage-badge-market">--</div>
+                </div>
+              </div>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+              Validate market size, distribution channels, competitors, and willingness-to-pay.
+            </p>
+            <div style="display: flex; gap: 1rem;">
+              <button id="stage-start-market" onclick="openStageValidationModal('market')" class="btn btn-primary" style="flex: 1;">Start</button>
+              <button id="stage-results-market" onclick="showStageValidationResults('market')" class="btn btn-secondary" style="flex: 1; display: none;">View Results</button>
+            </div>
+          </div>
+
+          <!-- Stage 5: Business Model Validation -->
+          <div id="stage-card-business" class="card" style="margin-bottom: 1.25rem;">
+            <div class="card-header">
+              <h3 class="card-title">
+                💼 Business Model Validation
+                <span id="stage-status-business" style="font-size: 0.85rem; margin-left: 10px; padding: 4px 8px; background: #fef3c7; color: #92400e; border-radius: 4px;">Locked</span>
+              </h3>
+              <span id="stage-lock-business" style="display:none; color: var(--text-secondary); font-size: 0.9rem;">(Locked)</span>
+            </div>
+            <div id="stage-summary-business" style="display:none; margin-bottom: 1rem;">
+              <div style="background: #f9fafb; border-radius: 12px; padding: 1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap: 1rem;">
+                  <div>
+                    <strong>Score:</strong> <span id="stage-score-business">--</span>
+                    <span style="margin-left: 0.75rem;"><strong>Completed:</strong> <span id="stage-date-business">--</span></span>
+                  </div>
+                  <div style="font-weight: 700;" id="stage-badge-business">--</div>
+                </div>
+              </div>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+              Validate pricing, unit economics, margins, CAC/LTV assumptions, and scalability.
+            </p>
+            <div style="display: flex; gap: 1rem;">
+              <button id="stage-start-business" onclick="openStageValidationModal('business')" class="btn btn-primary" style="flex: 1;">Start</button>
+              <button id="stage-results-business" onclick="showStageValidationResults('business')" class="btn btn-secondary" style="flex: 1; display: none;">View Results</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -333,6 +485,46 @@
     </div>
   </div>
 
+  <!-- Idea Validation Modal -->
+  <div id="idea-validation-modal" class="modal">
+    <div class="modal-content" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="stage-validation-modal-title">Validate Stage</h3>
+        <button class="modal-close" onclick="closeIdeaValidationModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+          Answer these 10 questions honestly. Your responses will be scored to determine if your idea is ready for investors.
+        </p>
+        
+        <form id="idea-validation-form">
+          <div id="validation-questions-container">
+            <!-- Questions will be dynamically loaded here -->
+          </div>
+          
+          <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <button type="submit" class="btn btn-primary" style="flex: 1;">Submit Validation</button>
+            <button type="button" class="btn btn-secondary" onclick="closeIdeaValidationModal()" style="flex: 1;">Cancel</button>
+          </div>
+        </form>
+
+        <!-- Validation Progress -->
+        <div id="validation-progress" style="margin-top: 1rem; display: none;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span>Progress</span>
+            <span id="validation-progress-text">0/10</span>
+          </div>
+          <div class="progress-bar" style="height: 8px;">
+            <div id="validation-progress-fill" class="progress-fill" style="width: 0%; transition: width 0.3s ease;"></div>
+          </div>
+          <div id="validation-estimated" style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--text-secondary);">
+            Estimated score: <strong id="validation-estimated-score">0%</strong> (need <strong>70%</strong> to validate)
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Include API Client -->
   <script src="./js/api.js"></script>
   
@@ -344,10 +536,26 @@
     // Update user name in header
     document.getElementById('user-name').textContent = user.name || 'User';
 
+    // Update user avatar with initials
+    const nameArray = (user.name || 'User').split(' ');
+    const initials = nameArray.map(n => n.charAt(0).toUpperCase()).join('');
+    document.querySelector('.user-avatar').textContent = initials || 'U';
+
     // Check if user is authenticated
     if (!token) {
       window.location.href = 'login.html';
     }
+
+    // User menu click handler - navigate to settings
+    document.getElementById('user-menu').addEventListener('click', () => {
+      // Show settings page
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      document.getElementById('settings-page').classList.add('active');
+      
+      // Update active nav
+      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+      document.querySelector('[data-page="settings"]').classList.add('active');
+    });
 
     // Navigation functionality
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -396,46 +604,77 @@
     async function loadDashboard() {
       try {
         const startup = await api.getStartup();
-        
+        const progressCard = document.querySelector('.progress-card');
+        const existingCreateBtn = document.getElementById('create-startup-btn');
+
         if (startup) {
-          // Update progress
-          const completedStages = startup.milestones.filter(m => m.verified).length;
-          const totalStages = startup.milestones.length;
-          const progress = Math.round((completedStages / totalStages) * 100);
-          
+          // Remove any duplicate create buttons if they exist (navigation bug)
+          if (existingCreateBtn) existingCreateBtn.remove();
+          if (progressCard) {
+            progressCard.querySelectorAll('button').forEach(btn => {
+              if ((btn.textContent || '').trim().toLowerCase() === 'create startup') {
+                btn.remove();
+              }
+            });
+          }
+
+          // Completion progress (how many stages are validated)
+          const validatedStages = (startup.validationStages && Object.keys(startup.validationStages).length > 0)
+            ? VALIDATION_STAGES
+                .map(s => startup.validationStages?.[s.key])
+                .filter(v => v && v.isValidated)
+                .length
+            : startup.milestones.filter(m => m.verified).length;
+
+          const totalStages = VALIDATION_STAGES.length;
+          const completionPercent = Math.round((validatedStages / totalStages) * 100);
+
+          // Overall score (only meaningful once all 5 stages are completed)
+          const completedCount = VALIDATION_STAGES
+            .map(s => startup.validationStages?.[s.key])
+            .filter(v => v && v.completedAt)
+            .length;
+          const allCompleted = completedCount === VALIDATION_STAGES.length;
+
           document.getElementById('startup-name-display').textContent = startup.name;
-          document.getElementById('progress-text').textContent = `${progress}% Complete`;
-          document.getElementById('progress-badge').textContent = `${progress}% Validated`;
-          document.getElementById('progress-fill').style.width = `${progress}%`;
-          
-          document.getElementById('stages-completed').textContent = `${completedStages}/${totalStages}`;
-          
+          document.getElementById('progress-text').textContent = `${completionPercent}% Complete (${validatedStages}/${totalStages} stages validated)`;
+          document.getElementById('progress-badge').textContent = allCompleted
+            ? `${startup.validationScore}% Overall`
+            : `Overall: Pending`;
+          document.getElementById('progress-fill').style.width = `${completionPercent}%`;
+
+          document.getElementById('stages-completed').textContent = `${validatedStages}/${totalStages}`;
+
+          // Keep "tasks" tied to milestones for now
           const completedTasks = startup.milestones.filter(m => m.isCompleted).length;
           const totalTasks = startup.milestones.length;
           document.getElementById('tasks-completed').textContent = `${completedTasks}/${totalTasks}`;
-          
-          // Populate stages list
-          populateStagesList(startup.milestones);
+
+          // Populate stages list with real stage scores
+          populateStagesList(startup);
         } else {
-          // Show create startup option
           document.getElementById('startup-name-display').textContent = 'No Startup Found';
           document.getElementById('progress-text').textContent = 'Create a startup to get started';
+          document.getElementById('progress-badge').textContent = 'Overall: Pending';
           document.getElementById('progress-fill').style.width = '0%';
           document.getElementById('stages-completed').textContent = '0/5';
           document.getElementById('tasks-completed').textContent = '0/15';
-          
-          // Add create startup button
-          const createButton = document.createElement('button');
-          createButton.textContent = 'Create Startup';
-          createButton.className = 'btn btn-primary';
-          createButton.style.marginTop = '1rem';
-          createButton.onclick = () => {
-            // Navigate to profile page
-            document.querySelector('[data-page="profile"]').click();
-          };
-          
-          const progressCard = document.querySelector('.progress-card');
-          progressCard.appendChild(createButton);
+
+          // Avoid duplicate buttons when navigating back/forth
+          if (!existingCreateBtn && progressCard) {
+            const createButton = document.createElement('button');
+            createButton.id = 'create-startup-btn';
+            createButton.textContent = 'Create Startup';
+            createButton.className = 'btn btn-primary';
+            createButton.style.marginTop = '1rem';
+            createButton.onclick = () => {
+              document.querySelector('[data-page="profile"]').click();
+            };
+            progressCard.appendChild(createButton);
+          }
+
+          // Clear roadmap list
+          populateStagesList(null);
         }
       } catch (error) {
         console.error('Error loading dashboard:', error);
@@ -444,39 +683,64 @@
       }
     }
 
-    function populateStagesList(milestones) {
+    function populateStagesList(startup) {
       const stagesList = document.getElementById('stages-list');
       stagesList.innerHTML = '';
-      
-      milestones.sort((a, b) => a.order - b.order).forEach(milestone => {
+
+      if (!startup) return;
+
+      const validationStages = startup.validationStages || {};
+
+      // Render the 5 validation stages with actual stage scores (not 0/100 placeholders)
+      VALIDATION_STAGES.forEach(({ key, title }, idx) => {
         const stageElement = document.createElement('div');
         stageElement.className = 'list-item';
-        
-        // Determine status
-        if (milestone.verified) {
-          stageElement.classList.add('verified');
-        } else if (milestone.isCompleted) {
-          stageElement.classList.add('submitted');
+
+        const rec = validationStages[key];
+        const hasCompleted = !!rec?.completedAt;
+        const passed = !!rec?.isValidated;
+
+        // Lock rules mirror stages page
+        let locked = idx > 0;
+        if (idx === 0) locked = false;
+        if (idx > 0) {
+          const prevKey = VALIDATION_STAGES[idx - 1].key;
+          locked = !validationStages?.[prevKey]?.isValidated;
         }
-        
-        // Calculate progress
-        const stageProgress = milestone.isCompleted ? 100 : 0;
-        
+
+        const scoreText = hasCompleted ? `${rec.score}%` : '--';
+        const statusText = locked
+          ? 'Locked'
+          : !hasCompleted
+            ? 'Not Started'
+            : passed
+              ? 'Validated'
+              : 'Needs Improvement';
+
+        const statusClass = locked
+          ? 'status-pending'
+          : !hasCompleted
+            ? 'status-pending'
+            : passed
+              ? 'status-approved'
+              : 'status-submitted';
+
         stageElement.innerHTML = `
           <div class="list-item-content">
-            <div class="list-item-title">${milestone.title}</div>
-            <div class="list-item-subtitle">${milestone.description}</div>
+            <div class="list-item-title">${title}</div>
+            <div class="list-item-subtitle">Score: ${scoreText}</div>
           </div>
           <div style="display: flex; align-items: center; gap: 16px;">
-            <span style="font-size: 12px; color: var(--text-secondary);">${stageProgress}%</span>
-            <span class="list-item-status ${getStatusClass(milestone)}">${getStatusText(milestone)}</span>
+            <span style="font-size: 12px; color: var(--text-secondary);">${scoreText}</span>
+            <span class="list-item-status ${statusClass}">${statusText}</span>
           </div>
         `;
-        
+
         stagesList.appendChild(stageElement);
       });
     }
 
+    // Legacy helpers (still used elsewhere)
     function getStatusClass(milestone) {
       if (milestone.verified) return 'status-approved';
       if (milestone.isCompleted) return 'status-submitted';
@@ -524,98 +788,56 @@
       }
     });
 
-    // Stages functionality - FIXED
+    // Stages functionality - 5-stage roadmap cards
     async function loadStages() {
       try {
         const startup = await api.getStartup();
-        
+
+        const msg = document.getElementById('validation-roadmap-message');
+
         if (!startup) {
-          document.getElementById('detailed-stages-list').innerHTML = 
-            '<p style="text-align: center; color: var(--text-secondary);">Create a startup first to access validation stages.</p>';
+          if (msg) {
+            msg.style.display = 'block';
+            msg.textContent = 'Create a startup first to access validation stages.';
+          }
+
+          const summaryCard = document.getElementById('overall-validation-summary');
+          if (summaryCard) summaryCard.style.display = 'none';
+
+          // Disable all stage buttons but keep the cards visible
+          VALIDATION_STAGES.forEach(({ key }) => {
+            const statusEl = document.getElementById(`stage-status-${key}`);
+            const startBtn = document.getElementById(`stage-start-${key}`);
+            const resultsBtn = document.getElementById(`stage-results-${key}`);
+            const summaryEl = document.getElementById(`stage-summary-${key}`);
+            const lockEl = document.getElementById(`stage-lock-${key}`);
+
+            if (statusEl) setBadge(statusEl, 'Create Startup', 'default');
+            if (startBtn) {
+              startBtn.disabled = true;
+              startBtn.textContent = 'Locked';
+            }
+            if (resultsBtn) resultsBtn.style.display = 'none';
+            if (summaryEl) summaryEl.style.display = 'none';
+            if (lockEl) lockEl.style.display = 'inline';
+          });
+
           return;
         }
-        
-        const detailedStagesList = document.getElementById('detailed-stages-list');
-        detailedStagesList.innerHTML = '';
-        
-        startup.milestones.sort((a, b) => a.order - b.order).forEach(milestone => {
-          const stageElement = document.createElement('div');
-          stageElement.className = 'card';
-          
-          // Determine if milestone is locked
-          const isLocked = milestone.order > 1 && 
-            !startup.milestones.find(m => m.order === milestone.order - 1)?.verified;
-          
-          // Calculate milestone progress
-          const milestoneProgress = milestone.isCompleted ? 100 : 0;
-          
-          // Create a unique ID for the checkbox
-          const checkboxId = `milestone-checkbox-${milestone._id}`;
-          
-          stageElement.innerHTML = `
-            <div class="card-header">
-              <h3 class="card-title">
-                ${milestone.title}
-                ${isLocked ? '<span style="color: var(--text-secondary); font-size: 0.9rem; margin-left: 8px;">(Locked)</span>' : ''}
-              </h3>
-              <span class="progress-badge" style="background: var(--background);">${milestoneProgress}% Complete</span>
-            </div>
-            <p style="color: var(--text-secondary); margin-bottom: 1rem;">${milestone.description}</p>
-            <div class="progress-bar" style="height: 6px; margin-bottom: 1rem;">
-              <div class="progress-fill" style="width: ${milestoneProgress}%"></div>
-            </div>
-            <div class="task-list">
-              <div class="task-item">
-                <div class="task-content">
-                  <div class="task-title">${milestone.title}</div>
-                  <div class="task-description">${milestone.description}</div>
-                </div>
-                <span class="task-status ${getStatusClass(milestone)}">${getStatusText(milestone)}</span>
-              </div>
-            </div>
-            ${!isLocked ? `
-              <div class="stage-details">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <input type="checkbox" 
-                    id="${checkboxId}" 
-                    class="milestone-checkbox" 
-                    ${milestone.isCompleted ? 'checked' : ''}
-                    onchange="toggleMilestone(null, '${milestone._id}', this)">
-                  <label for="${checkboxId}" style="cursor: pointer;">
-                    ${milestone.isCompleted ? 'Mark as Incomplete' : 'Mark as Complete'}
-                  </label>
-                </div>
-              </div>
-            ` : ''}
-          `;
-          
-          detailedStagesList.appendChild(stageElement);
-        });
+
+        if (msg) msg.style.display = 'none';
+
+        renderValidationRoadmap(startup);
       } catch (error) {
         console.error('Error loading stages:', error);
-        document.getElementById('detailed-stages-list').innerHTML = 
-          '<p style="text-align: center; color: red;">Failed to load validation stages.</p>';
+        const msg = document.getElementById('validation-roadmap-message');
+        if (msg) {
+          msg.style.display = 'block';
+          msg.style.color = 'red';
+          msg.textContent = 'Failed to load validation stages.';
+        }
       }
     }
-
-    // FIXED: toggleMilestone function
-    window.toggleMilestone = async (startupId, milestoneId, checkbox) => {
-      // FIXED: Use the checkbox parameter passed from the event
-      if (!checkbox) {
-        console.error(`Checkbox not found for milestoneId: ${milestoneId}`);
-        return;
-      }
-      
-      try {
-        // Removed startupId parameter as it's not needed in backend
-        const updatedStartup = await api.updateMilestone(milestoneId, checkbox.checked);
-        loadStages();
-        loadDashboard();
-      } catch (err) {
-        checkbox.checked = !checkbox.checked;
-        alert(err.message);
-      }
-    };
 
     // Resources functionality
     function loadResources() {
@@ -787,6 +1009,348 @@
       localStorage.setItem('autoSave', e.target.checked);
     });
 
+    // ============= VALIDATION STAGES UI (5-stage roadmap) =============
+
+    const VALIDATION_STAGES = [
+      { key: 'idea', title: 'Idea Validation' },
+      { key: 'problem', title: 'Problem Definition' },
+      { key: 'solution', title: 'Solution Development' },
+      { key: 'market', title: 'Market Validation' },
+      { key: 'business', title: 'Business Model Validation' }
+    ];
+
+    const stageOrder = (key) => VALIDATION_STAGES.findIndex(s => s.key === key) + 1;
+
+    function setBadge(el, text, variant) {
+      el.textContent = text;
+      // variant: 'default' | 'success' | 'danger'
+      if (variant === 'success') {
+        el.style.background = '#d1fae5';
+        el.style.color = '#065f46';
+      } else if (variant === 'danger') {
+        el.style.background = '#fee2e2';
+        el.style.color = '#991b1b';
+      } else {
+        el.style.background = '#fef3c7';
+        el.style.color = '#92400e';
+      }
+    }
+
+    function renderValidationRoadmap(startup) {
+      // For legacy startups that may not have validationStages yet
+      const validationStages = startup.validationStages || {};
+      const currentStage = startup.currentStage || 1;
+
+      // Overall summary (only final after all 5 completed)
+      const summaryCard = document.getElementById('overall-validation-summary');
+      const summaryText = document.getElementById('overall-validation-summary-text');
+      if (summaryCard && summaryText) {
+        const completedCount = VALIDATION_STAGES
+          .map(s => validationStages?.[s.key])
+          .filter(v => v && v.completedAt)
+          .length;
+        const allCompleted = completedCount === VALIDATION_STAGES.length;
+
+        summaryCard.style.display = 'block';
+        summaryText.textContent = allCompleted
+          ? `${startup.validationScore}% (final score across all 5 stages)`
+          : `Pending (${completedCount}/${VALIDATION_STAGES.length} stages completed)`;
+      }
+
+      VALIDATION_STAGES.forEach(({ key, title }) => {
+        const order = stageOrder(key);
+        const statusEl = document.getElementById(`stage-status-${key}`);
+        const summaryEl = document.getElementById(`stage-summary-${key}`);
+        const scoreEl = document.getElementById(`stage-score-${key}`);
+        const badgeEl = document.getElementById(`stage-badge-${key}`);
+        const dateEl = document.getElementById(`stage-date-${key}`);
+        const startBtn = document.getElementById(`stage-start-${key}`);
+        const resultsBtn = document.getElementById(`stage-results-${key}`);
+        const lockEl = document.getElementById(`stage-lock-${key}`);
+
+        const rec = validationStages[key];
+        const hasCompleted = !!rec?.completedAt;
+        const passed = !!rec?.isValidated;
+
+        // Locking rules: must not be ahead of currentStage; and must have previous stage validated
+        let locked = order > currentStage;
+        if (order > 1) {
+          const prevKey = VALIDATION_STAGES[order - 2].key;
+          const prev = validationStages[prevKey];
+          if (!prev?.isValidated) locked = true;
+        }
+
+        if (lockEl) lockEl.style.display = locked ? 'inline' : 'none';
+        if (startBtn) startBtn.disabled = locked;
+
+        if (!hasCompleted) {
+          setBadge(statusEl, locked ? 'Locked' : 'Not Started', 'default');
+          summaryEl.style.display = 'none';
+          resultsBtn.style.display = 'none';
+          startBtn.textContent = locked ? 'Locked' : 'Start';
+          badgeEl.textContent = '--';
+        } else {
+          // Completed (passed or failed)
+          summaryEl.style.display = 'block';
+          scoreEl.textContent = `${rec.score}%`;
+          badgeEl.textContent = `${rec.score}%`;
+          dateEl.textContent = new Date(rec.completedAt).toLocaleDateString();
+
+          if (passed) {
+            setBadge(statusEl, '✓ Validated', 'success');
+          } else {
+            setBadge(statusEl, 'Needs Improvement', 'danger');
+          }
+
+          resultsBtn.style.display = 'block';
+          startBtn.textContent = 'Retake';
+        }
+      });
+    }
+
+    async function openStageValidationModal(stageKey) {
+      const modal = document.getElementById('idea-validation-modal');
+      const container = document.getElementById('validation-questions-container');
+      const titleEl = document.getElementById('stage-validation-modal-title');
+
+      modal.dataset.stageKey = stageKey;
+      titleEl.textContent = `Validate: ${VALIDATION_STAGES.find(s => s.key === stageKey)?.title || stageKey}`;
+
+      try {
+        const response = await fetch(`/api/founder/validate-stage/${stageKey}/questions`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+
+        if (!data.success) {
+          alert(data.message || 'Failed to load questions');
+          return;
+        }
+
+        const questions = data.questions || [];
+        container.innerHTML = '';
+
+        questions.forEach((q) => {
+          const questionDiv = document.createElement('div');
+          questionDiv.style.marginBottom = '2rem';
+          questionDiv.innerHTML = `
+            <div style="background: #f9fafb; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
+              <label class="form-label" style="margin-bottom: 0.5rem;">
+                <strong>Q${q.id}:</strong> ${q.question}
+              </label>
+              <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 0.75rem;">💡 ${q.hint}</p>
+              
+              <textarea 
+                class="form-textarea validation-answer" 
+                data-question-id="${q.id}" 
+                data-category="${q.category}"
+                data-weight="${q.weight}"
+                placeholder="Your answer..." 
+                style="margin-bottom: 0.5rem; resize: vertical; min-height: 80px;"
+              ></textarea>
+              
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <label for="score-${stageKey}-${q.id}" style="font-size: 0.9rem;">Score (0-100):</label>
+                <input 
+                  type="range" 
+                  id="score-${stageKey}-${q.id}"
+                  class="validation-score"
+                  data-question-id="${q.id}"
+                  min="0" 
+                  max="100" 
+                  value="0"
+                  style="flex: 1; cursor: pointer;"
+                  oninput="updateScoreDisplay(this, ${q.id})"
+                >
+                <span id="score-display-${q.id}" style="font-weight: bold; min-width: 40px; text-align: right;">0%</span>
+              </div>
+            </div>
+          `;
+          container.appendChild(questionDiv);
+        });
+
+        document.getElementById('validation-progress').style.display = 'block';
+        document.getElementById('idea-validation-form').onsubmit = submitStageValidation;
+
+        // Reset estimated score
+        document.getElementById('validation-estimated-score').textContent = '0%';
+        document.getElementById('validation-progress-text').textContent = '0/10';
+        document.getElementById('validation-progress-fill').style.width = '0%';
+
+        modal.classList.add('active');
+      } catch (error) {
+        console.error('Error loading questions:', error);
+        alert('Failed to load validation questions');
+      }
+    }
+
+    function updateScoreDisplay(input, questionId) {
+      const scoreEl = document.getElementById(`score-display-${questionId}`);
+      if (scoreEl) scoreEl.textContent = `${input.value}%`;
+
+      // Update progress based on answered textareas
+      const allAnswers = document.querySelectorAll('.validation-answer');
+      const answeredCount = Array.from(allAnswers).filter(a => a.value.trim() !== '').length;
+      const totalQuestions = allAnswers.length || 10;
+
+      const percent = Math.round((answeredCount / totalQuestions) * 100);
+      const progressText = document.getElementById('validation-progress-text');
+      const progressFill = document.getElementById('validation-progress-fill');
+
+      if (progressText) progressText.textContent = `${answeredCount}/${totalQuestions}`;
+      if (progressFill) progressFill.style.width = `${percent}%`;
+
+      // Live estimated score (weighted average of sliders)
+      const scoreInputs = Array.from(document.querySelectorAll('.validation-score'));
+      let weightedSum = 0;
+      let totalWeight = 0;
+
+      scoreInputs.forEach(si => {
+        const qId = parseInt(si.dataset.questionId);
+        const answerElem = document.querySelector(`.validation-answer[data-question-id="${qId}"]`);
+        const w = parseFloat(answerElem?.dataset?.weight || '1');
+        const s = Math.min(Math.max(parseInt(si.value) || 0, 0), 100);
+        weightedSum += s * w;
+        totalWeight += w;
+      });
+
+      const est = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+      const estEl = document.getElementById('validation-estimated-score');
+      if (estEl) estEl.textContent = `${est}%`;
+    }
+
+    async function submitStageValidation(e) {
+      e.preventDefault();
+
+      const modal = document.getElementById('idea-validation-modal');
+      const stageKey = modal.dataset.stageKey;
+
+      const answers = [];
+      const answerElements = document.querySelectorAll('.validation-answer');
+
+      for (let elem of answerElements) {
+        if (elem.value.trim() === '') {
+          alert('Please answer all questions before submitting');
+          return;
+        }
+      }
+
+      document.querySelectorAll('.validation-score').forEach(scoreInput => {
+        const questionId = parseInt(scoreInput.dataset.questionId);
+        const answerElem = document.querySelector(`.validation-answer[data-question-id="${questionId}"]`);
+
+        answers.push({
+          id: questionId,
+          answer: answerElem.value,
+          score: parseInt(scoreInput.value),
+          category: answerElem.dataset.category
+        });
+      });
+
+      try {
+        const response = await fetch(`/api/founder/validate-stage/${stageKey}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ answers })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          closeIdeaValidationModal();
+
+          // Fetch latest startup so we can show a non-confusing overall score message.
+          // Overall score is only computed after ALL 5 stages are completed.
+          let overallLine = `Overall Validation Score: Pending`;
+          try {
+            const startup = await api.getStartup();
+            const completedCount = VALIDATION_STAGES
+              .map(s => startup?.validationStages?.[s.key])
+              .filter(v => v && v.completedAt)
+              .length;
+            const allCompleted = completedCount === VALIDATION_STAGES.length;
+
+            overallLine = allCompleted
+              ? `Overall Validation Score: ${startup.validationScore}%`
+              : `Overall Validation Score: Pending (${completedCount}/${VALIDATION_STAGES.length} stages completed)`;
+          } catch (_) {
+            // If this fails, fall back to a simple pending message.
+          }
+
+          const message = result.isValidated
+            ? `✓ Stage Validated (${result.validationScore}%)\n\n${overallLine}`
+            : `Stage Score: ${result.validationScore}% (need 70%)\n\n${overallLine}`;
+
+          alert(message);
+
+          loadStages();
+          loadDashboard();
+        } else {
+          alert(`Error: ${result.message || 'Validation failed'}`);
+        }
+      } catch (error) {
+        console.error('Error submitting validation:', error);
+        alert('Failed to submit validation');
+      }
+    }
+
+    function closeIdeaValidationModal() {
+      document.getElementById('idea-validation-modal').classList.remove('active');
+    }
+
+    async function showStageValidationResults(stageKey) {
+      try {
+        const startup = await api.getStartup();
+        const rec = startup?.validationStages?.[stageKey];
+
+        if (!rec || !rec.completedAt) {
+          alert('No results yet for this stage.');
+          return;
+        }
+
+        const lines = [];
+        lines.push(`${VALIDATION_STAGES.find(s => s.key === stageKey)?.title || stageKey}`);
+        lines.push(`Stage Score: ${rec.score}%`);
+        lines.push(`Completed: ${new Date(rec.completedAt).toLocaleDateString()}`);
+
+        const completedCount = VALIDATION_STAGES
+          .map(s => startup?.validationStages?.[s.key])
+          .filter(v => v && v.completedAt)
+          .length;
+        const allCompleted = completedCount === VALIDATION_STAGES.length;
+
+        lines.push(allCompleted
+          ? `Overall Validation Score: ${startup.validationScore}%`
+          : `Overall Validation Score: Pending (${completedCount}/${VALIDATION_STAGES.length} stages completed)`);
+
+        lines.push('');
+
+        (rec.answers || []).forEach((a, idx) => {
+          const short = (a.answer || '').replace(/\s+/g, ' ').slice(0, 120);
+          lines.push(`Q${idx + 1} (${a.score}%): ${short}${(a.answer || '').length > 120 ? '...' : ''}`);
+        });
+
+        alert(lines.join('\n'));
+      } catch (error) {
+        console.error('Failed to load results:', error);
+        alert('Failed to load results');
+      }
+    }
+
+    // Backwards-compatible global names (older onclicks may still call these)
+    function openIdeaValidationModal() {
+      return openStageValidationModal('idea');
+    }
+
+    function showValidationResults() {
+      return showStageValidationResults('idea');
+    }
+
+    // ============= END VALIDATION STAGES UI =============
+
     // Task modal functionality
     const modal = document.getElementById('task-modal');
     const modalTitle = document.querySelector('.modal-title');
@@ -829,12 +1393,21 @@
       if (e.key === 'Escape' && modal.classList.contains('active')) {
         modal.classList.remove('active');
       }
+      if (e.key === 'Escape' && document.getElementById('idea-validation-modal').classList.contains('active')) {
+        closeIdeaValidationModal();
+      }
     });
 
     // Close modal on outside click
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         modal.classList.remove('active');
+      }
+    });
+
+    document.getElementById('idea-validation-modal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('idea-validation-modal')) {
+        closeIdeaValidationModal();
       }
     });
   </script>

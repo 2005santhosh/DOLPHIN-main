@@ -10,6 +10,15 @@ const protect = async (req, res, next) => {
       // Extract token from header
       token = req.headers.authorization.split(' ')[1];
       
+      // Check if token is in blacklist (logged out)
+      if (req.app.locals.tokenBlacklist && req.app.locals.tokenBlacklist.has(token)) {
+        return res.status(401).json({ 
+          message: 'Token has been revoked',
+          reason: 'You have been logged out',
+          nextSteps: 'Please login again'
+        });
+      }
+      
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
       

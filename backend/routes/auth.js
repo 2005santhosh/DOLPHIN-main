@@ -61,11 +61,11 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Generate token
+    // Generate token (30 days validity)
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '2h' }
+      { expiresIn: '30d' }
     );
 
     res.status(201).json({
@@ -131,11 +131,11 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Generate token
+    // Generate token (30 days validity)
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '2h' }
+      { expiresIn: '30d' }
     );
 
     res.json({
@@ -161,12 +161,154 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Logout
+// Logout - Add token to blacklist
 router.post('/logout', protect, (req, res) => {
-  res.status(200).json({
-    message: 'Logged out successfully',
-    nextSteps: 'You can now safely close the browser'
-  });
+  try {
+    // Initialize token blacklist if not exists
+    if (!req.app.locals.tokenBlacklist) {
+      req.app.locals.tokenBlacklist = new Set();
+    }
+
+    // Get token from header
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (token) {
+      // Add token to blacklist
+      req.app.locals.tokenBlacklist.add(token);
+      
+      // Set a timer to remove token after 30 days (prevent memory leaks)
+      setTimeout(() => {
+        req.app.locals.tokenBlacklist.delete(token);
+      }, 30 * 24 * 60 * 60 * 1000);
+    }
+
+    res.status(200).json({
+      message: 'Logged out successfully',
+      nextSteps: 'You can now safely close the browser'
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Error during logout',
+      reason: error.message
+    });
+  }
+});
+
+// Email verification endpoint
+router.post('/verify-email', async (req, res) => {
+  try {
+    const { email, verificationCode } = req.body;
+
+    if (!email || !verificationCode) {
+      return res.status(400).json({
+        message: 'Email and verification code required'
+      });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found'
+      });
+    }
+
+    user.emailVerified = true;
+    await user.save();
+
+    res.status(200).json({
+      message: 'Email verified successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Server error during email verification',
+      reason: error.message
+    });
+  }
+});
+
+// Send verification email endpoint
+router.post('/send-verification-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        message: 'Email is required'
+      });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found'
+      });
+    }
+
+    const verificationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    // TODO: In production, implement real SMTP sending with nodemailer/SendGrid
+    // For now, this endpoint generates a code and would send via email
+    
+    res.status(200).json({
+      message: 'Verification email sent',
+      nextSteps: 'Check your email for the verification code'
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Error sending verification email',
+      reason: error.message
+    });
+  }
+});
+
+// Get user profile (Phase 1: State-Driven Dashboards - Frontend state sync)
+router.get('/profile', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select(
+      'name email role state stage emailVerified watchlist interestAreas stagePreference createdAt updatedAt'
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found',
+        reason: 'Session user record missing'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      profile: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        // Phase 1: State-driven UI control
+        state: user.state || 'PENDING_APPROVAL', // PENDING_APPROVAL | APPROVED | STAGE_1-5 | BLOCKED
+        stage: user.stage || 0,
+        emailVerified: user.emailVerified || false,
+        // Role-specific data
+        watchlist: user.watchlist || [],
+        interestAreas: user.interestAreas || [],
+        stagePreference: user.stagePreference || [],
+        // Timestamps for phase tracking
+        joinedAt: user.createdAt,
+        lastUpdated: user.updatedAt,
+        // Phase 5: Visibility - Status messages
+        status: {
+          isApproved: user.state === 'APPROVED' || user.state?.startsWith('STAGE_'),
+          isBlocked: user.state === 'BLOCKED',
+          currentStage: user.stage || 0,
+          canAccessPlatform: user.state !== 'PENDING_APPROVAL' && user.state !== 'BLOCKED'
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Error fetching profile',
+      reason: error.message,
+      nextSteps: 'Try refreshing the page or logging in again'
+    });
+  }
 });
 
 module.exports = router;

@@ -18,7 +18,7 @@
         </svg>
         <span class="notification-badge">3</span>
       </button>
-      <div class="user-menu">
+      <div class="user-menu" id="user-menu">
         <div class="user-avatar">AI</div>
         <span id="user-name">Investor Account</span>
       </div>
@@ -260,8 +260,24 @@
     // Update user name in header
     document.getElementById('user-name').textContent = user.name || 'User';
 
+    // Update user avatar with initials
+    const nameArray = (user.name || 'User').split(' ');
+    const initials = nameArray.map(n => n.charAt(0).toUpperCase()).join('');
+    document.querySelector('.user-avatar').textContent = initials || 'U';
+
     // Watchlist data stored in localStorage
     let watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
+
+    // User menu click handler - navigate to settings
+    document.getElementById('user-menu').addEventListener('click', () => {
+      // Show settings page
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      document.getElementById('settings-page').classList.add('active');
+      
+      // Update active nav
+      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+      document.querySelector('[data-page="settings"]').classList.add('active');
+    });
 
     // Navigation functionality
     document.querySelectorAll('.nav-item').forEach(item => {

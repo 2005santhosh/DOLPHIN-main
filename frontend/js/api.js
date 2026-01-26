@@ -113,12 +113,18 @@ const api = {
   },
 
   // Provider endpoints
+  async getEligibleFounders() {
+    return this.request('/provider/eligible-founders');
+  },
+
   async getMyRequests() {
-    return this.request('/providers/my-requests');
+    const data = await this.request('/provider/my-requests');
+    // Backend returns { requests, stats }
+    return data?.requests || data;
   },
 
   async updateIntroRequest(requestId, newStatus) {
-    return this.request(`/providers/requests/${requestId}`, {
+    return this.request(`/provider/requests/${requestId}`, {
       method: 'PUT',
       body: JSON.stringify({ status: newStatus })
     });
@@ -155,6 +161,23 @@ const api = {
       method: 'POST',
       body: JSON.stringify({ userId })
     });
+  },
+
+  // ===== VALIDATION ENDPOINTS =====
+  
+  async getValidationQuestionnaire() {
+    return this.request('/founder/validation/questionnaire');
+  },
+
+  async submitValidationResponses(responses) {
+    return this.request('/founder/validation/submit', {
+      method: 'POST',
+      body: JSON.stringify({ responses })
+    });
+  },
+
+  async getValidationStatus() {
+    return this.request('/founder/validation/status');
   }
 };
 

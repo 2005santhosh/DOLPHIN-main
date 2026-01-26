@@ -18,7 +18,7 @@
         </svg>
         <span class="notification-badge">3</span>
       </button>
-      <div class="user-menu">
+      <div class="user-menu" id="user-menu">
         <div class="user-avatar">AJ</div>
         <span id="user-name">Alex Johnson</span>
       </div>
@@ -195,16 +195,16 @@
 
         <div class="card">
           <div class="filter-group">
-            <div class="filter-item">
-              <label class="form-label">Filter by Stage</label>
-              <select class="form-select" id="stage-filter">
-                <option value="all">All Stages</option>
-                <option value="idea">Idea Validation</option>
-                <option value="problem">Problem Definition</option>
-                <option value="solution">Solution Development</option>
-                <option value="prototype">Prototype Testing</option>
-                <option value="launch">Launch Preparation</option>
-              </select>
+              <div class="filter-item">
+                <label class="form-label">Filter by Stage</label>
+                <select class="form-select" id="stage-filter">
+                  <option value="all">All Stages</option>
+                  <option value="idea">Idea Validation</option>
+                  <option value="problem">Problem Definition</option>
+                  <option value="solution">Solution Development</option>
+                  <option value="prototype">Prototype Testing</option>
+                  <option value="launch">Launch Preparation</option>
+                </select>
             </div>
             <div class="filter-item">
               <label class="form-label">Filter by Industry</label>
@@ -412,6 +412,22 @@
     // Update user name in header
     document.getElementById('user-name').textContent = user.name || 'User';
 
+    // Update user avatar with initials
+    const nameArray = (user.name || 'User').split(' ');
+    const initials = nameArray.map(n => n.charAt(0).toUpperCase()).join('');
+    document.querySelector('.user-avatar').textContent = initials || 'U';
+
+    // User menu click handler - navigate to settings
+    document.getElementById('user-menu').addEventListener('click', () => {
+      // Show settings page
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      document.getElementById('settings-page').classList.add('active');
+      
+      // Update active nav
+      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+      document.querySelector('[data-page="settings"]').classList.add('active');
+    });
+
     // Navigation functionality
     document.querySelectorAll('.nav-item').forEach(item => {
       item.addEventListener('click', (e) => {
@@ -465,7 +481,15 @@
         const rejectedRequests = requests.filter(r => r.status === 'rejected').length;
         
         document.getElementById('active-engagements').textContent = activeEngagements;
-        document.getElementById('eligible-founders').textContent = '24'; // Placeholder
+
+        // Replace placeholders with real data where available.
+        try {
+          const eligible = await api.getEligibleFounders();
+          document.getElementById('eligible-founders').textContent = String(eligible?.length || 0);
+        } catch (e) {
+          document.getElementById('eligible-founders').textContent = '0';
+        }
+
         document.getElementById('response-rate').textContent = '92%'; // Placeholder
         document.getElementById('avg-rating').textContent = '4.8'; // Placeholder
         
@@ -549,57 +573,32 @@
     // Founders functionality
     async function loadFounders() {
       try {
-        // Get verified providers (this will show founders for providers)
-        const providers = await api.getProviders();
-        
-        // For demo purposes, we'll create mock founder data
-        const founders = [
-          {
-            id: 1,
-            name: 'Tech Innovations',
-            stage: 'problem',
-            industry: 'tech',
-            validation: 25,
-            description: 'Solving data management inefficiencies for SMBs',
-            location: 'San Francisco, CA',
-            email: 'contact@techinnovations.com'
-          },
-          {
-            id: 2,
-            name: 'HealthTech Solutions',
-            stage: 'solution',
-            industry: 'health',
-            validation: 60,
-            description: 'AI-powered diagnostic platform for clinics',
-            location: 'Boston, MA',
-            email: 'info@healthtechsolutions.com'
-          },
-          {
-            id: 3,
-            name: 'EcoCommerce',
-            stage: 'prototype',
-            industry: 'retail',
-            validation: 75,
-            description: 'Sustainable e-commerce platform',
-            location: 'Portland, OR',
-            email: 'hello@ecocommerce.com'
-          }
-        ];
-        
+        const founders = await api.getEligibleFounders();
+
         const foundersList = document.getElementById('founders-list');
         foundersList.innerHTML = '';
-        
-        founders.forEach(founder => {
-          const founderCard = createFounderCard(founder);
-          foundersList.appendChild(founderCard);
-        });
-        
+
+        if (!founders || founders.length === 0) {
+          foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No eligible founders yet.</p>';
+        } else {
+          founders.forEach(founder => {
+            const founderCard = createFounderCard(founder);
+            foundersList.appendChild(founderCard);
+          });
+        }
+
+        // Update dashboard stat if the element exists
+        const eligibleFoundersStat = document.getElementById('eligible-founders');
+        if (eligibleFoundersStat) {
+          eligibleFoundersStat.textContent = String(founders?.length || 0);
+        }
+
         // Add filter functionality
         document.getElementById('stage-filter').addEventListener('change', filterFounders);
         document.getElementById('industry-filter').addEventListener('change', filterFounders);
       } catch (error) {
         console.error('Error loading founders:', error);
-        document.getElementById('founders-list').innerHTML = 
+        document.getElementById('founders-list').innerHTML =
           '<p style="text-align: center; color: red;">Failed to load founders.</p>';
       }
     }
@@ -607,45 +606,49 @@
     function createFounderCard(founder) {
       const card = document.createElement('div');
       card.className = 'founder-card';
-      
+
       const stageLabels = {
-        idea: "Idea Validation",
-        problem: "Problem Definition",
-        solution: "Solution Development",
-        prototype: "Prototype Testing",
-        launch: "Launch Preparation"
+        1: 'Idea Validation',
+        2: 'Problem Definition',
+        3: 'Solution Development',
+        4: 'Market Validation',
+        5: 'Business Model Validation'
       };
-      
+
+      const stageLabel = stageLabels[founder.currentStage] || `Stage ${founder.currentStage || '?'}`;
+      const founderName = founder.founder?.name || 'Founder';
+      const founderEmail = founder.founder?.email || '';
+
       card.innerHTML = `
         <div class="founder-header">
-          <div class="founder-name">${founder.name}</div>
-          <span class="stage-badge">${stageLabels[founder.stage]}</span>
+          <div class="founder-name">${founder.startupName}</div>
+          <span class="stage-badge">${stageLabel}</span>
         </div>
-        <p style="margin-bottom: 1rem;">${founder.description}</p>
+        <p style="margin-bottom: 1rem;">${founder.thesis || ''}</p>
         <div class="founder-details">
           <div class="detail-item">
             <span class="detail-label">Industry</span>
-            <span class="detail-value">${founder.industry}</span>
+            <span class="detail-value">${founder.industry || 'Not specified'}</span>
           </div>
           <div class="detail-item">
             <span class="detail-label">Validation Score</span>
-            <span class="detail-value">${founder.validation}%</span>
+            <span class="detail-value">${founder.validationScore ?? 0}%</span>
           </div>
           <div class="detail-item">
-            <span class="detail-label">Location</span>
-            <span class="detail-value">${founder.location}</span>
+            <span class="detail-label">Founder</span>
+            <span class="detail-value">${founderName}</span>
           </div>
           <div class="detail-item">
             <span class="detail-label">Contact</span>
-            <span class="detail-value">${founder.email}</span>
+            <span class="detail-value">${founderEmail}</span>
           </div>
         </div>
         <div class="request-actions">
-          <button class="btn btn-primary" onclick="openRequestModal('${founder.name}')">Send Request</button>
+          <button class="btn btn-primary" onclick="openRequestModal('${founder.startupName}')">Send Request</button>
           <button class="btn btn-secondary">View Profile</button>
         </div>
       `;
-      
+
       return card;
     }
 

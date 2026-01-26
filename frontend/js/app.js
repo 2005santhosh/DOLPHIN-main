@@ -45,7 +45,29 @@ async function logout() {
 // Client-side role protection + dynamic back link
 // Runs on every page load
 // ────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // PHASE 1: STATE-DRIVEN DASHBOARDS - Sync backend state on page load
+  if (typeof stateManager !== 'undefined' && window.location.pathname.includes('.html')) {
+    try {
+      const profile = await stateManager.syncStateWithBackend();
+      
+      // Store profile for validation
+      window.currentUserProfile = profile;
+      
+      // Apply state-driven UI rendering
+      stateManager.renderConditionalUI();
+      
+      // Display state indicator in page header
+      const headerContainer = document.querySelector('.dashboard-header') || document.querySelector('header');
+      if (headerContainer) {
+        stateManager.displayStateIndicator(headerContainer);
+      }
+    } catch (err) {
+      console.warn('State sync failed (non-critical):', err.message);
+      // Continue anyway - user can still use platform
+    }
+  }
+
   // Add event listener for logout button
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) {
@@ -225,7 +247,7 @@ if (window.location.pathname.includes('dashboard.html')) {
   window.toggleMilestone = async (startupId, milestoneId) => {
     const checkbox = document.getElementById(`check-${milestoneId}`);
     try {
-      const updatedStartup = await api.updateMilestone(startupId, milestoneId, checkbox.checked);
+      const updatedStartup = await api.updateMilestone(milestoneId, checkbox.checked);
       renderDashboard(updatedStartup);
     } catch (err) {
       checkbox.checked = !checkbox.checked;
