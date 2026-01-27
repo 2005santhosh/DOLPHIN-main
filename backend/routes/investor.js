@@ -1,3 +1,4 @@
+// backend/routes/investor.js - UPDATED with proper visibility rules
 const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/authMiddleware');
@@ -33,7 +34,7 @@ router.put('/profile', protect, authorize('investor'), async (req, res) => {
       req.user.id,
       { 
         interestAreas: interestAreas || [],
-        stagePreference: stagePreference || [4, 5] // Default: Market Validation, Launch
+        stagePreference: stagePreference || [4, 5]
       },
       { new: true }
     ).select('name email interestAreas stagePreference');
@@ -48,65 +49,71 @@ router.put('/profile', protect, authorize('investor'), async (req, res) => {
   }
 });
 
-// Get validated startups (FULL roadmap complete + overall score >= 70%)
+/**
+ * INVESTOR VISIBILITY RULE:
+ * Startups are visible to investors when they achieve ≥70% on ANY stage validation.
+ * This allows investors to see promising startups early in their journey.
+ */
 router.get('/validated-startups', protect, authorize('investor'), async (req, res) => {
   try {
-    // A startup is investor-visible only when:
-    // 1) all 5 stages are validated (each stage score >= 70), AND
-    // 2) the overall score across all 5 stages is >= 70.
-    // Load candidates that have completed the roadmap (either via new validationStages, or via verified milestone #5).
-    // Then compute the final overall score in JS to avoid stale DB values.
-    const candidates = await Startup.find({
-      $or: [
-        {
-          'validationStages.idea.isValidated': true,
-          'validationStages.problem.isValidated': true,
-          'validationStages.solution.isValidated': true,
-          'validationStages.market.isValidated': true,
-          'validationStages.business.isValidated': true
-        },
-        {
-          milestones: { $elemMatch: { order: 5, verified: true } }
-        }
-      ]
-    })
-    .populate('founderId', 'name email');
+    // Get all startups
+    const allStartups = await Startup.find()
+      .populate('founderId', 'name email state stage');
 
-    const keys = ['idea', 'problem', 'solution', 'market', 'business'];
-    const computeOverallScore = (startup) => {
+    // Filter for investor visibility: any stage with score ≥70%
+    const validatedStartups = allStartups.filter(startup => {
       const stages = startup.validationStages || {};
-      const records = keys.map(k => stages[k]);
-      const allCompleted = records.every(r => r && r.completedAt);
-      if (!allCompleted) return startup.validationScore || 0;
-      const scores = records.map(r => r.score || 0);
-      return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-    };
+      
+      // Check if ANY stage has been validated (score ≥70%)
+      const hasValidatedStage = Object.keys(stages).some(key => {
+        const stage = stages[key];
+        return stage && stage.isValidated && stage.score >= 70;
+      });
 
-    const startups = candidates
-      .map(s => {
-        const overall = computeOverallScore(s);
-        return { startup: s, overall };
+      return hasValidatedStage;
+    });
+
+    // Sort by highest validation score
+    const response = validatedStartups
+      .map(startup => {
+        // Calculate highest stage score achieved
+        const stages = startup.validationStages || {};
+        const stageScores = Object.values(stages)
+          .filter(s => s && s.completedAt)
+          .map(s => s.score || 0);
+        
+        const highestScore = stageScores.length > 0 
+          ? Math.max(...stageScores) 
+          : startup.validationScore || 0;
+
+        return {
+          _id: startup._id,
+          name: startup.name,
+          thesis: startup.thesis,
+          industry: startup.industry,
+          validationScore: highestScore, // Show highest stage score
+          overallScore: startup.validationScore, // Overall score (all 5 stages)
+          currentStage: startup.currentStage,
+          stagesCompleted: Object.values(stages).filter(s => s?.completedAt).length,
+          stagesValidated: Object.values(stages).filter(s => s?.isValidated).length,
+          milestoneCount: startup.milestones?.length || 0,
+          completedMilestones: startup.milestones?.filter(m => m.isCompleted).length || 0,
+          founder: startup.founderId,
+          problemStatement: startup.problemStatement,
+          targetUsers: startup.targetUsers,
+          createdAt: startup.createdAt,
+          lastValidated: Math.max(
+            ...Object.values(stages)
+              .filter(s => s?.completedAt)
+              .map(s => new Date(s.completedAt).getTime())
+          )
+        };
       })
-      .filter(x => x.overall >= 70)
-      .sort((a, b) => b.overall - a.overall);
-
-    const response = startups.map(({ startup, overall }) => ({
-      _id: startup._id,
-      name: startup.name,
-      thesis: startup.thesis,
-      industry: startup.industry,
-      validationScore: overall,
-      currentStage: startup.currentStage,
-      milestoneCount: startup.milestones?.length || 0,
-      completedMilestones: startup.milestones?.filter(m => m.isCompleted).length || 0,
-      founder: startup.founderId,
-      problemStatement: startup.problemStatement,
-      targetUsers: startup.targetUsers,
-      createdAt: startup.createdAt
-    }));
+      .sort((a, b) => b.validationScore - a.validationScore);
 
     res.json(response);
   } catch (error) {
+    console.error('Error fetching validated startups:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -164,7 +171,6 @@ router.post('/watchlist', protect, authorize('investor'), async (req, res) => {
       });
     }
 
-    // Verify startup exists
     const startup = await Startup.findById(startupId);
     if (!startup) {
       return res.status(404).json({ 
@@ -173,7 +179,6 @@ router.post('/watchlist', protect, authorize('investor'), async (req, res) => {
       });
     }
 
-    // Add to investor's watchlist
     const investor = await User.findById(req.user.id);
     if (!investor.watchlist) {
       investor.watchlist = [];
@@ -263,12 +268,10 @@ router.post('/express-interest', protect, authorize('investor'), async (req, res
       });
     }
 
-    // Record interest expression
     if (!startup.investorInterests) {
       startup.investorInterests = [];
     }
 
-    // Check for duplicate interest
     if (startup.investorInterests.find(i => i.investorId.toString() === req.user.id)) {
       return res.status(409).json({ 
         message: 'You have already expressed interest in this startup',

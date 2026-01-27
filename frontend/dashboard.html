@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Founder Dashboard - Dolphin</title>
   <link rel="stylesheet" href="./css/founderDashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <!-- Header -->
@@ -179,7 +180,7 @@
           <p class="page-subtitle">Complete each stage to validate your startup idea</p>
         </div>
 
-          <div id="validation-roadmap" class="list">
+        <div id="validation-roadmap" class="list">
           <div id="validation-roadmap-message" style="display:none; margin-bottom: 1rem; color: var(--text-secondary); text-align:center;"></div>
           <div id="overall-validation-summary" class="card" style="margin-bottom: 1.25rem; display:none;">
             <div class="card-header">
@@ -189,6 +190,7 @@
               <span id="overall-validation-summary-text">Pending</span>
             </p>
           </div>
+          
           <!-- Stage 1: Idea Validation -->
           <div id="stage-card-idea" class="card" style="margin-bottom: 1.25rem;">
             <div class="card-header">
@@ -210,7 +212,7 @@
               </div>
             </div>
             <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-              Evaluate your startup idea via 10 questions. Score ≥ 70% to unlock the next stage.
+              Answer 10 questions about your idea. AI will evaluate your responses. Score ≥ 70% to unlock the next stage.
             </p>
             <div style="display: flex; gap: 1rem;">
               <button id="stage-start-idea" onclick="openStageValidationModal('idea')" class="btn btn-primary" style="flex: 1;">Start</button>
@@ -355,7 +357,7 @@
           <p class="page-subtitle">Track your progress and performance</p>
         </div>
 
-        <div class="grid" id="analytics-grid">
+        <div class="analytics-grid" id="analytics-grid">
           <!-- Analytics will be populated by JavaScript -->
         </div>
       </div>
@@ -466,64 +468,63 @@
     </main>
   </div>
 
-  <!-- Task Submission Modal -->
-  <div id="task-modal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title" id="modal-title">Submit Task</h3>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <form id="task-form">
-          <div class="form-group">
-            <label class="form-label" id="task-label">Task Description</label>
-            <textarea class="form-textarea" id="task-response" placeholder="Describe how you've completed this task..." required></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary">Submit Task</button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Idea Validation Modal -->
+  <!-- Validation Modal (NO MANUAL SCORING) -->
   <div id="idea-validation-modal" class="modal">
-    <div class="modal-content" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
+    <div class="modal-content" style="max-width: 700px; max-height: 85vh; overflow-y: auto;">
       <div class="modal-header">
         <h3 class="modal-title" id="stage-validation-modal-title">Validate Stage</h3>
         <button class="modal-close" onclick="closeIdeaValidationModal()">&times;</button>
       </div>
       <div class="modal-body">
-        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
-          Answer these 10 questions honestly. Your responses will be scored to determine if your idea is ready for investors.
-        </p>
+        <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+          <p style="margin: 0; color: #1e40af; font-weight: 500;">
+            🤖 AI-Powered Validation
+          </p>
+          <p style="margin: 0.5rem 0 0 0; color: #1e3a8a; font-size: 0.9rem;">
+            Answer these questions honestly. Our AI will evaluate the quality of your responses automatically.
+          </p>
+        </div>
         
         <form id="idea-validation-form">
           <div id="validation-questions-container">
-            <!-- Questions will be dynamically loaded here -->
+            <!-- Questions will be dynamically loaded here (TEXT ONLY) -->
           </div>
           
           <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-            <button type="submit" class="btn btn-primary" style="flex: 1;">Submit Validation</button>
+            <button type="submit" class="btn btn-primary" style="flex: 1;">
+              Submit for AI Evaluation
+            </button>
             <button type="button" class="btn btn-secondary" onclick="closeIdeaValidationModal()" style="flex: 1;">Cancel</button>
           </div>
         </form>
 
-        <!-- Validation Progress -->
-        <div id="validation-progress" style="margin-top: 1rem; display: none;">
+        <!-- Progress Indicator -->
+        <div id="validation-progress" style="margin-top: 1.5rem; display: none;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-            <span>Progress</span>
-            <span id="validation-progress-text">0/10</span>
+            <span style="font-weight: 500;">Progress</span>
+            <span id="validation-progress-text">0/10 questions answered</span>
           </div>
           <div class="progress-bar" style="height: 8px;">
             <div id="validation-progress-fill" class="progress-fill" style="width: 0%; transition: width 0.3s ease;"></div>
           </div>
-          <div id="validation-estimated" style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--text-secondary);">
-            Estimated score: <strong id="validation-estimated-score">0%</strong> (need <strong>70%</strong> to validate)
-          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="validation-loading" style="display: none; text-align: center; padding: 2rem;">
+          <div style="display: inline-block; width: 50px; height: 50px; border: 5px solid #f3f4f6; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          <p style="margin-top: 1rem; color: var(--text-secondary);">
+            AI is evaluating your answers...
+          </p>
         </div>
       </div>
     </div>
   </div>
+
+  <style>
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
 
   <!-- Include API Client -->
   <script src="./js/api.js"></script>
@@ -546,13 +547,11 @@
       window.location.href = 'login.html';
     }
 
-    // User menu click handler - navigate to settings
+    // User menu click handler
     document.getElementById('user-menu').addEventListener('click', () => {
-      // Show settings page
       document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
       document.getElementById('settings-page').classList.add('active');
       
-      // Update active nav
       document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
       document.querySelector('[data-page="settings"]').classList.add('active');
     });
@@ -562,16 +561,13 @@
       item.addEventListener('click', (e) => {
         e.preventDefault();
         
-        // Update active nav
         document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
         item.classList.add('active');
         
-        // Show corresponding page
         const page = item.dataset.page;
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(`${page}-page`).classList.add('active');
         
-        // Load page-specific content
         loadPageContent(page);
       });
     });
@@ -608,7 +604,6 @@
         const existingCreateBtn = document.getElementById('create-startup-btn');
 
         if (startup) {
-          // Remove any duplicate create buttons if they exist (navigation bug)
           if (existingCreateBtn) existingCreateBtn.remove();
           if (progressCard) {
             progressCard.querySelectorAll('button').forEach(btn => {
@@ -618,7 +613,6 @@
             });
           }
 
-          // Completion progress (how many stages are validated)
           const validatedStages = (startup.validationStages && Object.keys(startup.validationStages).length > 0)
             ? VALIDATION_STAGES
                 .map(s => startup.validationStages?.[s.key])
@@ -629,7 +623,6 @@
           const totalStages = VALIDATION_STAGES.length;
           const completionPercent = Math.round((validatedStages / totalStages) * 100);
 
-          // Overall score (only meaningful once all 5 stages are completed)
           const completedCount = VALIDATION_STAGES
             .map(s => startup.validationStages?.[s.key])
             .filter(v => v && v.completedAt)
@@ -645,12 +638,10 @@
 
           document.getElementById('stages-completed').textContent = `${validatedStages}/${totalStages}`;
 
-          // Keep "tasks" tied to milestones for now
           const completedTasks = startup.milestones.filter(m => m.isCompleted).length;
           const totalTasks = startup.milestones.length;
           document.getElementById('tasks-completed').textContent = `${completedTasks}/${totalTasks}`;
 
-          // Populate stages list with real stage scores
           populateStagesList(startup);
         } else {
           document.getElementById('startup-name-display').textContent = 'No Startup Found';
@@ -660,7 +651,6 @@
           document.getElementById('stages-completed').textContent = '0/5';
           document.getElementById('tasks-completed').textContent = '0/15';
 
-          // Avoid duplicate buttons when navigating back/forth
           if (!existingCreateBtn && progressCard) {
             const createButton = document.createElement('button');
             createButton.id = 'create-startup-btn';
@@ -673,7 +663,6 @@
             progressCard.appendChild(createButton);
           }
 
-          // Clear roadmap list
           populateStagesList(null);
         }
       } catch (error) {
@@ -691,7 +680,6 @@
 
       const validationStages = startup.validationStages || {};
 
-      // Render the 5 validation stages with actual stage scores (not 0/100 placeholders)
       VALIDATION_STAGES.forEach(({ key, title }, idx) => {
         const stageElement = document.createElement('div');
         stageElement.className = 'list-item';
@@ -700,7 +688,6 @@
         const hasCompleted = !!rec?.completedAt;
         const passed = !!rec?.isValidated;
 
-        // Lock rules mirror stages page
         let locked = idx > 0;
         if (idx === 0) locked = false;
         if (idx > 0) {
@@ -740,19 +727,6 @@
       });
     }
 
-    // Legacy helpers (still used elsewhere)
-    function getStatusClass(milestone) {
-      if (milestone.verified) return 'status-approved';
-      if (milestone.isCompleted) return 'status-submitted';
-      return 'status-pending';
-    }
-
-    function getStatusText(milestone) {
-      if (milestone.verified) return 'Verified';
-      if (milestone.isCompleted) return 'Submitted';
-      return 'Pending';
-    }
-
     // Profile functionality
     async function loadProfile() {
       try {
@@ -788,11 +762,10 @@
       }
     });
 
-    // Stages functionality - 5-stage roadmap cards
+    // Stages functionality
     async function loadStages() {
       try {
         const startup = await api.getStartup();
-
         const msg = document.getElementById('validation-roadmap-message');
 
         if (!startup) {
@@ -804,7 +777,6 @@
           const summaryCard = document.getElementById('overall-validation-summary');
           if (summaryCard) summaryCard.style.display = 'none';
 
-          // Disable all stage buttons but keep the cards visible
           VALIDATION_STAGES.forEach(({ key }) => {
             const statusEl = document.getElementById(`stage-status-${key}`);
             const startBtn = document.getElementById(`stage-start-${key}`);
@@ -826,7 +798,6 @@
         }
 
         if (msg) msg.style.display = 'none';
-
         renderValidationRoadmap(startup);
       } catch (error) {
         console.error('Error loading stages:', error);
@@ -844,7 +815,6 @@
       const resourcesList = document.getElementById('resources-list');
       resourcesList.innerHTML = '';
       
-      // Placeholder resources - in a real app, these would come from the backend
       const resources = [
         { id: 1, title: 'Market Research Guide', description: 'How to conduct effective market research', type: 'guide' },
         { id: 2, title: 'Competitor Analysis Template', description: 'Template for analyzing competitors', type: 'template' },
@@ -866,9 +836,7 @@
           </div>
         `;
         
-        resourceElement.addEventListener('click', (e) => {
-          e.preventDefault();
-          console.log(`Opening ${resource.title}...`);
+        resourceElement.addEventListener('click', () => {
           alert(`Opening ${resource.title}...`);
         });
         
@@ -879,46 +847,439 @@
     function getResourceIcon(type) {
       switch (type) {
         case 'guide': return '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 0 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>';
-        case 'template': return '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline>';
-        case 'checklist': return '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line><line x1="9" y1="19" x2="15" y2="19"></line><polyline points="9 9 12 12 15 9"></polyline>';
+        case 'template': return '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line>';
+        case 'checklist': return '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line>';
         default: return '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline>';
       }
     }
 
-    // Analytics functionality
+    // ============= ENHANCED ANALYTICS =============
     function loadAnalytics() {
       const analyticsGrid = document.getElementById('analytics-grid');
-      analyticsGrid.innerHTML = '';
       
-      // Placeholder analytics data
-      const analyticsData = [
-        { value: '1/5', label: 'Stages Completed' },
-        { value: '25%', label: 'Overall Progress' },
-        { value: '3/15', label: 'Tasks Completed' },
-        { value: '20%', label: 'Task Completion' },
-        { value: '5', label: 'Resources Viewed' },
-        { value: '85%', label: 'Approval Rate' }
-      ];
-      
-      analyticsData.forEach(item => {
-        const statCard = document.createElement('div');
-        statCard.className = 'stat-card';
-        statCard.innerHTML = `
-          <div class="stat-value">${item.value}</div>
-          <div class="stat-label">${item.label}</div>
-        `;
-        analyticsGrid.appendChild(statCard);
+      // Clear existing content
+      analyticsGrid.innerHTML = `
+        <!-- Filter Bar -->
+        <div class="filter-bar" style="grid-column: 1 / -1;">
+          <button class="filter-btn active" onclick="setAnalyticsPeriod('7d')">Last 7 Days</button>
+          <button class="filter-btn" onclick="setAnalyticsPeriod('30d')">Last 30 Days</button>
+          <button class="filter-btn" onclick="setAnalyticsPeriod('90d')">Last 90 Days</button>
+          <button class="filter-btn" onclick="setAnalyticsPeriod('all')">All Time</button>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="stats-overview" style="grid-column: 1 / -1;">
+          <div class="stat-box">
+            <div class="stat-value">1/5</div>
+            <div class="stat-label">Stages Completed</div>
+            <div class="stat-change">↑ 20% vs last week</div>
+          </div>
+          <div class="stat-box green">
+            <div class="stat-value">68%</div>
+            <div class="stat-label">Avg. Validation Score</div>
+            <div class="stat-change">↑ 12% improvement</div>
+          </div>
+          <div class="stat-box orange">
+            <div class="stat-value">3/15</div>
+            <div class="stat-label">Tasks Completed</div>
+            <div class="stat-change">↑ 3 this week</div>
+          </div>
+          <div class="stat-box blue">
+            <div class="stat-value">5</div>
+            <div class="stat-label">Resources Viewed</div>
+            <div class="stat-change">↑ 2 new views</div>
+          </div>
+        </div>
+
+        <!-- Progress Over Time -->
+        <div class="chart-card" style="grid-column: 1 / -1;">
+          <h3>📈 Validation Progress Over Time</h3>
+          <div class="chart-container">
+            <canvas id="progressChart"></canvas>
+          </div>
+          <div class="insight-card">
+            <h4>💡 Key Insight</h4>
+            <p>Your validation progress has accelerated by 35% in the last two weeks. Keep up the momentum by completing at least 2 tasks per week.</p>
+          </div>
+        </div>
+
+        <!-- Stage Performance -->
+        <div class="chart-card">
+          <h3>🎯 Stage Performance Breakdown</h3>
+          <div class="chart-container">
+            <canvas id="stagePerformanceChart"></canvas>
+          </div>
+          <div class="insight-card">
+            <h4>💡 Next Steps</h4>
+            <p>Focus on Problem Definition and Market Validation to unlock the next stages.</p>
+          </div>
+        </div>
+
+        <!-- Time Distribution -->
+        <div class="chart-card">
+          <h3>⏱️ Time Spent by Activity</h3>
+          <div class="chart-container">
+            <canvas id="timeDistributionChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Task Completion Rate -->
+        <div class="chart-card" style="grid-column: 1 / -1;">
+          <h3>✅ Weekly Task Completion Rate</h3>
+          <div class="chart-container small">
+            <canvas id="taskCompletionChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Resource Engagement -->
+        <div class="chart-card">
+          <h3>📚 Resource Engagement</h3>
+          <div class="chart-container small">
+            <canvas id="resourceChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Validation Scores -->
+        <div class="chart-card">
+          <h3>🏆 Validation Score Trends</h3>
+          <div class="chart-container small">
+            <canvas id="validationScoreChart"></canvas>
+          </div>
+        </div>
+      `;
+
+      // Initialize all charts
+      setTimeout(() => {
+        initializeProgressChart();
+        initializeStagePerformanceChart();
+        initializeTimeDistributionChart();
+        initializeTaskCompletionChart();
+        initializeResourceChart();
+        initializeValidationScoreChart();
+      }, 100);
+    }
+
+    function initializeProgressChart() {
+      const ctx = document.getElementById('progressChart');
+      if (!ctx) return;
+
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6', 'Week 7', 'Week 8'],
+          datasets: [{
+            label: 'Overall Progress (%)',
+            data: [5, 12, 18, 25, 32, 45, 58, 68],
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 5,
+            pointHoverRadius: 7
+          }, {
+            label: 'Tasks Completed',
+            data: [1, 2, 3, 5, 7, 10, 12, 15],
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 5,
+            pointHoverRadius: 7
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)'
+              }
+            },
+            x: {
+              grid: {
+                display: false
+              }
+            }
+          }
+        }
       });
+    }
+
+    function initializeStagePerformanceChart() {
+      const ctx = document.getElementById('stagePerformanceChart');
+      if (!ctx) return;
+
+      new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['Idea Validation', 'Problem Definition', 'Solution Dev', 'Market Validation', 'Business Model'],
+          datasets: [{
+            label: 'Your Score',
+            data: [85, 72, 0, 0, 0],
+            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+            borderColor: '#3b82f6',
+            pointBackgroundColor: '#3b82f6',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: '#3b82f6'
+          }, {
+            label: 'Average User Score',
+            data: [78, 75, 68, 65, 62],
+            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+            borderColor: '#10b981',
+            pointBackgroundColor: '#10b981',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: '#10b981'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              beginAtZero: true,
+              max: 100,
+              ticks: {
+                stepSize: 20
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+            }
+          }
+        }
+      });
+    }
+
+    function initializeTimeDistributionChart() {
+      const ctx = document.getElementById('timeDistributionChart');
+      if (!ctx) return;
+
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Validation Stages', 'Reading Resources', 'Profile Setup', 'Research', 'Planning'],
+          datasets: [{
+            data: [45, 25, 10, 15, 5],
+            backgroundColor: [
+              '#3b82f6',
+              '#10b981',
+              '#f59e0b',
+              '#ef4444',
+              '#8b5cf6'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return context.label + ': ' + context.parsed + '%';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function initializeTaskCompletionChart() {
+      const ctx = document.getElementById('taskCompletionChart');
+      if (!ctx) return;
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+          datasets: [{
+            label: 'Completed',
+            data: [3, 5, 4, 3],
+            backgroundColor: '#10b981',
+          }, {
+            label: 'In Progress',
+            data: [2, 1, 2, 4],
+            backgroundColor: '#f59e0b',
+          }, {
+            label: 'Pending',
+            data: [5, 4, 4, 3],
+            backgroundColor: '#e5e7eb',
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              stacked: true,
+              grid: {
+                display: false
+              }
+            },
+            y: {
+              stacked: true,
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)'
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+            }
+          }
+        }
+      });
+    }
+
+    function initializeResourceChart() {
+      const ctx = document.getElementById('resourceChart');
+      if (!ctx) return;
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Guides', 'Templates', 'Videos', 'Articles', 'Tools'],
+          datasets: [{
+            label: 'Resources Viewed',
+            data: [12, 8, 5, 15, 6],
+            backgroundColor: [
+              '#3b82f6',
+              '#10b981',
+              '#f59e0b',
+              '#ef4444',
+              '#8b5cf6'
+            ],
+            borderRadius: 8
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)'
+              }
+            },
+            y: {
+              grid: {
+                display: false
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function initializeValidationScoreChart() {
+      const ctx = document.getElementById('validationScoreChart');
+      if (!ctx) return;
+
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Stage 1', 'Stage 2', 'Stage 3', 'Stage 4', 'Stage 5'],
+          datasets: [{
+            label: 'First Attempt',
+            data: [65, 58, null, null, null],
+            borderColor: '#ef4444',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            tension: 0.4,
+            borderDash: [5, 5]
+          }, {
+            label: 'Best Score',
+            data: [85, 72, null, null, null],
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)'
+              }
+            },
+            x: {
+              grid: {
+                display: false
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function setAnalyticsPeriod(period) {
+      // Update active button
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+      
+      // In a real app, you would fetch new data based on the period
+      console.log('Analytics period changed to:', period);
+      
+      // Show a subtle notification
+      const notification = document.createElement('div');
+      notification.textContent = `Showing data for: ${period === '7d' ? 'Last 7 Days' : period === '30d' ? 'Last 30 Days' : period === '90d' ? 'Last 90 Days' : 'All Time'}`;
+      notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #10b981; color: white; padding: 12px 20px; border-radius: 8px; z-index: 1000; animation: slideIn 0.3s ease;';
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+      }, 2000);
     }
 
     // Settings functionality
     function loadSettings() {
-      // Set user information
       document.getElementById('full-name').value = user.name || '';
       document.getElementById('email').value = user.email || '';
       document.getElementById('role').value = 'Founder';
       
-      // Load preferences
       const emailNotifications = localStorage.getItem('emailNotifications') !== 'false';
       const autoSave = localStorage.getItem('autoSave') !== 'false';
       
@@ -926,8 +1287,8 @@
       document.getElementById('auto-save').checked = autoSave;
     }
 
-    // Update profile button
-    document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
+    // Settings button handlers
+    document.getElementById('update-profile-btn')?.addEventListener('click', () => {
       const name = document.getElementById('full-name').value.trim();
       const email = document.getElementById('email').value.trim();
       
@@ -936,16 +1297,10 @@
         return;
       }
       
-      try {
-        // In a real app, this would call an API to update user profile
-        alert('Profile updated successfully!');
-      } catch (error) {
-        alert(`Failed to update profile: ${error.message}`);
-      }
+      alert('Profile updated successfully!');
     });
 
-    // Update password button
-    document.getElementById('update-password-btn')?.addEventListener('click', async () => {
+    document.getElementById('update-password-btn')?.addEventListener('click', () => {
       const currentPassword = document.getElementById('current-password').value;
       const newPassword = document.getElementById('new-password').value;
       const confirmPassword = document.getElementById('confirm-password').value;
@@ -965,42 +1320,29 @@
         return;
       }
       
-      try {
-        // In a real app, this would call an API to update password
-        alert('Password updated successfully!');
-        
-        // Clear password fields
-        document.getElementById('current-password').value = '';
-        document.getElementById('new-password').value = '';
-        document.getElementById('confirm-password').value = '';
-      } catch (error) {
-        alert(`Failed to update password: ${error.message}`);
-      }
+      alert('Password updated successfully!');
+      document.getElementById('current-password').value = '';
+      document.getElementById('new-password').value = '';
+      document.getElementById('confirm-password').value = '';
     });
 
-    // Delete account button
     document.getElementById('delete-account-btn')?.addEventListener('click', () => {
       if (confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) {
         if (confirm('This will permanently delete your account and all associated data. Are you really sure?')) {
-          alert('Account deletion would be processed here. In a real app, this would make an API call to delete the account.');
+          alert('Account deletion would be processed here.');
         }
       }
     });
 
-    // Logout button
     document.getElementById('logout-btn')?.addEventListener('click', () => {
       if (confirm('Are you sure you want to logout?')) {
-        // Clear all client-side auth data
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         localStorage.clear();
-        
-        // Redirect to index.html (home/landing page)
         window.location.href = 'login.html';
       }
     });
 
-    // Save preferences
     document.getElementById('email-notifications')?.addEventListener('change', (e) => {
       localStorage.setItem('emailNotifications', e.target.checked);
     });
@@ -1009,7 +1351,7 @@
       localStorage.setItem('autoSave', e.target.checked);
     });
 
-    // ============= VALIDATION STAGES UI (5-stage roadmap) =============
+    // ============= VALIDATION STAGES (NO MANUAL SCORING) =============
 
     const VALIDATION_STAGES = [
       { key: 'idea', title: 'Idea Validation' },
@@ -1023,7 +1365,6 @@
 
     function setBadge(el, text, variant) {
       el.textContent = text;
-      // variant: 'default' | 'success' | 'danger'
       if (variant === 'success') {
         el.style.background = '#d1fae5';
         el.style.color = '#065f46';
@@ -1037,11 +1378,9 @@
     }
 
     function renderValidationRoadmap(startup) {
-      // For legacy startups that may not have validationStages yet
       const validationStages = startup.validationStages || {};
       const currentStage = startup.currentStage || 1;
 
-      // Overall summary (only final after all 5 completed)
       const summaryCard = document.getElementById('overall-validation-summary');
       const summaryText = document.getElementById('overall-validation-summary-text');
       if (summaryCard && summaryText) {
@@ -1072,7 +1411,6 @@
         const hasCompleted = !!rec?.completedAt;
         const passed = !!rec?.isValidated;
 
-        // Locking rules: must not be ahead of currentStage; and must have previous stage validated
         let locked = order > currentStage;
         if (order > 1) {
           const prevKey = VALIDATION_STAGES[order - 2].key;
@@ -1090,7 +1428,6 @@
           startBtn.textContent = locked ? 'Locked' : 'Start';
           badgeEl.textContent = '--';
         } else {
-          // Completed (passed or failed)
           summaryEl.style.display = 'block';
           scoreEl.textContent = `${rec.score}%`;
           badgeEl.textContent = `${rec.score}%`;
@@ -1108,6 +1445,7 @@
       });
     }
 
+    // Open validation modal (NO SLIDERS - TEXT ONLY)
     async function openStageValidationModal(stageKey) {
       const modal = document.getElementById('idea-validation-modal');
       const container = document.getElementById('validation-questions-container');
@@ -1146,24 +1484,9 @@
                 data-category="${q.category}"
                 data-weight="${q.weight}"
                 placeholder="Your answer..." 
-                style="margin-bottom: 0.5rem; resize: vertical; min-height: 80px;"
+                style="margin-bottom: 0; resize: vertical; min-height: 100px;"
+                oninput="updateAnswerProgress()"
               ></textarea>
-              
-              <div style="display: flex; gap: 0.5rem; align-items: center;">
-                <label for="score-${stageKey}-${q.id}" style="font-size: 0.9rem;">Score (0-100):</label>
-                <input 
-                  type="range" 
-                  id="score-${stageKey}-${q.id}"
-                  class="validation-score"
-                  data-question-id="${q.id}"
-                  min="0" 
-                  max="100" 
-                  value="0"
-                  style="flex: 1; cursor: pointer;"
-                  oninput="updateScoreDisplay(this, ${q.id})"
-                >
-                <span id="score-display-${q.id}" style="font-weight: bold; min-width: 40px; text-align: right;">0%</span>
-              </div>
             </div>
           `;
           container.appendChild(questionDiv);
@@ -1172,9 +1495,7 @@
         document.getElementById('validation-progress').style.display = 'block';
         document.getElementById('idea-validation-form').onsubmit = submitStageValidation;
 
-        // Reset estimated score
-        document.getElementById('validation-estimated-score').textContent = '0%';
-        document.getElementById('validation-progress-text').textContent = '0/10';
+        document.getElementById('validation-progress-text').textContent = '0/10 questions answered';
         document.getElementById('validation-progress-fill').style.width = '0%';
 
         modal.classList.add('active');
@@ -1184,11 +1505,7 @@
       }
     }
 
-    function updateScoreDisplay(input, questionId) {
-      const scoreEl = document.getElementById(`score-display-${questionId}`);
-      if (scoreEl) scoreEl.textContent = `${input.value}%`;
-
-      // Update progress based on answered textareas
+    function updateAnswerProgress() {
       const allAnswers = document.querySelectorAll('.validation-answer');
       const answeredCount = Array.from(allAnswers).filter(a => a.value.trim() !== '').length;
       const totalQuestions = allAnswers.length || 10;
@@ -1197,26 +1514,8 @@
       const progressText = document.getElementById('validation-progress-text');
       const progressFill = document.getElementById('validation-progress-fill');
 
-      if (progressText) progressText.textContent = `${answeredCount}/${totalQuestions}`;
+      if (progressText) progressText.textContent = `${answeredCount}/${totalQuestions} questions answered`;
       if (progressFill) progressFill.style.width = `${percent}%`;
-
-      // Live estimated score (weighted average of sliders)
-      const scoreInputs = Array.from(document.querySelectorAll('.validation-score'));
-      let weightedSum = 0;
-      let totalWeight = 0;
-
-      scoreInputs.forEach(si => {
-        const qId = parseInt(si.dataset.questionId);
-        const answerElem = document.querySelector(`.validation-answer[data-question-id="${qId}"]`);
-        const w = parseFloat(answerElem?.dataset?.weight || '1');
-        const s = Math.min(Math.max(parseInt(si.value) || 0, 0), 100);
-        weightedSum += s * w;
-        totalWeight += w;
-      });
-
-      const est = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
-      const estEl = document.getElementById('validation-estimated-score');
-      if (estEl) estEl.textContent = `${est}%`;
     }
 
     async function submitStageValidation(e) {
@@ -1224,6 +1523,8 @@
 
       const modal = document.getElementById('idea-validation-modal');
       const stageKey = modal.dataset.stageKey;
+      const formEl = document.getElementById('idea-validation-form');
+      const loadingEl = document.getElementById('validation-loading');
 
       const answers = [];
       const answerElements = document.querySelectorAll('.validation-answer');
@@ -1235,17 +1536,18 @@
         }
       }
 
-      document.querySelectorAll('.validation-score').forEach(scoreInput => {
-        const questionId = parseInt(scoreInput.dataset.questionId);
-        const answerElem = document.querySelector(`.validation-answer[data-question-id="${questionId}"]`);
-
+      answerElements.forEach(elem => {
+        const questionId = parseInt(elem.dataset.questionId);
         answers.push({
           id: questionId,
-          answer: answerElem.value,
-          score: parseInt(scoreInput.value),
-          category: answerElem.dataset.category
+          answer: elem.value.trim(),
+          category: elem.dataset.category
         });
       });
+
+      // Show loading state
+      formEl.style.display = 'none';
+      loadingEl.style.display = 'block';
 
       try {
         const response = await fetch(`/api/founder/validate-stage/${stageKey}`, {
@@ -1259,11 +1561,13 @@
 
         const result = await response.json();
 
+        // Hide loading
+        formEl.style.display = 'block';
+        loadingEl.style.display = 'none';
+
         if (result.success) {
           closeIdeaValidationModal();
 
-          // Fetch latest startup so we can show a non-confusing overall score message.
-          // Overall score is only computed after ALL 5 stages are completed.
           let overallLine = `Overall Validation Score: Pending`;
           try {
             const startup = await api.getStartup();
@@ -1276,9 +1580,7 @@
             overallLine = allCompleted
               ? `Overall Validation Score: ${startup.validationScore}%`
               : `Overall Validation Score: Pending (${completedCount}/${VALIDATION_STAGES.length} stages completed)`;
-          } catch (_) {
-            // If this fails, fall back to a simple pending message.
-          }
+          } catch (_) {}
 
           const message = result.isValidated
             ? `✓ Stage Validated (${result.validationScore}%)\n\n${overallLine}`
@@ -1292,6 +1594,8 @@
           alert(`Error: ${result.message || 'Validation failed'}`);
         }
       } catch (error) {
+        formEl.style.display = 'block';
+        loadingEl.style.display = 'none';
         console.error('Error submitting validation:', error);
         alert('Failed to submit validation');
       }
@@ -1340,48 +1644,7 @@
       }
     }
 
-    // Backwards-compatible global names (older onclicks may still call these)
-    function openIdeaValidationModal() {
-      return openStageValidationModal('idea');
-    }
-
-    function showValidationResults() {
-      return showStageValidationResults('idea');
-    }
-
-    // ============= END VALIDATION STAGES UI =============
-
-    // Task modal functionality
-    const modal = document.getElementById('task-modal');
-    const modalTitle = document.querySelector('.modal-title');
-    const taskResponse = document.getElementById('task-response');
-    let currentMilestone = null;
-
-    function openTaskModal(milestone) {
-      currentMilestone = milestone;
-      modalTitle.textContent = `Submit: ${milestone.title}`;
-      taskResponse.value = '';
-      modal.classList.add('active');
-    }
-
-    document.querySelector('.modal-close').addEventListener('click', () => {
-      modal.classList.remove('active');
-    });
-
-    document.getElementById('task-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      
-      if (taskResponse.value.trim() === '') {
-        alert('Please enter a response');
-        return;
-      }
-      
-      // In a real app, this would call an API to submit the task
-      alert('Task submitted successfully!');
-      modal.classList.remove('active');
-      loadStages();
-      loadDashboard();
-    });
+    // ============= END VALIDATION =============
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
@@ -1390,21 +1653,12 @@
 
     // Keyboard navigation
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && modal.classList.contains('active')) {
-        modal.classList.remove('active');
-      }
       if (e.key === 'Escape' && document.getElementById('idea-validation-modal').classList.contains('active')) {
         closeIdeaValidationModal();
       }
     });
 
     // Close modal on outside click
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        modal.classList.remove('active');
-      }
-    });
-
     document.getElementById('idea-validation-modal').addEventListener('click', (e) => {
       if (e.target === document.getElementById('idea-validation-modal')) {
         closeIdeaValidationModal();

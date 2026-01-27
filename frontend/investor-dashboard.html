@@ -72,7 +72,7 @@
       <div id="dashboard-page" class="page active">
         <div class="page-header">
           <h1 class="page-title">Investor Dashboard</h1>
-          <p class="page-subtitle">Browse high-potential startups that have reached validation thresholds.</p>
+          <p class="page-subtitle">Browse high-potential startups that have reached validation thresholds (≥70% on any stage).</p>
         </div>
 
         <!-- Quick Stats -->
@@ -83,28 +83,28 @@
           </div>
           <div class="stat-card">
             <div class="stat-value" id="highest-score">0%</div>
-            <div class="stat-label">Highest Score</div>
+            <div class="stat-label">Highest Stage Score</div>
           </div>
           <div class="stat-card">
             <div class="stat-value" id="watchlist-count">0</div>
             <div class="stat-label">Watchlist</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value" id="new-this-week">0</div>
-            <div class="stat-label">New This Week</div>
+            <div class="stat-value" id="fully-validated">0</div>
+            <div class="stat-label">Fully Validated (5/5)</div>
           </div>
         </div>
 
         <!-- Validated Startups -->
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title">Validated Startups (Score ≥ 70%)</h3>
+            <h3 class="card-title">Validated Startups (Score ≥ 70% on Any Stage)</h3>
           </div>
           <div class="form-group">
             <input type="text" class="form-input" id="search-startup" placeholder="Search by name or thesis...">
           </div>
           <div id="validated-startups">
-            <!-- Startup cards will be populated by JavaScript -->
+            <p style="text-align: center; color: var(--text-secondary);">Loading startups...</p>
           </div>
         </div>
       </div>
@@ -124,7 +124,7 @@
             <input type="text" class="form-input" id="search-all-startups" placeholder="Search by name or industry...">
           </div>
           <div id="all-startups">
-            <!-- All startup cards will be populated by JavaScript -->
+            <p style="text-align: center; color: var(--text-secondary);">Loading startups...</p>
           </div>
         </div>
       </div>
@@ -141,7 +141,7 @@
             <h3 class="card-title">Tracked Startups</h3>
           </div>
           <div id="watchlist-startups">
-            <!-- Watchlist items will be populated by JavaScript -->
+            <p style="text-align: center; color: var(--text-secondary);">Your watchlist is empty.</p>
           </div>
         </div>
       </div>
@@ -252,6 +252,9 @@
     </main>
   </div>
 
+  <!-- Include API Client -->
+  <script src="./js/api.js"></script>
+
   <script>
     // Get user from localStorage
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -270,11 +273,9 @@
 
     // User menu click handler - navigate to settings
     document.getElementById('user-menu').addEventListener('click', () => {
-      // Show settings page
       document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
       document.getElementById('settings-page').classList.add('active');
       
-      // Update active nav
       document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
       document.querySelector('[data-page="settings"]').classList.add('active');
     });
@@ -284,16 +285,13 @@
       item.addEventListener('click', (e) => {
         e.preventDefault();
         
-        // Update active nav
         document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
         item.classList.add('active');
         
-        // Show corresponding page
         const page = item.dataset.page;
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(`${page}-page`).classList.add('active');
         
-        // Load page-specific content
         loadPageContent(page);
       });
     });
@@ -316,35 +314,53 @@
       }
     }
 
-    // Dashboard functionality
+    // Dashboard functionality with NEW VISIBILITY LOGIC
     async function loadDashboard() {
       try {
-        // Get validated startups
-        const startups = await api.getValidatedStartups();
+        // Fetch startups visible to investors (≥70% on any stage)
+        const response = await fetch('/api/investor/validated-startups', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch startups');
+        }
+
+        const data = await response.json();
+        const startups = data.startups || [];
         
         // Update stats
         document.getElementById('total-startups').textContent = startups.length;
         
-        if (startups.length > 0) {
-          const highestScore = Math.max(...startups.map(s => s.validationScore));
-          document.getElementById('highest-score').textContent = `${highestScore}%`;
-        } else {
-          document.getElementById('highest-score').textContent = '0%';
-        }
+        // Calculate highest stage score across all startups
+        let highestScore = 0;
+        let fullyValidatedCount = 0;
         
+        startups.forEach(startup => {
+          if (startup.bestStageScore > highestScore) {
+            highestScore = startup.bestStageScore;
+          }
+          if (startup.completedStages === 5) {
+            fullyValidatedCount++;
+          }
+        });
+        
+        document.getElementById('highest-score').textContent = `${highestScore}%`;
         document.getElementById('watchlist-count').textContent = watchlist.length;
-        
-        // Calculate new startups this week (placeholder)
-        document.getElementById('new-this-week').textContent = '3';
+        document.getElementById('fully-validated').textContent = fullyValidatedCount;
         
         // Populate validated startups
         const startupsContainer = document.getElementById('validated-startups');
         startupsContainer.innerHTML = '';
         
-        startups.forEach(startup => {
-          const startupCard = createStartupCard(startup);
-          startupsContainer.appendChild(startupCard);
-        });
+        if (startups.length === 0) {
+          startupsContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No validated startups yet. Startups appear here once they achieve ≥70% on any validation stage.</p>';
+        } else {
+          startups.forEach(startup => {
+            const startupCard = createStartupCard(startup);
+            startupsContainer.appendChild(startupCard);
+          });
+        }
         
         // Add search functionality
         document.getElementById('search-startup').addEventListener('input', (e) => {
@@ -357,24 +373,35 @@
       } catch (error) {
         console.error('Error loading dashboard:', error);
         document.getElementById('validated-startups').innerHTML = 
-          '<p style="text-align: center; color: red;">Failed to load startups.</p>';
+          '<p style="text-align: center; color: red;">Failed to load startups. Please try again later.</p>';
       }
     }
 
     // Startups page functionality
     async function loadStartups() {
       try {
-        // Get all startups
-        const startups = await api.getValidatedStartups();
+        const response = await fetch('/api/investor/validated-startups', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch startups');
+        }
+
+        const data = await response.json();
+        const startups = data.startups || [];
         
         const startupsContainer = document.getElementById('all-startups');
         startupsContainer.innerHTML = '';
         
-        // Show all startups
-        startups.forEach(startup => {
-          const startupCard = createStartupCard(startup);
-          startupsContainer.appendChild(startupCard);
-        });
+        if (startups.length === 0) {
+          startupsContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No validated startups available.</p>';
+        } else {
+          startups.forEach(startup => {
+            const startupCard = createStartupCard(startup);
+            startupsContainer.appendChild(startupCard);
+          });
+        }
         
         // Add search functionality
         document.getElementById('search-all-startups').addEventListener('input', (e) => {
@@ -396,23 +423,19 @@
       const watchlistContainer = document.getElementById('watchlist-startups');
       watchlistContainer.innerHTML = '';
       
-      // Get watchlist startups from the full list
-      // In a real app, this would be an API call
-      const watchlistStartups = watchlist.map(id => {
-        // This is a placeholder - in a real app, you'd fetch the full startup data
-        return {
-          id,
-          name: `Startup ${id}`,
-          industry: 'Technology',
-          validationScore: 75 + Math.random() * 20,
-          funding: '$' + (Math.floor(Math.random() * 5) + 1) + 'M'
-        };
-      });
-      
-      if (watchlistStartups.length === 0) {
+      if (watchlist.length === 0) {
         watchlistContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Your watchlist is empty. Add startups from the validated list.</p>';
         return;
       }
+      
+      // In a real app, fetch full startup data for watchlist items
+      const watchlistStartups = watchlist.map(id => ({
+        id,
+        name: `Startup ${id}`,
+        industry: 'Technology',
+        bestStageScore: 75 + Math.random() * 20,
+        completedStages: Math.floor(Math.random() * 5) + 1
+      }));
       
       watchlistStartups.forEach(startup => {
         const watchlistItem = createWatchlistItem(startup);
@@ -420,38 +443,51 @@
       });
     }
 
-    // Create startup card
+    // Create startup card with NEW VISIBILITY INDICATORS
     function createStartupCard(startup) {
       const card = document.createElement('div');
       card.className = 'startup-card';
       
-      const scoreClass = startup.validationScore >= 85 ? 'score-high' : 
-                        startup.validationScore >= 70 ? 'score-medium' : 'score-low';
+      const scoreClass = startup.bestStageScore >= 85 ? 'score-high' : 
+                        startup.bestStageScore >= 70 ? 'score-medium' : 'score-low';
       
       const isInWatchlist = watchlist.includes(startup._id || startup.id);
+      
+      // Determine badge based on completion status
+      const fullyValidated = startup.completedStages === 5;
+      const badgeHtml = fullyValidated 
+        ? '<span style="background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">✓ Fully Validated</span>'
+        : '<span style="background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">Early Stage Opportunity</span>';
       
       card.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
           <div>
             <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">${startup.name}</h3>
-            <span class="${scoreClass}" style="font-size: 1rem; font-weight: 600;">${startup.validationScore}% Validation</span>
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+              <span class="${scoreClass}" style="font-size: 1rem; font-weight: 600;">${startup.bestStageScore}% Best Stage</span>
+              ${badgeHtml}
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">
+              ${startup.completedStages}/5 stages validated
+              ${fullyValidated ? ' • Ready for investment' : ' • Early opportunity'}
+            </p>
           </div>
           <div style="display: flex; gap: 0.5rem;">
             <button class="btn btn-secondary" onclick="toggleWatchlist('${startup._id || startup.id}')">
               ${isInWatchlist ? 'Remove' : 'Add to Watchlist'}
             </button>
-            <button class="btn btn-primary">View Details</button>
+            <button class="btn btn-primary">Express Interest</button>
           </div>
         </div>
-        <p style="color: var(--text-secondary); margin-bottom: 1rem;">${startup.thesis}</p>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <p style="color: var(--text-secondary); margin-bottom: 1rem;">${startup.thesis || 'No description available'}</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
           <div>
             <span style="color: var(--text-secondary); font-size: 0.9rem;">Industry: ${startup.industry || 'Not specified'}</span>
-            <span style="color: var(--text-secondary); font-size: 0.9rem; margin-left: 1rem;">Stage: ${getStageLabel(startup.currentStage || 1)}</span>
+            <span style="color: var(--text-secondary); font-size: 0.9rem; margin-left: 1rem;">
+              Current Stage: Stage ${startup.currentStage || 1}
+            </span>
           </div>
-          <div>
-            <span style="color: var(--text-secondary); font-size: 0.9rem;">Funding: ${startup.funding || 'Not specified'}</span>
-          </div>
+          ${fullyValidated ? '<span style="color: #10b981; font-weight: 600; font-size: 0.9rem;">✓ All Validation Complete</span>' : ''}
         </div>
       `;
       
@@ -463,15 +499,19 @@
       const item = document.createElement('div');
       item.className = 'list-item';
       
+      const fullyValidated = startup.completedStages === 5;
+      
       item.innerHTML = `
         <div class="list-item-content">
           <div class="list-item-title">${startup.name}</div>
           <div class="list-item-subtitle">
-            ${startup.industry} • ${getStageLabel(startup.currentStage || 1)} • ${startup.funding}
+            ${startup.industry} • ${startup.bestStageScore}% Best Stage • ${startup.completedStages}/5 Stages
           </div>
         </div>
-        <div style="display: flex; gap: 0.5rem;">
-          <span class="list-item-status status-watchlisted">Watchlisted</span>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          ${fullyValidated 
+            ? '<span style="background: #d1fae5; color: #065f46; padding: 4px 8px; border-radius: 8px; font-size: 0.8rem;">Fully Validated</span>'
+            : '<span class="list-item-status status-watchlisted">In Progress</span>'}
           <button class="btn btn-danger" onclick="removeFromWatchlist('${startup.id}')">Remove</button>
         </div>
       `;
@@ -480,7 +520,7 @@
     }
 
     // Toggle watchlist
-    function toggleWatchlist(startupId) {
+    window.toggleWatchlist = function(startupId) {
       const index = watchlist.indexOf(startupId);
       if (index === -1) {
         watchlist.push(startupId);
@@ -490,44 +530,28 @@
         alert('Removed from watchlist!');
       }
       
-      // Save to localStorage
       localStorage.setItem('watchlist', JSON.stringify(watchlist));
       
-      // Reload current page
       const activePage = document.querySelector('.nav-item.active').dataset.page;
       loadPageContent(activePage);
-    }
+    };
 
     // Remove from watchlist
-    function removeFromWatchlist(startupId) {
+    window.removeFromWatchlist = function(startupId) {
       const index = watchlist.indexOf(startupId);
       if (index !== -1) {
         watchlist.splice(index, 1);
         localStorage.setItem('watchlist', JSON.stringify(watchlist));
         loadWatchlist();
       }
-    }
-
-    // Get stage label
-    function getStageLabel(stage) {
-      const stages = {
-        1: 'Idea Validation',
-        2: 'Problem Definition',
-        3: 'Solution Development',
-        4: 'Prototype Testing',
-        5: 'Launch Preparation'
-      };
-      return stages[stage] || `Stage ${stage}`;
-    }
+    };
 
     // Settings functionality
     function loadSettings() {
-      // Set user information
       document.getElementById('full-name').value = user.name || '';
       document.getElementById('email').value = user.email || '';
       document.getElementById('role').value = 'Investor';
       
-      // Load preferences
       const emailNotifications = localStorage.getItem('emailNotifications') !== 'false';
       const autoRefresh = localStorage.getItem('autoRefresh') !== 'false';
       
@@ -535,7 +559,7 @@
       document.getElementById('auto-refresh').checked = autoRefresh;
     }
 
-    // Update profile button
+    // Settings button handlers
     document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
       const name = document.getElementById('full-name').value.trim();
       const email = document.getElementById('email').value.trim();
@@ -545,15 +569,9 @@
         return;
       }
       
-      try {
-        // In a real app, this would call an API to update user profile
-        alert('Profile updated successfully!');
-      } catch (error) {
-        alert(`Failed to update profile: ${error.message}`);
-      }
+      alert('Profile updated successfully!');
     });
 
-    // Update password button
     document.getElementById('update-password-btn')?.addEventListener('click', async () => {
       const currentPassword = document.getElementById('current-password').value;
       const newPassword = document.getElementById('new-password').value;
@@ -574,42 +592,29 @@
         return;
       }
       
-      try {
-        // In a real app, this would call an API to update password
-        alert('Password updated successfully!');
-        
-        // Clear password fields
-        document.getElementById('current-password').value = '';
-        document.getElementById('new-password').value = '';
-        document.getElementById('confirm-password').value = '';
-      } catch (error) {
-        alert(`Failed to update password: ${error.message}`);
-      }
+      alert('Password updated successfully!');
+      document.getElementById('current-password').value = '';
+      document.getElementById('new-password').value = '';
+      document.getElementById('confirm-password').value = '';
     });
 
-    // Delete account button
     document.getElementById('delete-account-btn')?.addEventListener('click', () => {
       if (confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) {
         if (confirm('This will permanently delete your account and all associated data. Are you really sure?')) {
-          alert('Account deletion would be processed here. In a real app, this would make an API call to delete the account.');
+          alert('Account deletion would be processed here.');
         }
       }
     });
 
-    // Logout button
     document.getElementById('logout-btn')?.addEventListener('click', () => {
       if (confirm('Are you sure you want to logout?')) {
-        // Clear all client-side auth data
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         localStorage.clear();
-        
-        // Redirect to index.html (home/landing page)
-        window.location.href = 'index.html';
+        window.location.href = 'login.html';
       }
     });
 
-    // Save preferences
     document.getElementById('email-notifications')?.addEventListener('change', (e) => {
       localStorage.setItem('emailNotifications', e.target.checked);
     });

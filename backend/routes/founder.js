@@ -1,4 +1,5 @@
 // backend/routes/founder.js
+// UPDATED WITH AI VALIDATION - Manual scoring removed
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
@@ -6,11 +7,11 @@ const checkStageAccess = require('../middleware/stageGating');
 const Startup = require('../models/Startup');
 const Log = require('../models/Log');
 const { updateMilestone } = require('../services/milestoneService');
+const { validateStage } = require('../services/aiValidationService');
 
 // Get founder's startup
 router.get('/my-startup', protect, async (req, res) => {
   try {
-    // Check if user exists in request
     if (!req.user || !req.user.id) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
@@ -35,7 +36,6 @@ router.get('/my-startup', protect, async (req, res) => {
 // Create startup
 router.post('/', protect, async (req, res) => {
   try {
-    // Check if user exists in request
     if (!req.user || !req.user.id) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
@@ -49,7 +49,6 @@ router.post('/', protect, async (req, res) => {
       });
     }
 
-    // 5-stage validation roadmap (milestone order == stage number)
     const initialMilestones = [
       { title: 'Idea Validation', description: 'Evaluate your startup idea via a 10-question questionnaire (score ≥ 70% to pass).', isCompleted: false, verified: false, order: 1 },
       { title: 'Problem Definition', description: 'Clearly define the problem, target user, and evidence that the problem is real.', isCompleted: false, verified: false, order: 2 },
@@ -67,7 +66,6 @@ router.post('/', protect, async (req, res) => {
       auditLogs: []
     });
 
-    // Create audit log
     const log = await Log.create({
       userId: req.user.id,
       action: 'startup_created',
@@ -76,7 +74,6 @@ router.post('/', protect, async (req, res) => {
     startup.auditLogs.push(log._id);
     await startup.save();
 
-    // Return populated startup
     const populatedStartup = await Startup.findById(startup._id).populate('auditLogs');
     res.status(201).json(populatedStartup);
   } catch (error) {
@@ -121,7 +118,6 @@ router.put('/my-startup', protect, async (req, res) => {
       });
     }
 
-    // Create audit log
     const log = await Log.create({
       userId: req.user.id,
       action: 'startup_profile_updated',
@@ -161,7 +157,6 @@ router.post('/submit-task', protect, async (req, res) => {
       });
     }
 
-    // Find milestone
     const milestone = startup.milestones.id(milestoneId);
     if (!milestone) {
       return res.status(404).json({ 
@@ -170,7 +165,6 @@ router.post('/submit-task', protect, async (req, res) => {
       });
     }
 
-    // Create task submission
     const taskSubmission = {
       milestoneId,
       title,
@@ -188,7 +182,6 @@ router.post('/submit-task', protect, async (req, res) => {
 
     await startup.save();
 
-    // Create audit log
     const log = await Log.create({
       userId: req.user.id,
       action: 'task_submitted',
@@ -223,7 +216,6 @@ router.get('/task-submissions', protect, async (req, res) => {
       });
     }
 
-    // Collect all task submissions across milestones
     const submissions = [];
     startup.milestones.forEach((milestone, idx) => {
       if (milestone.taskSubmissions) {
@@ -244,10 +236,9 @@ router.get('/task-submissions', protect, async (req, res) => {
   }
 });
 
-// Update milestone - FIXED endpoint to match frontend expectations
+// Update milestone
 router.put('/milestones', protect, checkStageAccess, async (req, res) => {
   try {
-    // Check if user exists in request
     if (!req.user || !req.user.id) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
@@ -261,7 +252,6 @@ router.put('/milestones', protect, checkStageAccess, async (req, res) => {
       });
     }
 
-    // Verify user owns the startup
     const startup = await Startup.findOne({ founderId: req.user.id });
     if (!startup) {
       return res.status(404).json({ 
@@ -289,7 +279,7 @@ router.put('/milestones', protect, checkStageAccess, async (req, res) => {
   }
 });
 
-// ============= VALIDATION STAGES (5-stage roadmap) =============
+// ============= VALIDATION STAGES (5-stage roadmap with AI scoring) =============
 
 const VALIDATION_STAGE_KEYS = ['idea', 'problem', 'solution', 'market', 'business'];
 const VALIDATION_STAGE_ORDER = {
@@ -308,19 +298,7 @@ const VALIDATION_STAGE_TITLES = {
   business: 'Business Model Validation'
 };
 
-const QUESTION_WEIGHTS = {
-  1: 1.0,
-  2: 1.0,
-  3: 0.9,
-  4: 0.9,
-  5: 0.8,
-  6: 0.8,
-  7: 0.7,
-  8: 0.8,
-  9: 0.9,
-  10: 0.7
-};
-
+// Question definitions remain the same
 const getStageQuestions = (stageKey) => {
   switch (stageKey) {
     case 'idea':
@@ -406,36 +384,22 @@ const assertStageKey = (stageKey) => {
   }
 };
 
-const computeProcessedAnswers = (answers) => {
-  let weightedSum = 0;
-  let totalWeight = 0;
-  const processedAnswers = [];
+// AI-POWERED ANSWER PROCESSING
+const computeProcessedAnswers = async (stageKey, answers) => {
+  const questions = getStageQuestions(stageKey);
+  
+  if (!questions || questions.length === 0) {
+    throw new Error('Invalid stage or no questions available');
+  }
 
-  answers.forEach(answer => {
-    const weight = QUESTION_WEIGHTS[answer.id] || 1.0;
-    const score = Math.min(Math.max(parseInt(answer.score) || 0, 0), 100);
+  // Use AI validation service to score answers
+  const { stageScore, processedAnswers, overallFeedback } = await validateStage(questions, answers);
 
-    weightedSum += score * weight;
-    totalWeight += weight;
-
-    processedAnswers.push({
-      question: `Question ${answer.id}`,
-      answer: answer.answer || '',
-      score,
-      weight,
-      category: answer.category || 'general'
-    });
-  });
-
-  const stageScore = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
-  return { processedAnswers, stageScore };
+  return { processedAnswers, stageScore, overallFeedback };
 };
 
 const recomputeTotalValidationScore = (startup) => {
-  // IMPORTANT: overall validation score should represent the average across ALL 5 stages.
-  // Until all stages are completed, keep the total at 0 so startups don't appear in the investor dashboard early.
   const stageRecords = VALIDATION_STAGE_KEYS.map(k => startup.validationStages?.[k]);
-
   const allCompleted = stageRecords.every(v => v && v.completedAt);
   if (!allCompleted) return 0;
 
@@ -455,7 +419,7 @@ const submitStageValidation = async (stageKey, req, res) => {
     if (!answers || !Array.isArray(answers)) {
       return res.status(400).json({
         message: 'Invalid request format',
-        nextSteps: 'Please submit answers array'
+        nextSteps: 'Please submit answers array with { id, answer } objects'
       });
     }
 
@@ -469,7 +433,7 @@ const submitStageValidation = async (stageKey, req, res) => {
 
     const stageOrder = VALIDATION_STAGE_ORDER[stageKey];
 
-    // Enforce sequential gating (no skipping): can only submit the current stage or earlier (retakes allowed).
+    // Enforce sequential gating
     if (stageOrder > (startup.currentStage || 1)) {
       return res.status(403).json({
         message: 'Access denied',
@@ -490,7 +454,11 @@ const submitStageValidation = async (stageKey, req, res) => {
       }
     }
 
-    const { processedAnswers, stageScore } = computeProcessedAnswers(answers);
+    // AI-POWERED VALIDATION
+    console.log(`Processing ${answers.length} answers for stage: ${stageKey}...`);
+    const { processedAnswers, stageScore, overallFeedback } = await computeProcessedAnswers(stageKey, answers);
+    console.log(`AI scored stage ${stageKey}: ${stageScore}%`);
+
     const isValidated = stageScore >= 70;
     const completedAt = new Date();
 
@@ -499,17 +467,18 @@ const submitStageValidation = async (stageKey, req, res) => {
       score: stageScore,
       isValidated,
       answers: processedAnswers,
-      completedAt
+      completedAt,
+      overallFeedback // Store AI feedback
     };
 
-    // Backwards-compatible fields for existing Idea Validation UI.
+    // Backwards compatibility
     if (stageKey === 'idea') {
       startup.isIdeaValidated = isValidated;
       startup.ideaValidationAnswers = processedAnswers;
       startup.ideaValidationCompletedAt = completedAt;
     }
 
-    // Unlock milestone stage if validated.
+    // Unlock milestone if validated
     if (isValidated) {
       const title = VALIDATION_STAGE_TITLES[stageKey];
       const milestone = startup.milestones?.find(m => m.order === stageOrder) ||
@@ -524,7 +493,6 @@ const submitStageValidation = async (stageKey, req, res) => {
       startup.currentStage = Math.max(startup.currentStage || 1, Math.min(MAX_STAGE, stageOrder + 1));
     }
 
-    // Update total score used by investor dashboard.
     startup.validationScore = recomputeTotalValidationScore(startup);
     startup.updatedAt = completedAt;
     await startup.save();
@@ -538,7 +506,8 @@ const submitStageValidation = async (stageKey, req, res) => {
         totalValidationScore: startup.validationScore,
         isValidated,
         questionsAnswered: answers.length,
-        startupId: startup._id
+        startupId: startup._id,
+        aiScored: true
       }
     });
 
@@ -550,7 +519,9 @@ const submitStageValidation = async (stageKey, req, res) => {
         : `${VALIDATION_STAGE_TITLES[stageKey]} score is ${stageScore}%. Need 70% to validate.`,
       validationScore: stageScore,
       totalValidationScore: startup.validationScore,
-      isValidated
+      isValidated,
+      overallFeedback,
+      aiGenerated: true
     });
   } catch (error) {
     console.error('Error validating stage:', error);
@@ -576,7 +547,6 @@ const getStageStatus = async (stageKey, req, res) => {
 
     const stageRecord = startup.validationStages?.[stageKey];
 
-    // Backwards compatibility for old idea fields.
     const fallbackIdea = stageKey === 'idea'
       ? {
           isValidated: startup.isIdeaValidated,
@@ -597,7 +567,8 @@ const getStageStatus = async (stageKey, req, res) => {
         totalValidationScore: startup.validationScore,
         completedAt: rec?.completedAt,
         answerCount: (rec?.answers || []).length,
-        previousAnswers: rec?.answers || []
+        previousAnswers: rec?.answers || [],
+        overallFeedback: rec?.overallFeedback
       }
     });
   } catch (error) {
@@ -615,7 +586,8 @@ const getStageQuestionsHandler = (stageKey, req, res) => {
       success: true,
       stage: stageKey,
       questions,
-      message: `Answer these questions to validate: ${VALIDATION_STAGE_TITLES[stageKey]}`
+      message: `Answer these questions to validate: ${VALIDATION_STAGE_TITLES[stageKey]}`,
+      note: 'Your answers will be scored by AI. No manual scoring required.'
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({ message: 'Failed to load questions' });
