@@ -1,58 +1,263 @@
-<!-- frontend/index.html (Updated: Light theme CSS enhancements) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dolphin | Startup OS</title>
-    <style>
-        /* Light theme: Inverted colors */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
-        :root { --primary: #38bdf8; --secondary: #f8fafc; --glass: rgba(0,0,0,0.05); --text: #0f172a; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--secondary); color: var(--text); margin: 0; }
-        header { background: rgba(255,255,255,0.9); padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10; }
-        .logo { font-size: 1.5rem; font-weight: 800; background: linear-gradient(to right, #000, var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .btn { padding: 12px 30px; background: var(--primary); color: #fff; border-radius: 50px; text-decoration: none; font-weight: 700; transition: 0.3s; box-shadow: 0 4px 15px rgba(56,189,248,0.3); }
-        .btn:hover { transform: scale(1.05); box-shadow: 0 6px 25px rgba(56,189,248,0.5); }
-        .hero { text-align: center; padding: 120px 20px; background: radial-gradient(circle at 50% 10%, #ffffff, #f8fafc); animation: fadeIn 1s ease-out; }
-        .hero h1 { font-size: 3.5rem; line-height: 1.1; margin-bottom: 20px; animation: slideInLeft 0.8s ease-out; }
-        .hero p { font-size: 1.25rem; color: #475569; max-width: 600px; margin: 0 auto 40px; animation: slideInRight 0.8s ease-out; }
-        .features { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; margin-top: 50px; }
-        .feature-card { background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.1); padding: 30px; border-radius: 16px; width: 300px; transition: transform 0.3s, box-shadow 0.3s; }
-        .feature-card:hover { transform: translateY(-10px); box-shadow: 0 10px 30px rgba(56,189,248,0.2); }
-        .feature-card h3 { color: var(--primary); margin-bottom: 10px; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-50px); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes slideInRight { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
-    </style>
+    <title>Dolphin | Startup OS - Validate. Build. Scale.</title>
+    <link rel="stylesheet" href="./css/index.css">
 </head>
 <body>
     <header>
-        <div class="logo">Dolphin</div>
-        <nav>
-            <a href="login.html" class="btn">Launch Platform</a>
+        <div class="logo">🐬 Dolphin</div>
+        <nav class="nav-links">
+            <a href="#features" class="nav-link">Features</a>
+            <a href="#how-it-works" class="nav-link">How It Works</a>
+            <a href="login.html" class="btn btn-primary">Launch Platform</a>
         </nav>
     </header>
 
-    <div class="hero">
-        <h1>The Operating System<br>For Entrepreneurship</h1>
-        <p>Turn the chaotic "0-to-1" journey into a measurable, repeatable science. Get funded faster.</p>
-        <a href="login.html" class="btn">Start Your Journey</a>
-
-        <div class="features">
-            <div class="feature-card">
-                <h3>Validation Engine</h3>
-                <p>Structured SOPs to prove your product-market fit before writing code.</p>
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span>🚀</span>
+                <span>Trusted by 1,000+ Founders</span>
             </div>
-            <div class="feature-card">
-                <h3>Investor Access</h3>
-                <p>Direct pipeline to VCs looking for de-risked, validated startups.</p>
-            </div>
-            <div class="feature-card">
-                <h3>Vetted Resources</h3>
-                <p>Curated marketplace of legal, cloud, and design partners.</p>
+            <h1>
+                The Operating System<br>
+                For <span class="gradient-text">Entrepreneurship</span>
+            </h1>
+            <p>Turn the chaotic "0-to-1" journey into a measurable, repeatable science. Validate faster. Build smarter. Get funded sooner.</p>
+            <div class="hero-cta">
+                <a href="register.html" class="btn btn-primary">Start Your Journey →</a>
+                <a href="#how-it-works" class="btn btn-secondary">See How It Works</a>
             </div>
         </div>
-    </div>
+
+        <div class="features" id="features">
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3>Validation Engine</h3>
+                <p>Stage-gated roadmap with AI-powered verification to ensure product-market fit at every milestone.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💼</div>
+                <h3>Investor Discovery</h3>
+                <p>Curated pipeline connecting VCs with high-potential, funding-ready startups with validation scores ≥ 70%.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🤝</div>
+                <h3>Service Marketplace</h3>
+                <p>Connect with vetted legal, tech, and design partners verified by our platform for quality assurance.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="stats-section">
+        <div class="stats-container">
+            <div class="stat-item">
+                <div class="stat-number">1,000+</div>
+                <div class="stat-label">Active Founders</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">$50M+</div>
+                <div class="stat-label">Capital Raised</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">200+</div>
+                <div class="stat-label">Validated Startups</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">85%</div>
+                <div class="stat-label">Success Rate</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="section-header">
+            <div class="section-badge">Why Choose Dolphin</div>
+            <h2 class="section-title">Built for Stability, Scale & Trust</h2>
+            <p class="section-subtitle">A state-driven platform designed to de-risk your entrepreneurial journey with transparency at every step.</p>
+        </div>
+        
+        <div class="benefits-grid">
+            <div class="benefit-card reveal">
+                <div class="benefit-icon">🛡️</div>
+                <h3 class="benefit-title">De-Risked Growth</h3>
+                <p>Every milestone is AI-verified and admin-reviewed to protect against data falsification and ensure genuine progress toward your goals.</p>
+            </div>
+            <div class="benefit-card reveal">
+                <div class="benefit-icon">🔒</div>
+                <h3 class="benefit-title">Secure Interactions</h3>
+                <p>Strict role-based access control and comprehensive interaction tracking ensure trust between founders, investors, and service providers.</p>
+            </div>
+            <div class="benefit-card reveal">
+                <div class="benefit-icon">📊</div>
+                <h3 class="benefit-title">Total Transparency</h3>
+                <p>Complete audit trails for every startup profile, keeping all stakeholders aligned on metrics, progress, and validation status.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="how-it-works">
+        <div class="section-header">
+            <div class="section-badge">The Roadmap</div>
+            <h2 class="section-title">Your Path to Validation</h2>
+            <p class="section-subtitle">Our proven 4-stage framework ensures founder-investor fit and operational excellence.</p>
+        </div>
+        
+        <div class="process-steps">
+            <div class="step reveal">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3 class="step-title">Idea Clarity & Problem Validation</h3>
+                    <p class="step-description">Define your core thesis and validate the pain point with supporting data. Complete AI-powered assessments to measure idea quality and market opportunity.</p>
+                </div>
+            </div>
+            <div class="step reveal">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3 class="step-title">Customer Discovery & Interviews</h3>
+                    <p class="step-description">Conduct 20+ qualitative interviews to verify solution-market fit. Our platform guides you through structured interview frameworks and analysis.</p>
+                </div>
+            </div>
+            <div class="step reveal">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3 class="step-title">MVP Development & Testing</h3>
+                    <p class="step-description">Build and test solution hypotheses with early adopters. Track key metrics and iterate based on real user feedback and validation data.</p>
+                </div>
+            </div>
+            <div class="step reveal">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3 class="step-title">Traction & Funding Readiness</h3>
+                    <p class="step-description">Achieve measurable traction and finalize pitch-ready financials. Connect with our network of investors actively seeking validated opportunities.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="cta-content">
+            <h2>Ready to Validate Your Idea?</h2>
+            <p>Join 1,000+ founders who are turning their startup dreams into fundable realities.</p>
+            <a href="register.html" class="btn btn-white">Get Started Free →</a>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-column">
+                <h3>🐬 Dolphin</h3>
+                <p style="color: rgba(255, 255, 255, 0.7); margin-top: 1rem; line-height: 1.7;">
+                    The Operating System for modern entrepreneurship. Validate, build, and scale with confidence.
+                </p>
+                <div class="social-links">
+                    <a href="#" class="social-link">📘</a>
+                    <a href="#" class="social-link">🐦</a>
+                    <a href="#" class="social-link">💼</a>
+                    <a href="#" class="social-link">📸</a>
+                </div>
+            </div>
+            <div class="footer-column">
+                <h3>Platform</h3>
+                <ul>
+                    <li><a href="register.html">For Founders</a></li>
+                    <li><a href="register.html">For Investors</a></li>
+                    <li><a href="register.html">For Service Providers</a></li>
+                    <li><a href="#">Pricing</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h3>Resources</h3>
+                <ul>
+                    <li><a href="#">Validation Methodology</a></li>
+                    <li><a href="#">Success Stories</a></li>
+                    <li><a href="#">Blog & Insights</a></li>
+                    <li><a href="#">Help Center</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h3>Company</h3>
+                <ul>
+                    <li><a href="#">About Us</a></li>
+                    <li><a href="#">Careers</a></li>
+                    <li><a href="#">Privacy Policy</a></li>
+                    <li><a href="#">Terms of Service</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Dolphin. All rights reserved. Built with ❤️ for entrepreneurs.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scroll reveal animation
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all elements with reveal class
+        document.querySelectorAll('.reveal').forEach(element => {
+            observer.observe(element);
+        });
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Animate numbers on stats section
+        const animateValue = (element, start, end, duration) => {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const value = Math.floor(progress * (end - start) + start);
+                element.textContent = value.toLocaleString() + (element.dataset.suffix || '');
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        };
+
+        const statsObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !entry.target.dataset.animated) {
+                    const statNumber = entry.target.querySelector('.stat-number');
+                    const text = statNumber.textContent;
+                    const number = parseInt(text.replace(/\D/g, ''));
+                    statNumber.dataset.suffix = text.replace(/[0-9,]/g, '');
+                    animateValue(statNumber, 0, number, 2000);
+                    entry.target.dataset.animated = 'true';
+                }
+            });
+        }, { threshold: 0.5 });
+
+        document.querySelectorAll('.stat-item').forEach(item => {
+            statsObserver.observe(item);
+        });
+    </script>
 </body>
 </html>

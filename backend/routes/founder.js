@@ -1,5 +1,5 @@
 // backend/routes/founder.js
-// UPDATED WITH AI VALIDATION - Manual scoring removed
+// UPDATED WITH NOTIFICATIONS AND GEMINI AI
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
@@ -7,7 +7,13 @@ const checkStageAccess = require('../middleware/stageGating');
 const Startup = require('../models/Startup');
 const Log = require('../models/Log');
 const { updateMilestone } = require('../services/milestoneService');
-const { validateStage } = require('../services/aiValidationService');
+const { batchValidateStage } = require('../services/geminiValidationService'); // CHANGED TO GEMINI
+const {
+  notifyValidationComplete,
+  notifyStageUnlocked,
+  notifyTaskApproved,
+  notifyMilestoneVerified
+} = require('../services/notificationService');
 
 // Get founder's startup
 router.get('/my-startup', protect, async (req, res) => {
@@ -279,7 +285,7 @@ router.put('/milestones', protect, checkStageAccess, async (req, res) => {
   }
 });
 
-// ============= VALIDATION STAGES (5-stage roadmap with AI scoring) =============
+// ============= VALIDATION STAGES WITH NOTIFICATIONS =============
 
 const VALIDATION_STAGE_KEYS = ['idea', 'problem', 'solution', 'market', 'business'];
 const VALIDATION_STAGE_ORDER = {
@@ -298,7 +304,6 @@ const VALIDATION_STAGE_TITLES = {
   business: 'Business Model Validation'
 };
 
-// Question definitions remain the same
 const getStageQuestions = (stageKey) => {
   switch (stageKey) {
     case 'idea':
@@ -384,20 +389,6 @@ const assertStageKey = (stageKey) => {
   }
 };
 
-// AI-POWERED ANSWER PROCESSING
-const computeProcessedAnswers = async (stageKey, answers) => {
-  const questions = getStageQuestions(stageKey);
-  
-  if (!questions || questions.length === 0) {
-    throw new Error('Invalid stage or no questions available');
-  }
-
-  // Use AI validation service to score answers
-  const { stageScore, processedAnswers, overallFeedback } = await validateStage(questions, answers);
-
-  return { processedAnswers, stageScore, overallFeedback };
-};
-
 const recomputeTotalValidationScore = (startup) => {
   const stageRecords = VALIDATION_STAGE_KEYS.map(k => startup.validationStages?.[k]);
   const allCompleted = stageRecords.every(v => v && v.completedAt);
@@ -454,10 +445,11 @@ const submitStageValidation = async (stageKey, req, res) => {
       }
     }
 
-    // AI-POWERED VALIDATION
-    console.log(`Processing ${answers.length} answers for stage: ${stageKey}...`);
-    const { processedAnswers, stageScore, overallFeedback } = await computeProcessedAnswers(stageKey, answers);
-    console.log(`AI scored stage ${stageKey}: ${stageScore}%`);
+    // GEMINI AI VALIDATION
+    console.log(`🤖 Processing ${answers.length} answers for ${stageKey} using Gemini AI...`);
+    const questions = getStageQuestions(stageKey);
+    const { processedAnswers, stageScore, overallFeedback } = await batchValidateStage(questions, answers);
+    console.log(`✓ Gemini AI scored ${stageKey}: ${stageScore}%`);
 
     const isValidated = stageScore >= 70;
     const completedAt = new Date();
@@ -468,7 +460,7 @@ const submitStageValidation = async (stageKey, req, res) => {
       isValidated,
       answers: processedAnswers,
       completedAt,
-      overallFeedback // Store AI feedback
+      overallFeedback
     };
 
     // Backwards compatibility
@@ -490,7 +482,18 @@ const submitStageValidation = async (stageKey, req, res) => {
       }
 
       const MAX_STAGE = 5;
-      startup.currentStage = Math.max(startup.currentStage || 1, Math.min(MAX_STAGE, stageOrder + 1));
+      const newStage = Math.min(MAX_STAGE, stageOrder + 1);
+      if (newStage > (startup.currentStage || 1)) {
+        startup.currentStage = newStage;
+        
+        // Send notification for unlocked stage
+        if (newStage <= MAX_STAGE) {
+          const nextKey = VALIDATION_STAGE_KEYS[newStage - 1];
+          if (nextKey) {
+            await notifyStageUnlocked(req.user.id, nextKey, startup._id);
+          }
+        }
+      }
     }
 
     startup.validationScore = recomputeTotalValidationScore(startup);
@@ -507,9 +510,12 @@ const submitStageValidation = async (stageKey, req, res) => {
         isValidated,
         questionsAnswered: answers.length,
         startupId: startup._id,
-        aiScored: true
+        aiEngine: 'gemini'
       }
     });
+
+    // Send notification
+    await notifyValidationComplete(req.user.id, stageKey, stageScore, isValidated, startup._id);
 
     res.json({
       success: true,
@@ -587,7 +593,7 @@ const getStageQuestionsHandler = (stageKey, req, res) => {
       stage: stageKey,
       questions,
       message: `Answer these questions to validate: ${VALIDATION_STAGE_TITLES[stageKey]}`,
-      note: 'Your answers will be scored by AI. No manual scoring required.'
+      note: 'Your answers will be scored by Gemini AI. No manual scoring required.'
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({ message: 'Failed to load questions' });

@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -6,11 +7,16 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const connectDB = require('./config/db');
 const { securePage } = require('./middleware/securePage');
+const { initializeSocket } = require('./services/socketService');
 
 dotenv.config();
 connectDB();
 
 const app = express();
+const server = http.createServer(app);
+
+// Initialize Socket.io for real-time notifications
+initializeSocket(server);
 
 // Initialize token blacklist
 app.locals.tokenBlacklist = new Set();
@@ -24,7 +30,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       imgSrc: ["'self'", "data:", "https:"],
       fontSrc: ["'self'", "https:", "data:"],
-      connectSrc: ["'self'", "https:", "http:", "ws:"],
+      connectSrc: ["'self'", "https:", "http:", "ws:", "wss:"], // Added wss: for Socket.io WebSocket
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
@@ -45,8 +51,12 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*',
+  credentials: true
+}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, '../frontend')));
@@ -73,7 +83,7 @@ app.get('/investor-dashboard.html', securePage(['investor']), (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/investor-dashboard.html'));
 });
 
-app.get('/admin-dashboard.html', securePage(['investor']), (req, res) => {
+app.get('/admin-dashboard.html', securePage(['admin']), (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/admin-dashboard.html'));
 });
 
@@ -91,6 +101,17 @@ app.use('/api/founder', require('./routes/founder'));
 app.use('/api/investor', require('./routes/investor'));
 app.use('/api/provider', require('./routes/provider'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/notifications', require('./routes/notifications')); // NEW: Notification routes
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    socketio: 'enabled'
+  });
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -102,7 +123,36 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Cleanup old notifications daily
+const Notification = require('./models/Notification');
+setInterval(async () => {
+  try {
+    const result = await Notification.deleteOldNotifications(30);
+    if (result.deletedCount > 0) {
+      console.log(`Cleaned up ${result.deletedCount} old notifications`);
+    }
+  } catch (error) {
+    console.error('Error cleaning up notifications:', error);
+  }
+}, 24 * 60 * 60 * 1000); // Run daily
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`✓ Server running on port ${PORT}`);
+  console.log(`✓ Real-time notifications enabled via Socket.io`);
+  console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
 });
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  server.close(() => {
+    const mongoose = require('mongoose');
+    mongoose.connection.close(false, () => {
+      console.log('MongoDB connection closed');
+      process.exit(0);
+    });
+  });
+});
+
+module.exports = server;
