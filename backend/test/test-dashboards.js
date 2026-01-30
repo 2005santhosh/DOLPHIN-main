@@ -3,12 +3,16 @@
 /**
  * DASHBOARD TESTING SCRIPT
  * Tests all 3 dashboards with state-driven rendering
- * Run: node test-dashboards.js
+ * Run from repo root: node backend/test/test-dashboards.js
+ * Run from backend: node test/test-dashboards.js
  */
 
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+
+// Repo root (parent of backend, which contains this test folder)
+const ROOT = path.join(__dirname, '..', '..');
 
 const BASE_URL = 'http://localhost:5000';
 
@@ -122,7 +126,7 @@ async function runTests() {
 
 async function testServerHealth() {
     currentTest = 'Server Health';
-    
+
     try {
         const res = await makeRequest({
             hostname: 'localhost',
@@ -185,11 +189,11 @@ async function testHTMLDashboards() {
     ];
 
     for (const dashboard of dashboards) {
-        const filePath = path.join(__dirname, dashboard.path);
-        
+        const filePath = path.join(ROOT, dashboard.path);
+
         if (fs.existsSync(filePath)) {
             const content = fs.readFileSync(filePath, 'utf-8');
-            
+
             // Check for state indicator
             if (content.includes('id="state-indicator-container"')) {
                 pass(`${dashboard.name} has state indicator container`);
@@ -198,7 +202,7 @@ async function testHTMLDashboards() {
             }
 
             // Check for data-require attributes
-            if (content.includes('data-require-state=') || 
+            if (content.includes('data-require-state=') ||
                 content.includes('data-require-stage=') ||
                 content.includes('data-require-role=')) {
                 pass(`${dashboard.name} has data-require attributes`);
@@ -229,7 +233,7 @@ async function testFrontendIntegration() {
     currentTest = 'Frontend Integration';
 
     // Check StateManager.js exists and has required methods
-    const stateManagerPath = path.join(__dirname, 'frontend/js/stateManager.js');
+    const stateManagerPath = path.join(ROOT, 'frontend/js/stateManager.js');
     if (fs.existsSync(stateManagerPath)) {
         const content = fs.readFileSync(stateManagerPath, 'utf-8');
 
@@ -253,10 +257,10 @@ async function testFrontendIntegration() {
     }
 
     // Check app.js includes StateManager
-    const appPath = path.join(__dirname, 'frontend/js/app.js');
+    const appPath = path.join(ROOT, 'frontend/js/app.js');
     if (fs.existsSync(appPath)) {
         const content = fs.readFileSync(appPath, 'utf-8');
-        
+
         if (content.includes('stateManager') || content.includes('StateManager')) {
             pass('app.js references StateManager');
         } else {
@@ -273,7 +277,7 @@ async function testFrontendIntegration() {
     }
 
     // Check CSS has block message styles
-    const cssPath = path.join(__dirname, 'frontend/css/style.css');
+    const cssPath = path.join(ROOT, 'frontend/css/style.css');
     if (fs.existsSync(cssPath)) {
         const content = fs.readFileSync(cssPath, 'utf-8');
 

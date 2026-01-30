@@ -2,23 +2,27 @@
 
 /**
  * PHASES 1-6 IMPLEMENTATION VERIFICATION SCRIPT
- * 
+ *
  * Validates that all required components for state-driven dashboards are in place.
- * Run this after implementing to ensure no critical pieces are missing.
+ * Run from repo root: node backend/test/verify-phases.js
+ * Run from backend: node test/verify-phases.js
  */
 
 const fs = require('fs');
 const path = require('path');
 
+// Repo root (parent of backend, which contains this test folder)
+const ROOT = path.join(__dirname, '..', '..');
+
 console.log('\n=== PHASES 1-6 PRODUCTION FRAMEWORK - IMPLEMENTATION VERIFICATION ===\n');
 
 const checks = [];
 
-// Helper function
+// Helper function: filePath is relative to repo root
 function checkFile(filePath, description, requiredContent = null) {
-  const fullPath = path.join(__dirname, filePath);
+  const fullPath = path.join(ROOT, filePath);
   const exists = fs.existsSync(fullPath);
-  
+
   const check = {
     status: 'PENDING',
     description,
@@ -26,15 +30,15 @@ function checkFile(filePath, description, requiredContent = null) {
     file: exists,
     content: false
   };
-  
+
   if (exists) {
     check.status = 'PASS';
     if (requiredContent) {
       const content = fs.readFileSync(fullPath, 'utf8');
-      const hasContent = Array.isArray(requiredContent) 
+      const hasContent = Array.isArray(requiredContent)
         ? requiredContent.every(str => content.includes(str))
         : content.includes(requiredContent);
-      
+
       if (hasContent) {
         check.content = true;
       } else {
@@ -46,7 +50,7 @@ function checkFile(filePath, description, requiredContent = null) {
     check.status = 'FAIL';
     check.reason = 'File not found';
   }
-  
+
   checks.push(check);
   return check;
 }
@@ -126,7 +130,7 @@ checkFile('backend/routes/provider.js', 'Provider interaction endpoints', [
 console.log('\nPHASE 5: VISIBILITY & TRANSPARENCY');
 console.log('─'.repeat(50));
 
-const stateManagerCheck = checkFile('frontend/js/stateManager.js', 'getBlockReason method', [
+checkFile('frontend/js/stateManager.js', 'getBlockReason method', [
   'getBlockReason',
   'nextSteps',
   'estimatedTime'

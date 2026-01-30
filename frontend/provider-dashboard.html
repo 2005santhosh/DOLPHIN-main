@@ -404,6 +404,7 @@
     </div>
   </div>
 
+  <script src="./js/api.js"></script>
   <script>
     // Get user from localStorage
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -845,11 +846,17 @@
     });
 
     // Delete account button
-    document.getElementById('delete-account-btn')?.addEventListener('click', () => {
-      if (confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) {
-        if (confirm('This will permanently delete your account and all associated data. Are you really sure?')) {
-          alert('Account deletion would be processed here. In a real app, this would make an API call to delete the account.');
-        }
+    document.getElementById('delete-account-btn')?.addEventListener('click', async () => {
+      if (!confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) return;
+      if (!confirm('This will permanently delete your account and all associated data. Are you really sure?')) return;
+      try {
+        await api.deleteAccount();
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.clear();
+        window.location.href = 'login.html';
+      } catch (err) {
+        alert(err.message || 'Failed to delete account. Try again.');
       }
     });
 

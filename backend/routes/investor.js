@@ -49,67 +49,54 @@ router.put('/profile', protect, authorize('investor'), async (req, res) => {
   }
 });
 
+const VALIDATION_SCORE_THRESHOLD = 70;
+
 /**
  * INVESTOR VISIBILITY RULE:
- * Startups are visible to investors when they achieve ≥70% on ANY stage validation.
- * This allows investors to see promising startups early in their journey.
+ * Startups appear on investor dashboard when overall validation score ≥ 70%.
+ * Overall score = average of all completed validation stages.
  */
 router.get('/validated-startups', protect, authorize('investor'), async (req, res) => {
   try {
-    // Get all startups
     const allStartups = await Startup.find()
       .populate('founderId', 'name email state stage');
 
-    // Filter for investor visibility: any stage with score ≥70%
+    // Filter: overall validationScore >= 70% (average of completed stages)
     const validatedStartups = allStartups.filter(startup => {
-      const stages = startup.validationStages || {};
-      
-      // Check if ANY stage has been validated (score ≥70%)
-      const hasValidatedStage = Object.keys(stages).some(key => {
-        const stage = stages[key];
-        return stage && stage.isValidated && stage.score >= 70;
-      });
-
-      return hasValidatedStage;
+      const overall = startup.validationScore ?? 0;
+      return overall >= VALIDATION_SCORE_THRESHOLD;
     });
 
-    // Sort by highest validation score
+    const stages = (s) => s.validationStages || {};
     const response = validatedStartups
       .map(startup => {
-        // Calculate highest stage score achieved
-        const stages = startup.validationStages || {};
-        const stageScores = Object.values(stages)
-          .filter(s => s && s.completedAt)
-          .map(s => s.score || 0);
-        
-        const highestScore = stageScores.length > 0 
-          ? Math.max(...stageScores) 
-          : startup.validationScore || 0;
-
+        const st = stages(startup);
+        const lastValidated = Math.max(
+          0,
+          ...Object.values(st)
+            .filter(s => s?.completedAt)
+            .map(s => new Date(s.completedAt).getTime())
+        );
         return {
           _id: startup._id,
           name: startup.name,
           thesis: startup.thesis,
           industry: startup.industry,
-          validationScore: highestScore, // Show highest stage score
-          overallScore: startup.validationScore, // Overall score (all 5 stages)
+          validationScore: startup.validationScore ?? 0,
+          overallScore: startup.validationScore ?? 0,
           currentStage: startup.currentStage,
-          stagesCompleted: Object.values(stages).filter(s => s?.completedAt).length,
-          stagesValidated: Object.values(stages).filter(s => s?.isValidated).length,
+          stagesCompleted: Object.values(st).filter(s => s?.completedAt).length,
+          stagesValidated: Object.values(st).filter(s => s?.isValidated).length,
           milestoneCount: startup.milestones?.length || 0,
           completedMilestones: startup.milestones?.filter(m => m.isCompleted).length || 0,
           founder: startup.founderId,
           problemStatement: startup.problemStatement,
           targetUsers: startup.targetUsers,
           createdAt: startup.createdAt,
-          lastValidated: Math.max(
-            ...Object.values(stages)
-              .filter(s => s?.completedAt)
-              .map(s => new Date(s.completedAt).getTime())
-          )
+          lastValidated
         };
       })
-      .sort((a, b) => b.validationScore - a.validationScore);
+      .sort((a, b) => (b.validationScore || 0) - (a.validationScore || 0));
 
     res.json(response);
   } catch (error) {

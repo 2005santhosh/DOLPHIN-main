@@ -6,6 +6,8 @@ const { protect } = require('../middleware/authMiddleware');
 const checkStageAccess = require('../middleware/stageGating');
 const Startup = require('../models/Startup');
 const Log = require('../models/Log');
+const User = require('../models/User');
+const Provider = require('../models/Provider');
 const { updateMilestone } = require('../services/milestoneService');
 const { batchValidateStage } = require('../services/geminiValidationService'); // CHANGED TO GEMINI
 const {
@@ -389,12 +391,14 @@ const assertStageKey = (stageKey) => {
   }
 };
 
+// Overall validation score = average of completed stages (so it updates after each stage).
+// Used for investor visibility: startups with overall score >= 70% appear on investor dashboard.
 const recomputeTotalValidationScore = (startup) => {
   const stageRecords = VALIDATION_STAGE_KEYS.map(k => startup.validationStages?.[k]);
-  const allCompleted = stageRecords.every(v => v && v.completedAt);
-  if (!allCompleted) return 0;
+  const completed = stageRecords.filter(v => v && v.completedAt && typeof (v.score) === 'number');
+  if (completed.length === 0) return 0;
 
-  const scores = stageRecords.map(v => v.score || 0);
+  const scores = completed.map(v => v.score);
   return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
 };
 
@@ -624,6 +628,128 @@ router.post('/validate-idea', protect, (req, res) => {
 
 router.get('/validate-idea/status', protect, (req, res) => {
   return getStageStatus('idea', req, res);
+});
+
+// ============= FOUNDER: VIEW INVESTORS & PROVIDERS (when validationScore >= 70%) =============
+const FOUNDER_VALIDATION_THRESHOLD = 70;
+
+const requireFounderValidationScore = async (req, res, next) => {
+  try {
+    const startup = await Startup.findOne({ founderId: req.user.id });
+    if (!startup) {
+      return res.status(404).json({ message: 'No startup found', nextSteps: 'Create a startup first' });
+    }
+    const score = startup.validationScore ?? 0;
+    if (score < FOUNDER_VALIDATION_THRESHOLD) {
+      return res.status(403).json({
+        message: 'Access restricted',
+        reason: `This feature is available when your overall validation score is ≥ ${FOUNDER_VALIDATION_THRESHOLD}%`,
+        nextSteps: 'Complete validation stages to reach at least 70% overall score',
+        currentScore: score
+      });
+    }
+    req.founderStartup = startup;
+    next();
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// List all investors (for founders with score >= 70%)
+router.get('/investors', protect, requireFounderValidationScore, async (req, res) => {
+  try {
+    const investors = await User.find({ role: 'investor' })
+      .select('name email interestAreas stagePreference createdAt')
+      .sort({ name: 1 });
+    res.json(investors.map(u => ({
+      _id: u._id,
+      name: u.name,
+      email: u.email,
+      interestAreas: u.interestAreas || [],
+      stagePreference: u.stagePreference || [],
+      joinedAt: u.createdAt
+    })));
+  } catch (err) {
+    console.error('Error fetching investors:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get single investor detail (for founders with score >= 70%)
+router.get('/investors/:id', protect, requireFounderValidationScore, async (req, res) => {
+  try {
+    const investor = await User.findById(req.params.id).select('name email interestAreas stagePreference createdAt');
+    if (!investor || investor.role !== 'investor') {
+      return res.status(404).json({ message: 'Investor not found' });
+    }
+    res.json({
+      _id: investor._id,
+      name: investor.name,
+      email: investor.email,
+      interestAreas: investor.interestAreas || [],
+      stagePreference: investor.stagePreference || [],
+      joinedAt: investor.createdAt
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// List all providers (for founders with score >= 70%)
+router.get('/providers', protect, requireFounderValidationScore, async (req, res) => {
+  try {
+    const providers = await Provider.find({ verified: true })
+      .populate('userId', 'name email')
+      .sort({ name: 1 });
+    res.json(providers.map(p => ({
+      _id: p._id,
+      userId: p.userId?._id,
+      name: p.name,
+      email: p.userId?.email,
+      category: p.category,
+      description: p.description,
+      bio: p.bio,
+      experienceLevel: p.experienceLevel,
+      specialties: p.specialties || [],
+      availability: p.availability,
+      contactMethod: p.contactMethod,
+      rating: p.rating
+    })));
+  } catch (err) {
+    console.error('Error fetching providers:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get single provider detail (for founders with score >= 70%)
+router.get('/providers/:id', protect, requireFounderValidationScore, async (req, res) => {
+  try {
+    const provider = await Provider.findById(req.params.id)
+      .populate('userId', 'name email');
+    if (!provider) {
+      return res.status(404).json({ message: 'Provider not found' });
+    }
+    res.json({
+      _id: provider._id,
+      userId: provider.userId?._id,
+      name: provider.name,
+      email: provider.userId?.email,
+      category: provider.category,
+      description: provider.description,
+      bio: provider.bio,
+      experienceLevel: provider.experienceLevel,
+      specialties: provider.specialties || [],
+      availability: provider.availability,
+      contactMethod: provider.contactMethod,
+      rating: provider.rating,
+      engagementCount: provider.engagementCount,
+      responseRate: provider.responseRate,
+      stageCategories: provider.stageCategories || [],
+      createdAt: provider.createdAt
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 module.exports = router;

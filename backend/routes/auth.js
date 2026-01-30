@@ -4,6 +4,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Provider = require('../models/Provider');
+const Startup = require('../models/Startup');
+const IntroRequest = require('../models/IntroRequest');
+const Notification = require('../models/Notification');
+const Log = require('../models/Log');
 const { protect } = require('../middleware/authMiddleware');
 
 // Register
@@ -307,6 +311,55 @@ router.get('/profile', protect, async (req, res) => {
       message: 'Error fetching profile',
       reason: error.message,
       nextSteps: 'Try refreshing the page or logging in again'
+    });
+  }
+});
+
+// Delete account: remove user and all associated data (cascade)
+router.delete('/account', protect, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.role === 'founder') {
+      const founderStartups = await Startup.find({ founderId: userId }).select('_id');
+      const startupIds = founderStartups.map(s => s._id);
+      await Startup.deleteMany({ founderId: userId });
+      if (startupIds.length > 0) {
+        await User.updateMany(
+          { watchlist: { $in: startupIds } },
+          { $pullAll: { watchlist: startupIds } }
+        );
+      }
+    }
+    if (user.role === 'provider') {
+      await Provider.deleteOne({ userId });
+    }
+
+    await IntroRequest.deleteMany({ $or: [{ providerId: userId }, { founderId: userId }] });
+    await Notification.deleteMany({ userId });
+    await Log.deleteMany({ userId });
+
+    await User.findByIdAndDelete(userId);
+
+    if (req.app.locals.tokenBlacklist) {
+      const token = req.headers.authorization?.split(' ')[1];
+      if (token) req.app.locals.tokenBlacklist.add(token);
+    }
+
+    res.status(200).json({
+      message: 'Account deleted successfully',
+      nextSteps: 'You have been signed out. You can register again anytime.'
+    });
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    res.status(500).json({
+      message: 'Failed to delete account',
+      reason: error.message
     });
   }
 });

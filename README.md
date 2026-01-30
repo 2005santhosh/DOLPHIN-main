@@ -115,7 +115,7 @@ npm start
 #           "MongoDB Connected: localhost"
 
 # Terminal 2: Run tests
-node test-dashboards.js
+node backend/test/test-dashboards.js
 # Expected: "27/27 PASSED (100% success rate)" or "22/27 PASSED (81%)"
 ```
 
@@ -152,7 +152,7 @@ http://localhost:5000/frontend/provider-dashboard.html     # Provider
 
 ```bash
 # Run comprehensive test suite
-node test-dashboards.js
+node backend/test/test-dashboards.js
 
 # Expected output (with backend running):
 # Total Passed: 27
@@ -350,7 +350,7 @@ cd backend
 npm start
 
 # In Terminal 2, run tests
-node test-dashboards.js
+node backend/test/test-dashboards.js
 ```
 
 ### Test Coverage
@@ -394,7 +394,7 @@ Expected Results:
 
 ```bash
 # Verify all components are ready
-node verify-phases.js
+node backend/test/verify-phases.js
 # Expected: ✅ ALL CHECKS PASSED
 ```
 
@@ -603,8 +603,10 @@ Dolphin/
 │   └── marketplace.html
 │
 ├── README.md                 (← You are here)
-├── test-dashboards.js        (Comprehensive test suite - 500+ lines)
-└── verify-phases.js          (Phase verification script)
+└── backend/test/
+    ├── test-dashboards.js    (Comprehensive test suite - 500+ lines)
+    ├── verify-phases.js      (Phase verification script)
+    └── testNotifications.js
 ```
 
 ---
@@ -633,8 +635,8 @@ Dolphin/
 ## Quick Links
 
 - **Get Started**: Follow [Deployment Instructions](#deployment-instructions)
-- **Run Tests**: `node test-dashboards.js`
-- **View Tests**: [test-dashboards.js](test-dashboards.js)
+- **Run Tests**: `node backend/test/test-dashboards.js`
+- **View Tests**: [backend/test/test-dashboards.js](backend/test/test-dashboards.js)
 - **See Frontend**: [frontend/](frontend/)
 - **See Backend**: [backend/](backend/)
 
@@ -646,7 +648,7 @@ For issues or questions:
 1. Check [Troubleshooting](#troubleshooting) section
 2. Review error messages (Phase 5 format explains WHY)
 3. Check browser console (F12) and backend terminal for errors
-4. Review test output: `node test-dashboards.js`
+4. Review test output: `node backend/test/test-dashboards.js`
 
 ---
 
@@ -769,7 +771,7 @@ Weights (total weight = 8.5):
 Check that all components are in place:
 
 ```bash
-node verify-phases.js
+node backend/test/verify-phases.js
 ```
 
 Should output: ✅ ALL CHECKS PASSED
@@ -798,8 +800,8 @@ Should output: ✅ ALL CHECKS PASSED
 
 **How do I...?**
 - ...run the backend? → `cd backend` then `npm start`
-- ...run verification tests? → `node test-dashboards.js`
-- ...verify required files exist? → `node verify-phases.js`
+- ...run verification tests? → `node backend/test/test-dashboards.js`
+- ...verify required files exist? → `node backend/test/verify-phases.js`
 
 ---
 
