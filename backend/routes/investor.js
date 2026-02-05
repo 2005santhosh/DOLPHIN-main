@@ -1,4 +1,4 @@
-// backend/routes/investor.js - UPDATED with proper visibility rules
+// backend/routes/investor.js
 const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middleware/authMiddleware');
@@ -9,6 +9,7 @@ const User = require('../models/User');
 // Get investor profile
 router.get('/profile', protect, authorize('investor'), async (req, res) => {
   try {
+    console.log('!!! INVESTOR PROFILE REQUESTED for User ID:', req.user.id);
     const investor = await User.findById(req.user.id)
       .select('name email stage state');
 
@@ -18,9 +19,10 @@ router.get('/profile', protect, authorize('investor'), async (req, res) => {
         nextSteps: 'Verify your account'
       });
     }
-
+    console.log('✅ Investor Profile Found:', investor.name);
     res.json(investor);
   } catch (error) {
+    console.error('Error fetching investor profile:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -52,29 +54,53 @@ router.put('/profile', protect, authorize('investor'), async (req, res) => {
 /**
  * INVESTOR VISIBILITY RULE:
  * Startups are visible to investors when they achieve ≥70% on ANY stage validation.
- * This allows investors to see promising startups early in their journey.
  */
 router.get('/validated-startups', protect, authorize('investor'), async (req, res) => {
   try {
+    console.log('!!! ROUTE HIT: /api/investor/validated-startups !!!');
+    console.log('User ID:', req.user.id, 'Role:', req.user.role);
+
     // Get all startups
     const allStartups = await Startup.find()
       .populate('founderId', 'name email state stage');
 
-    // Filter for investor visibility: any stage with score ≥70%
+    console.log(`--- Total Startups in DB: ${allStartups.length} ---`);
+
+    // Filter for investor visibility: any stage with score >= 70%
     const validatedStartups = allStartups.filter(startup => {
       const stages = startup.validationStages || {};
+      const stageKeys = Object.keys(stages);
       
-      // Check if ANY stage has been validated (score ≥70%)
-      const hasValidatedStage = Object.keys(stages).some(key => {
+      if (stageKeys.length === 0) {
+        console.log(`⚠️  Skipping "${startup.name}": No validation stages data found.`);
+        return false;
+      }
+
+      // Check if ANY stage has been validated (score >= 70%)
+      const hasValidatedStage = stageKeys.some(key => {
         const stage = stages[key];
-        return stage && stage.isValidated && stage.score >= 70;
+        // Logic: stage exists, is validated, and score is at least 70
+        const isValid = stage && stage.isValidated && stage.score >= 70;
+        
+        if (isValid) {
+          console.log(`   ✅ Match found for "${startup.name}" in stage: ${key} (Score: ${stage.score})`);
+        }
+        
+        return isValid;
       });
+
+      if (!hasValidatedStage) {
+        console.log(`❌ REJECTED "${startup.name}": No stage with score >= 70% found.`);
+      }
 
       return hasValidatedStage;
     });
 
-    // Sort by highest validation score
-    const response = validatedStartups
+    console.log(`--- Final Validated Startups Count: ${validatedStartups.length} ---`);
+
+    // Map to response format that matches Frontend Expectations
+    // Frontend expects: data.startups = [...]
+    const startupList = validatedStartups
       .map(startup => {
         // Calculate highest stage score achieved
         const stages = startup.validationStages || {};
@@ -84,20 +110,22 @@ router.get('/validated-startups', protect, authorize('investor'), async (req, re
         
         const highestScore = stageScores.length > 0 
           ? Math.max(...stageScores) 
-          : startup.validationScore || 0;
+          : 0;
 
         return {
           _id: startup._id,
           name: startup.name,
           thesis: startup.thesis,
-          industry: startup.industry,
-          validationScore: highestScore, // Show highest stage score
-          overallScore: startup.validationScore, // Overall score (all 5 stages)
+          industry: startup.industry, // Added for Frontend
           currentStage: startup.currentStage,
-          stagesCompleted: Object.values(stages).filter(s => s?.completedAt).length,
+          
+          // RENAMED FOR FRONTEND COMPATIBILITY
+          bestStageScore: highestScore, 
+          completedStages: Object.values(stages).filter(s => s?.completedAt).length,
+          
+          // Additional fields used by Frontend
+          overallScore: startup.validationScore, 
           stagesValidated: Object.values(stages).filter(s => s?.isValidated).length,
-          milestoneCount: startup.milestones?.length || 0,
-          completedMilestones: startup.milestones?.filter(m => m.isCompleted).length || 0,
           founder: startup.founderId,
           problemStatement: startup.problemStatement,
           targetUsers: startup.targetUsers,
@@ -109,9 +137,11 @@ router.get('/validated-startups', protect, authorize('investor'), async (req, re
           )
         };
       })
-      .sort((a, b) => b.validationScore - a.validationScore);
+      .sort((a, b) => b.bestStageScore - a.bestStageScore);
 
-    res.json(response);
+    // WRAP IN OBJECT TO MATCH FRONTEND: data.startups
+    res.json({ startups: startupList });
+
   } catch (error) {
     console.error('Error fetching validated startups:', error);
     res.status(500).json({ message: 'Server error' });
@@ -123,6 +153,7 @@ router.get('/startups', protect, authorize('investor'), async (req, res) => {
   try {
     const { minScore, stage, industry } = req.query;
     let filter = {};
+    console.log('!!! ROUTE HIT: /startups with filters:', req.query);
 
     if (minScore) {
       filter.validationScore = { $gte: parseInt(minScore) };
@@ -139,6 +170,8 @@ router.get('/startups', protect, authorize('investor'), async (req, res) => {
     const startups = await Startup.find(filter)
       .populate('founderId', 'name email')
       .sort({ validationScore: -1 });
+    
+    console.log(`--- Startups found: ${startups.length} ---`);
 
     const response = startups.map(startup => ({
       _id: startup._id,
@@ -155,6 +188,7 @@ router.get('/startups', protect, authorize('investor'), async (req, res) => {
 
     res.json(response);
   } catch (error) {
+    console.error('Error fetching startups:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -224,6 +258,7 @@ router.get('/watchlist', protect, authorize('investor'), async (req, res) => {
 
     res.json(watchlist);
   } catch (error) {
+    console.error('Error fetching watchlist:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -244,6 +279,7 @@ router.delete('/watchlist/:startupId', protect, authorize('investor'), async (re
       watchlistCount: investor.watchlist?.length || 0
     });
   } catch (error) {
+    console.error('Error removing from watchlist:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -306,6 +342,7 @@ router.get('/providers', protect, authorize('investor'), async (req, res) => {
 
     res.json(providers);
   } catch (error) {
+    console.error('Error fetching providers:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -320,12 +357,13 @@ router.get('/startups/:id', protect, authorize('investor'), async (req, res) => 
     if (!startup) {
       return res.status(404).json({ 
         message: 'Startup not found',
-        nextSteps: 'Verify the startup ID'
+        nextSteps: 'Verify startup ID'
       });
     }
 
     res.json(startup);
   } catch (error) {
+    console.error('Error fetching startup details:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

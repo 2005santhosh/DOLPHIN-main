@@ -8,6 +8,26 @@ if (!GEMINI_API_KEY) {
 }
 
 /**
+ * Applies a category-based floor to the score to ensure specific areas aren't penalized too harshly.
+ * @param {Number} score - The calculated score.
+ * @param {String} category - The question category.
+ * @returns {Number} - The adjusted score.
+ */
+function applyCategoryFloor(score, category) {
+  const floors = {
+    'commitment': 70,
+    'feasibility': 65,
+    'domain_expertise': 65,
+    'business_model': 60
+  };
+
+  const floor = floors[category];
+  if (!floor) return score;
+
+  return Math.max(score, floor);
+}
+
+/**
  * Validates and scores a single answer using Google Gemini AI
  * Gemini API is FREE with 15 requests/minute (900/hour) and 1500 requests/day
  * @param {Object} question - The question object
@@ -30,14 +50,18 @@ async function scoreAnswer(question, answer) {
   }
 
   try {
-    const prompt = `You are an expert startup advisor evaluating a founder's response to a validation question.
+    // FIX 1: Updated Prompt with Founder Stage Context
+    const prompt = `You are an expert startup advisor evaluating an EARLY-STAGE startup founder.
+Assume this is an idea-stage or MVP-stage company, not a growth-stage startup.
+Score based on clarity of thinking, realism, and progress relative to stage.
+Do NOT penalize lack of revenue, users, or large datasets if reasoning is sound.
 
 **Question**: ${question.question}
 **Hint/Context**: ${question.hint}
 **Category**: ${question.category}
 
 **Founder's Answer**:
-${answer}
+ ${answer}
 
 Please evaluate this answer and provide:
 1. A score from 0-100 based on:
@@ -131,8 +155,12 @@ Respond ONLY with valid JSON in this exact format:
       return fallbackScoring(question, answer);
     }
 
+    // FIX 2: Apply Category-Based Score Floor
+    let finalScore = Math.round(result.score);
+    finalScore = applyCategoryFloor(finalScore, question.category);
+
     return {
-      score: Math.round(result.score),
+      score: finalScore,
       feedback: result.feedback || 'No feedback provided',
       strengths: Array.isArray(result.strengths) ? result.strengths : [],
       improvements: Array.isArray(result.improvements) ? result.improvements : []
@@ -153,7 +181,8 @@ function fallbackScoring(question, answer) {
   const hasNumbers = /\d+/.test(answer);
   const hasSpecifics = /\b(because|specifically|example|data|evidence|tested|validated|measured)\b/i.test(answer);
   
-  let score = 30; // Base score for attempting
+  // FIX 3: Improve Base Score and Ceiling
+  let score = 40; // Base score for attempting (increased from 30)
   
   // Length bonus (up to 20 points)
   if (words >= 50) score += 20;
@@ -165,11 +194,19 @@ function fallbackScoring(question, answer) {
   if (hasNumbers) score += 15;
   if (hasSpecifics) score += 15;
   
-  // Detail bonus (up to 20 points)
-  if (answer.includes('\n') || answer.includes('.')) score += 10;
+  // FIX 3: Added Structure Bonus
+  const hasStructure =
+    answer.includes('\n') ||
+    answer.includes('-') ||
+    answer.match(/\b(Q1|Q2|Yes|No)\b/i);
+
+  if (hasStructure) score += 10;
+
+  // Detail bonus
+  if (answer.includes('\n') || answer.includes('.')) score += 10; 
   if (words > 100) score += 10;
   
-  score = Math.min(score, 100);
+  score = Math.min(score, 85); // Raised cap from 100 to 85 for fallback
   
   const feedback = score >= 70 
     ? 'Good answer with reasonable detail.'
@@ -228,16 +265,29 @@ async function validateStage(questions, answers) {
     }
   }
 
-  const stageScore = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+  const rawStageScore = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
 
-  // Generate overall feedback
-  const avgScore = stageScore;
-  const overallFeedback = avgScore >= 80
+  // FIX 4: Normalize Stage Score (Soft Curve Adjustment)
+  let normalizedScore = rawStageScore;
+
+  if (rawStageScore >= 60 && rawStageScore < 70) {
+    normalizedScore += 5;
+  }
+
+  if (rawStageScore >= 70 && rawStageScore < 80) {
+    normalizedScore += 3;
+  }
+
+  normalizedScore = Math.min(normalizedScore, 100);
+  const stageScore = normalizedScore;
+
+  // FIX 5: Improve Overall Feedback
+  const overallFeedback = stageScore >= 80
     ? 'Excellent responses! You have clearly thought through this stage.'
-    : avgScore >= 70
+    : stageScore >= 70
     ? 'Good work! Your answers demonstrate solid understanding.'
-    : avgScore >= 50
-    ? 'You\'re on the right track, but several answers need more depth and specifics.'
+    : stageScore >= 50
+    ? 'Your idea shows promise. Strengthen a few answers with clearer examples or validation to move forward.'
     : 'Your answers need significant improvement. Focus on providing concrete examples and evidence.';
 
   return {
@@ -305,15 +355,29 @@ async function batchValidateStage(questions, answers) {
     }
   }
 
-  const stageScore = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+  const rawStageScore = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
 
-  const avgScore = stageScore;
-  const overallFeedback = avgScore >= 80
+  // FIX 4: Normalize Stage Score (Soft Curve Adjustment)
+  let normalizedScore = rawStageScore;
+
+  if (rawStageScore >= 60 && rawStageScore < 70) {
+    normalizedScore += 5;
+  }
+
+  if (rawStageScore >= 70 && rawStageScore < 80) {
+    normalizedScore += 3;
+  }
+
+  normalizedScore = Math.min(normalizedScore, 100);
+  const stageScore = normalizedScore;
+
+  // FIX 5: Improve Overall Feedback
+  const overallFeedback = stageScore >= 80
     ? 'Excellent responses! You have clearly thought through this stage.'
-    : avgScore >= 70
+    : stageScore >= 70
     ? 'Good work! Your answers demonstrate solid understanding.'
-    : avgScore >= 50
-    ? 'You\'re on the right track, but several answers need more depth and specifics.'
+    : stageScore >= 50
+    ? 'Your idea shows promise. Strengthen a few answers with clearer examples or validation to move forward.'
     : 'Your answers need significant improvement. Focus on providing concrete examples and evidence.';
 
   return {

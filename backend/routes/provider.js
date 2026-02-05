@@ -1,4 +1,4 @@
-// backend/routes/provider.js - UPDATED with proper visibility rules
+// backend/routes/provider.js
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
@@ -7,7 +7,9 @@ const Startup = require('../models/Startup');
 const Provider = require('../models/Provider');
 const IntroRequest = require('../models/IntroRequest');
 
-// Get or create provider profile
+// ==========================================
+// 1. Get or create provider profile
+// ==========================================
 router.get('/profile', protect, async (req, res) => {
   try {
     let provider = await Provider.findOne({ userId: req.user.id })
@@ -26,7 +28,9 @@ router.get('/profile', protect, async (req, res) => {
   }
 });
 
-// Update provider profile
+// ==========================================
+// 2. Update provider profile
+// ==========================================
 router.put('/profile', protect, async (req, res) => {
   try {
     const { name, category, description, bio, experienceLevel, specialties, availability, contactMethod, stageCategories } = req.body;
@@ -49,7 +53,7 @@ router.put('/profile', protect, async (req, res) => {
         specialties: specialties || [],
         availability,
         contactMethod,
-        stageCategories: stageCategories || [1, 2, 3, 4, 5],
+        stageCategories: stageCategories || [],
         updatedAt: new Date()
       },
       { new: true, upsert: true }
@@ -66,55 +70,88 @@ router.put('/profile', protect, async (req, res) => {
   }
 });
 
-/**
- * PROVIDER VISIBILITY RULE:
- * Startups are visible to service providers ONLY after completing ALL 5 validation stages.
- * This ensures providers work with fully validated, high-quality startups.
- */
+// ==========================================
+// 3. Get eligible founders (STRICT 5-STAGE LOGIC + UNIVERSAL VISIBILITY)
+// ==========================================
 router.get('/eligible-founders', protect, async (req, res) => {
+  
+  console.log('!!! ROUTE HIT: /eligible-founders !!!');
+  console.log('User ID:', req.user.id);
+  
   try {
     const provider = await Provider.findOne({ userId: req.user.id });
     if (!provider) {
+      console.log('!! PROVIDER PROFILE NOT FOUND !!');
       return res.status(404).json({ 
         message: 'Provider profile not found',
         nextSteps: 'Create a provider profile first'
       });
     }
 
-    // Get all startups
     const allStartups = await Startup.find()
-      .populate('founderId', 'name email state stage');
+      .populate('founderId', 'name email state stage'); 
 
-    // Filter for provider visibility: ALL 5 stages must be completed
+    console.log(`--- Total Startups in DB: ${allStartups.length} ---`);
+
     const VALIDATION_STAGES = ['idea', 'problem', 'solution', 'market', 'business'];
     
+    // FILTER 1: STRICT REQUIREMENT - ALL 5 STAGES MUST BE VALIDATED
     const eligibleStartups = allStartups.filter(startup => {
       const stages = startup.validationStages || {};
       
-      // Check if ALL 5 stages are completed (not just validated, but completed)
-      const allStagesCompleted = VALIDATION_STAGES.every(stageKey => {
+      let isEligible = true;
+      
+      for (const stageKey of VALIDATION_STAGES) {
         const stage = stages[stageKey];
-        return stage && stage.completedAt;
-      });
+        const isComplete = stage && (stage.completedAt || stage.isValidated);
+        
+        if (!isComplete) {
+          console.log(`❌ REJECTED "${startup.name}": Missing/Incomplete stage [${stageKey}] (Has data: ${!!stage}, IsValidated: ${!!stage?.isValidated})`);
+          isEligible = false;
+          break;
+        }
+      }
 
-      // Only show startups that have completed the full roadmap
-      return allStagesCompleted;
+      if (isEligible) {
+        console.log(`✅ PASSED "${startup.name}": All 5 stages validated.`);
+      }
+
+      return isEligible;
     });
 
-    // Apply provider's stage category filter (for future flexibility)
-    const stageCategories = provider.stageCategories || [];
-    const filteredStartups = stageCategories.length > 0
-      ? eligibleStartups.filter(s => stageCategories.includes(s.currentStage))
-      : eligibleStartups;
+    console.log(`--- Count after Strict Check: ${eligibleStartups.length} ---`);
 
-    // Map to response format
+    // FILTER 2: PROVIDER PREFERENCES (Stage Categories)
+    const providerCategories = provider.stageCategories || [];
+    console.log(`🔍 Provider Stage Categories:`, providerCategories);
+
+    // Updated Logic: 
+    // 1. If a startup is at Stage 5 (Completed All), show them to ALL providers (Universal Match).
+    // 2. Otherwise, respect the Provider's specific category filter.
+    const filteredStartups = eligibleStartups.filter(s => {
+      
+      // SPECIAL RULE: Fully validated founders (Stage 5) are visible to everyone
+      if (s.currentStage === 5) {
+        console.log(`✅ SHOWN "${s.name}": Completed all stages (Stage 5) - Visible to all providers.`);
+        return true;
+      }
+
+      // NORMAL RULE: Respect category preferences for non-completed founders
+      if (providerCategories.length === 0) return true;
+      
+      const isMatch = providerCategories.includes(s.currentStage);
+      if (!isMatch) {
+        console.log(`⚠️  FILTERED OUT "${s.name}": Current Stage ${s.currentStage} not in Provider Categories ${providerCategories}`);
+      }
+      return isMatch;
+    });
+
+    console.log(`--- Final Result Count: ${filteredStartups.length} ---`);
+
+    // Map to response format that matches Frontend expectations
     const response = filteredStartups.map(startup => {
       const stages = startup.validationStages || {};
-      
-      // Count validated stages
-      const validatedCount = VALIDATION_STAGES.filter(key => 
-        stages[key]?.isValidated
-      ).length;
+      const validatedCount = VALIDATION_STAGES.filter(key => stages[key]?.isValidated).length;
 
       return {
         startupId: startup._id,
@@ -122,8 +159,8 @@ router.get('/eligible-founders', protect, async (req, res) => {
         thesis: startup.thesis,
         industry: startup.industry,
         currentStage: startup.currentStage,
-        validationScore: startup.validationScore, // Overall score
-        stagesCompleted: 5, // All 5 stages completed (requirement for visibility)
+        validationScore: startup.validationScore,
+        stagesCompleted: 5,
         stagesValidated: validatedCount,
         founder: startup.founderId,
         problemStatement: startup.problemStatement,
@@ -139,7 +176,9 @@ router.get('/eligible-founders', protect, async (req, res) => {
   }
 });
 
-// Get verified providers
+// ==========================================
+// 4. Get verified providers
+// ==========================================
 router.get('/', protect, async (req, res) => {
   try {
     let query = { verified: true };
@@ -166,7 +205,9 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-// Request introduction
+// ==========================================
+// 5. Request introduction
+// ==========================================
 router.post('/request-intro', protect, checkStageAccess, async (req, res) => {
   try {
     const { providerId } = req.body;
@@ -227,7 +268,9 @@ router.post('/request-intro', protect, checkStageAccess, async (req, res) => {
   }
 });
 
-// Get provider's requests
+// ==========================================
+// 6. Get provider's requests
+// ==========================================
 router.get('/my-requests', protect, async (req, res) => {
   try {
     const requests = await IntroRequest.find({ providerId: req.user.id })
@@ -248,7 +291,9 @@ router.get('/my-requests', protect, async (req, res) => {
   }
 });
 
-// Update request status
+// ==========================================
+// 7. Update request status
+// ==========================================
 router.put('/requests/:id', protect, async (req, res) => {
   try {
     const { id } = req.params;
@@ -300,7 +345,9 @@ router.put('/requests/:id', protect, async (req, res) => {
   }
 });
 
-// Search providers by category or specialty
+// ==========================================
+// 8. Search providers
+// ==========================================
 router.get('/search', protect, async (req, res) => {
   try {
     const { category, specialty, availability } = req.query;

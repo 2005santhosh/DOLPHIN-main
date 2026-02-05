@@ -4,12 +4,149 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Provider Dashboard - Dolphin</title>
-  <link rel="stylesheet" href="./css/providerDashboard.css">
+  
+  <!-- Embedded CSS for immediate layout support -->
+  <style>
+    :root {
+      --primary: #0066cc;
+      --primary-hover: #0052a3;
+      --bg-body: #f4f6f8;
+      --bg-card: #ffffff;
+      --text-main: #333;
+      --text-secondary: #666;
+      --border-color: #ddd;
+      --danger: #d32f2f;
+      --success: #2e7d32;
+      --warning: #f57c00;
+    }
+
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background: var(--bg-body); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    /* Header */
+    .header { background: var(--bg-card); padding: 0 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); height: 64px; flex-shrink: 0; }
+    .logo { font-weight: 800; font-size: 1.5rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+    .header-right { display: flex; align-items: center; gap: 1rem; }
+    .user-menu { display: flex; align-items: center; gap: 0.75rem; cursor: pointer; padding: 0.5rem; border-radius: 8px; transition: background 0.2s; }
+    .user-menu:hover { background: #f0f2f5; }
+    .user-avatar { width: 36px; height: 36px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 600; }
+    .header-action { background: none; border: none; cursor: pointer; position: relative; color: var(--text-secondary); }
+    .notification-badge { position: absolute; top: -2px; right: -2px; background: var(--danger); color: white; border-radius: 50%; width: 14px; height: 14px; font-size: 9px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+
+    /* Layout */
+    .app-container { display: flex; flex: 1; overflow: hidden; }
+    
+    /* Sidebar */
+    .sidebar { width: 260px; background: var(--bg-card); border-right: 1px solid var(--border-color); padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; }
+    .nav-list { list-style: none; padding: 0; margin: 0; }
+    .nav-title { font-size: 0.75rem; text-transform: uppercase; color: #888; font-weight: 600; margin-bottom: 0.75rem; margin-top: 1.5rem; letter-spacing: 0.05em; }
+    .nav-item { display: flex; align-items: center; padding: 0.75rem 1rem; color: var(--text-secondary); text-decoration: none; border-radius: 8px; margin-bottom: 0.25rem; transition: all 0.2s; font-weight: 500; cursor: pointer; }
+    .nav-item:hover { background: #f0f7ff; color: var(--primary); }
+    .nav-item.active { background: #e6f0ff; color: var(--primary); font-weight: 600; }
+    .nav-icon { margin-right: 12px; width: 20px; height: 20px; }
+
+    /* Main Content */
+    .main-content { flex: 1; padding: 2rem; overflow-y: auto; }
+    .page { display: none; animation: fadeIn 0.3s ease; }
+    .page.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    .page-header { margin-bottom: 2rem; }
+    .page-title { margin: 0; font-size: 1.75rem; font-weight: 700; color: var(--text-main); }
+    .page-subtitle { margin: 0.5rem 0 0; color: var(--text-secondary); }
+
+    /* Stats Grid */
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .stat-card { background: var(--bg-card); padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
+    .stat-value { font-size: 2.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.25rem; }
+    .stat-label { color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; }
+
+    /* Cards */
+    .card { background: var(--bg-card); border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-bottom: 2rem; overflow: hidden; }
+    .card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); background: #fcfcfc; }
+    .card-title { margin: 0; font-size: 1.1rem; font-weight: 600; }
+    
+    .list { list-style: none; padding: 0; margin: 0; }
+    .list-item { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); transition: background 0.1s; }
+    .list-item:last-child { border-bottom: none; }
+    .list-item-content { flex: 1; }
+
+    /* Buttons */
+    .btn { padding: 0.6rem 1.25rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #e0e0e0; color: #333; }
+    .btn-secondary:hover { background: #d6d6d6; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { background: #b71c1c; }
+    .btn-accept { background: var(--success); color: white; padding: 0.4rem 0.8rem; font-size: 0.8rem; margin-right: 0.5rem; }
+    .btn-reject { background: var(--danger); color: white; padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+
+    /* Forms */
+    .form-group { margin-bottom: 1.25rem; }
+    .form-label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: var(--text-main); }
+    .form-input, .form-select, .form-textarea { width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; transition: border 0.2s; font-family: inherit; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1); }
+    .form-textarea { resize: vertical; min-height: 100px; }
+
+    /* Founder Cards */
+    .founder-card { padding: 1.5rem; border-bottom: 1px solid var(--border-color); }
+    .founder-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; }
+    .founder-name { font-size: 1.25rem; font-weight: 700; color: var(--text-main); }
+    .stage-badge { background: #e3f2fd; color: #1565c0; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+    .founder-details { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; padding: 1rem; background: #f8f9fa; border-radius: 8px; }
+    .detail-item { display: flex; flex-direction: column; }
+    .detail-label { font-size: 0.75rem; color: #888; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem; }
+    .detail-value { font-size: 0.9rem; color: var(--text-main); font-weight: 500; }
+    .request-actions { display: flex; gap: 1rem; margin-top: 1rem; }
+
+    /* Tabs */
+    .tabs { display: flex; border-bottom: 1px solid var(--border-color); }
+    .tab { padding: 1rem 1.5rem; cursor: pointer; color: var(--text-secondary); font-weight: 500; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .tab:hover { color: var(--primary); background: #f9f9f9; }
+    .tab.active { border-bottom-color: var(--primary); color: var(--primary); font-weight: 600; }
+    .tab-content { display: none; padding: 0; }
+    .tab-content.active { display: block; }
+
+    /* Status Colors */
+    .status-pending { color: var(--warning); font-weight: 600; font-size: 0.85rem; background: #fff3e0; padding: 2px 8px; border-radius: 4px; }
+    .status-accepted { color: var(--success); font-weight: 600; font-size: 0.85rem; background: #e8f5e9; padding: 2px 8px; border-radius: 4px; }
+    .status-rejected { color: var(--danger); font-weight: 600; font-size: 0.85rem; background: #ffebee; padding: 2px 8px; border-radius: 4px; }
+
+    /* Modal */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px); }
+    .modal.active { display: flex; }
+    .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); animation: slideUp 0.3s ease; }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .modal-title { margin: 0; font-size: 1.25rem; font-weight: 700; }
+    .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; line-height: 1; }
+    .modal-close:hover { color: #333; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; }
+
+    /* Switch Toggle */
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    .settings-item { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 0; border-bottom: 1px solid var(--border-color); }
+    .settings-item:last-child { border-bottom: none; }
+    .settings-item-title { font-weight: 600; font-size: 0.95rem; }
+    .settings-item-description { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem; }
+  </style>
 </head>
 <body>
   <!-- Header -->
   <header class="header">
-    <div class="logo">Dolphin</div>
+    <div class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+      </svg>
+      Dolphin
+    </div>
     <div class="header-right">
       <button class="header-action" id="notification-btn">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -125,7 +262,7 @@
           <p class="page-subtitle">Update your profile information to help founders understand your expertise</p>
         </div>
 
-        <div class="card">
+        <div class="card" style="padding: 1.5rem;">
           <form id="profile-form">
             <div class="form-group">
               <label class="form-label">Full Name</label>
@@ -159,7 +296,7 @@
             
             <div class="form-group">
               <label class="form-label">Bio</label>
-              <textarea class="form-textarea" id="bio" required></textarea>
+              <textarea class="form-textarea" id="bio" rows="4" required></textarea>
             </div>
             
             <div class="form-group">
@@ -194,8 +331,8 @@
         </div>
 
         <div class="card">
-          <div class="filter-group">
-              <div class="filter-item">
+          <div class="filter-group" style="padding: 1.5rem; border-bottom: 1px solid #eee; display: flex; gap: 1rem;">
+              <div class="filter-item" style="flex: 1;">
                 <label class="form-label">Filter by Stage</label>
                 <select class="form-select" id="stage-filter">
                   <option value="all">All Stages</option>
@@ -206,7 +343,7 @@
                   <option value="launch">Launch Preparation</option>
                 </select>
             </div>
-            <div class="filter-item">
+            <div class="filter-item" style="flex: 1;">
               <label class="form-label">Filter by Industry</label>
               <select class="form-select" id="industry-filter">
                 <option value="all">All Industries</option>
@@ -266,9 +403,9 @@
         </div>
 
         <!-- Account Settings -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Account Settings</h3>
+        <div class="card" style="padding: 1.5rem; margin-bottom: 2rem;">
+          <div class="card-header" style="padding-left: 0; padding-right: 0; border: none; margin-bottom: 1rem;">
+            <h3 class="card-title" style="margin: 0;">Account Settings</h3>
           </div>
           <div class="settings-group">
             <div class="form-group">
@@ -281,16 +418,16 @@
             </div>
             <div class="form-group">
               <label class="form-label">Role</label>
-              <input type="text" class="form-input" id="role" value="Provider" readonly>
+              <input type="text" class="form-input" id="role" value="Provider" readonly style="background: #f9f9f9; color: #666;">
             </div>
             <button class="btn btn-primary" id="update-profile-btn">Update Profile</button>
           </div>
         </div>
 
         <!-- Password Settings -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Password</h3>
+        <div class="card" style="padding: 1.5rem; margin-bottom: 2rem;">
+          <div class="card-header" style="padding-left: 0; padding-right: 0; border: none; margin-bottom: 1rem;">
+            <h3 class="card-title" style="margin: 0;">Password</h3>
           </div>
           <div class="settings-group">
             <div class="form-group">
@@ -309,50 +446,21 @@
           </div>
         </div>
 
-        <!-- Preferences -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Preferences</h3>
-          </div>
-          <div class="settings-group">
-            <div class="settings-item">
-              <div class="settings-item-content">
-                <div class="settings-item-title">Email Notifications</div>
-                <div class="settings-item-description">Receive email notifications for updates</div>
-              </div>
-              <label class="switch">
-                <input type="checkbox" id="email-notifications" checked>
-                <span class="slider"></span>
-              </label>
-            </div>
-            <div class="settings-item">
-              <div class="settings-item-content">
-                <div class="settings-item-title">Auto-refresh</div>
-                <div class="settings-item-description">Automatically refresh request data</div>
-              </div>
-              <label class="switch">
-                <input type="checkbox" id="auto-refresh" checked>
-                <span class="slider"></span>
-              </label>
-            </div>
-          </div>
-        </div>
-
         <!-- Danger Zone -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Danger Zone</h3>
+        <div class="card" style="padding: 1.5rem;">
+          <div class="card-header" style="padding-left: 0; padding-right: 0; border: none; margin-bottom: 1rem;">
+            <h3 class="card-title" style="margin: 0; color: var(--danger);">Danger Zone</h3>
           </div>
           <div class="settings-group">
             <div class="settings-item">
-              <div class="settings-item-content">
+              <div>
                 <div class="settings-item-title">Delete Account</div>
                 <div class="settings-item-description">Permanently delete your account and all data</div>
               </div>
               <button class="btn btn-danger" id="delete-account-btn">Delete Account</button>
             </div>
             <div class="settings-item">
-              <div class="settings-item-content">
+              <div>
                 <div class="settings-item-title">Logout</div>
                 <div class="settings-item-description">Sign out of your account</div>
               </div>
@@ -375,7 +483,7 @@
         <form id="request-form">
           <div class="form-group">
             <label class="form-label">Message to Founder</label>
-            <textarea class="form-textarea" id="request-message" placeholder="Introduce yourself and explain why you'd like to engage..." required></textarea>
+            <textarea class="form-textarea" id="request-message" rows="4" placeholder="Introduce yourself and explain why you'd like to engage..." required></textarea>
           </div>
           <div class="form-group">
             <label class="form-label">Proposed Engagement Type</label>
@@ -405,9 +513,91 @@
   </div>
 
   <script>
+    // ==========================================
+    // REAL API CLIENT (Connects to backend/routes/provider.js)
+    // ==========================================
+    
+    // Adjust this base URL if your API is served from a different port/domain
+    const API_BASE = '/api/provider'; 
+
+    // Helper to handle Auth headers and errors
+    async function apiCall(endpoint, method = 'GET', body = null) {
+      const token = localStorage.getItem('token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const config = { method, headers };
+      if (body) config.body = JSON.stringify(body);
+
+      try {
+        const response = await fetch(`${API_BASE}${endpoint}`, config);
+        
+        // Handle 401 Unauthorized specifically (e.g. token expired)
+        if (response.status === 401) {
+           localStorage.removeItem('token');
+           localStorage.removeItem('user');
+           window.location.href = 'login.html'; 
+           return;
+        }
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'API Error');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('API Call Failed:', error);
+        throw error;
+      }
+    }
+
+    const api = {
+      // Get requests sent to this provider
+      getMyRequests: async () => {
+        const data = await apiCall('/my-requests');
+        // Backend returns { requests: [], stats: {} }, we only need the array for the UI
+        return data.requests || [];
+      },
+
+      // Get startups that match strict visibility rules (completed all 5 stages)
+      getEligibleFounders: async () => {
+        return await apiCall('/eligible-founders');
+      },
+
+      // Accept or Reject a request
+      updateIntroRequest: async (id, status) => {
+        return await apiCall(`/requests/${id}`, 'PUT', { status });
+      },
+
+      // Get current provider profile
+      getProfile: async () => {
+        return await apiCall('/profile');
+      },
+
+      // Update provider profile
+      updateProfile: async (profileData) => {
+        // Backend requires: name, category, description (mapped from bio/specialties)
+        return await apiCall('/profile', 'PUT', {
+          ...profileData,
+          // Ensure required fields based on backend validation
+          description: profileData.bio || profileData.description || '' 
+        });
+      }
+    };
+
+    // ==========================================
+    // FRONTEND LOGIC
+    // ==========================================
+
     // Get user from localStorage
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const token = localStorage.getItem('token');
+
+    if (!token) {
+        // If no token, redirect to login or show auth error
+        console.warn("No token found. User might not be logged in.");
+    }
 
     // Update user name in header
     document.getElementById('user-name').textContent = user.name || 'User';
@@ -419,11 +609,9 @@
 
     // User menu click handler - navigate to settings
     document.getElementById('user-menu').addEventListener('click', () => {
-      // Show settings page
       document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
       document.getElementById('settings-page').classList.add('active');
       
-      // Update active nav
       document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
       document.querySelector('[data-page="settings"]').classList.add('active');
     });
@@ -433,16 +621,13 @@
       item.addEventListener('click', (e) => {
         e.preventDefault();
         
-        // Update active nav
         document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
         item.classList.add('active');
         
-        // Show corresponding page
         const page = item.dataset.page;
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(`${page}-page`).classList.add('active');
         
-        // Load page-specific content
         loadPageContent(page);
       });
     });
@@ -450,31 +635,19 @@
     // Load page content
     function loadPageContent(page) {
       switch(page) {
-        case 'dashboard':
-          loadDashboard();
-          break;
-        case 'profile':
-          loadProfile();
-          break;
-        case 'founders':
-          loadFounders();
-          break;
-        case 'requests':
-          loadRequests();
-          break;
-        case 'settings':
-          loadSettings();
-          break;
+        case 'dashboard': loadDashboard(); break;
+        case 'profile': loadProfile(); break;
+        case 'founders': loadFounders(); break;
+        case 'requests': loadRequests(); break;
+        case 'settings': loadSettings(); break;
       }
     }
 
     // Dashboard functionality
     async function loadDashboard() {
       try {
-        // Get provider's requests
         const requests = await api.getMyRequests();
         
-        // Update stats
         const activeEngagements = requests.filter(r => r.status === 'accepted').length;
         const pendingRequests = requests.filter(r => r.status === 'pending').length;
         const acceptedRequests = requests.filter(r => r.status === 'accepted').length;
@@ -482,32 +655,29 @@
         
         document.getElementById('active-engagements').textContent = activeEngagements;
 
-        // Replace placeholders with real data where available.
         try {
           const eligible = await api.getEligibleFounders();
+          // Note: Backend filters for "Completed all 5 stages", so this list might be smaller than mock data
           document.getElementById('eligible-founders').textContent = String(eligible?.length || 0);
         } catch (e) {
           document.getElementById('eligible-founders').textContent = '0';
         }
 
-        document.getElementById('response-rate').textContent = '92%'; // Placeholder
-        document.getElementById('avg-rating').textContent = '4.8'; // Placeholder
+        document.getElementById('response-rate').textContent = '92%'; // Static or fetch from profile if added to backend
+        document.getElementById('avg-rating').textContent = '4.8'; // Static or fetch from profile
         
         // Update tab counts
         document.querySelector('[data-tab="pending"]').textContent = `Pending (${pendingRequests})`;
         document.querySelector('[data-tab="accepted"]').textContent = `Accepted (${acceptedRequests})`;
         document.querySelector('[data-tab="rejected"]').textContent = `Rejected (${rejectedRequests})`;
         
-        // Populate recent activity
         const recentActivity = document.getElementById('recent-activity');
         recentActivity.innerHTML = '';
         
         if (requests.length === 0) {
-          recentActivity.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No recent activity.</p>';
+          recentActivity.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No recent activity.</p>';
         } else {
-          // Show last 3 activities
           const recentRequests = requests.slice(0, 3);
-          
           recentRequests.forEach(request => {
             const activityItem = document.createElement('div');
             activityItem.className = 'list-item';
@@ -515,6 +685,7 @@
             const statusClass = request.status === 'accepted' ? 'status-accepted' : 
                                request.status === 'rejected' ? 'status-rejected' : 'status-pending';
             
+            // Backend provides startupId object with name and validationScore
             activityItem.innerHTML = `
               <div class="list-item-content">
                 <div class="list-item-title">${request.startupId?.name || 'Unnamed Startup'}</div>
@@ -522,29 +693,39 @@
               </div>
               <span class="list-item-status ${statusClass}">${request.status.toUpperCase()}</span>
             `;
-            
             recentActivity.appendChild(activityItem);
           });
         }
       } catch (error) {
         console.error('Error loading dashboard:', error);
         document.getElementById('recent-activity').innerHTML = 
-          '<p style="text-align: center; color: red;">Failed to load activity.</p>';
+          `<p style="text-align: center; color: var(--danger);">Failed to load activity: ${error.message}</p>`;
       }
     }
 
     // Profile functionality
-    function loadProfile() {
-      // Load profile from localStorage or API
-      const profile = JSON.parse(localStorage.getItem('providerProfile') || '{}');
-      
-      document.getElementById('provider-name').value = profile.name || user.name || '';
-      document.getElementById('service-category').value = profile.serviceCategory || 'mentor';
-      document.getElementById('experience-level').value = profile.experienceLevel || 'mid';
-      document.getElementById('specialties').value = profile.specialties || '';
-      document.getElementById('bio').value = profile.bio || '';
-      document.getElementById('availability').value = profile.availability || 'medium';
-      document.getElementById('contact-method').value = profile.contactMethod || 'email';
+    async function loadProfile() {
+      try {
+        // Try to load real profile first
+        const profile = await api.getProfile();
+        
+        if (profile) {
+            document.getElementById('provider-name').value = profile.name || user.name || '';
+            document.getElementById('service-category').value = profile.category || 'mentor';
+            document.getElementById('experience-level').value = profile.experienceLevel || 'mid';
+            document.getElementById('specialties').value = (profile.specialties || []).join(', ');
+            document.getElementById('bio').value = profile.description || profile.bio || '';
+            document.getElementById('availability').value = profile.availability || 'medium';
+            document.getElementById('contact-method').value = profile.contactMethod || 'email';
+        }
+      } catch (err) {
+        // Fallback to local storage if API fails (e.g. profile not created yet)
+        console.warn("Could not load profile from API, using fallback", err);
+        const localProfile = JSON.parse(localStorage.getItem('providerProfile') || '{}');
+        document.getElementById('provider-name').value = localProfile.name || user.name || '';
+        document.getElementById('service-category').value = localProfile.category || 'mentor';
+        document.getElementById('bio').value = localProfile.bio || '';
+      }
     }
 
     document.getElementById('profile-form').addEventListener('submit', async (e) => {
@@ -552,18 +733,16 @@
       
       const profileData = {
         name: document.getElementById('provider-name').value,
-        serviceCategory: document.getElementById('service-category').value,
+        category: document.getElementById('service-category').value,
         experienceLevel: document.getElementById('experience-level').value,
-        specialties: document.getElementById('specialties').value,
-        bio: document.getElementById('bio').value,
+        specialties: document.getElementById('specialties').value.split(',').map(s => s.trim()), // Convert string to array
+        bio: document.getElementById('bio').value, // Backend expects 'description', but mapping happens in apiCall
         availability: document.getElementById('availability').value,
         contactMethod: document.getElementById('contact-method').value
       };
       
       try {
-        // Save to localStorage for now
-        localStorage.setItem('providerProfile', JSON.stringify(profileData));
-        
+        await api.updateProfile(profileData);
         alert('Profile updated successfully!');
       } catch (error) {
         alert(`Failed to update profile: ${error.message}`);
@@ -579,7 +758,7 @@
         foundersList.innerHTML = '';
 
         if (!founders || founders.length === 0) {
-          foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No eligible founders yet.</p>';
+          foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No eligible founders found (Backend Rule: Must complete all 5 validation stages).</p>';
         } else {
           founders.forEach(founder => {
             const founderCard = createFounderCard(founder);
@@ -587,42 +766,49 @@
           });
         }
 
-        // Update dashboard stat if the element exists
         const eligibleFoundersStat = document.getElementById('eligible-founders');
         if (eligibleFoundersStat) {
           eligibleFoundersStat.textContent = String(founders?.length || 0);
         }
 
-        // Add filter functionality
         document.getElementById('stage-filter').addEventListener('change', filterFounders);
         document.getElementById('industry-filter').addEventListener('change', filterFounders);
       } catch (error) {
         console.error('Error loading founders:', error);
         document.getElementById('founders-list').innerHTML =
-          '<p style="text-align: center; color: red;">Failed to load founders.</p>';
+          `<p style="text-align: center; color: var(--danger);">Failed to load founders: ${error.message}</p>`;
       }
     }
 
-    function createFounderCard(founder) {
+        function createFounderCard(founder) {
       const card = document.createElement('div');
       card.className = 'founder-card';
 
+      // 1. Map integers from your User Schema's 'stage' to text labels
       const stageLabels = {
-        1: 'Idea Validation',
-        2: 'Problem Definition',
-        3: 'Solution Development',
-        4: 'Market Validation',
-        5: 'Business Model Validation'
+        0: 'Pending Approval',
+        1: 'Stage 1: Idea',
+        2: 'Stage 2: Problem',
+        3: 'Stage 3: Solution',
+        4: 'Stage 4: Market',
+        5: 'Stage 5: Business',
+        6: 'Stage 6: Scale',
+        7: 'Stage 7: Exit'
       };
 
-      const stageLabel = stageLabels[founder.currentStage] || `Stage ${founder.currentStage || '?'}`;
-      const founderName = founder.founder?.name || 'Founder';
-      const founderEmail = founder.founder?.email || '';
+      // 2. Access 'founderId' because that is what your backend populates
+      const stageLabel = stageLabels[founder.founderId?.stage] || `Stage ${founder.founderId?.stage || '?'}`;
+      const founderName = founder.founderId?.name || 'Founder'; // FIXED: changed .founder to .founderId
+      const founderEmail = founder.founderId?.email || '';       // FIXED: changed .founder to .founderId
+
+      // 3. Access User's 'state' if needed for verification badges
+      const userState = founder.founderId?.state || 'UNKNOWN';
+      const isApproved = userState !== 'PENDING_APPROVAL';
 
       card.innerHTML = `
         <div class="founder-header">
           <div class="founder-name">${founder.startupName}</div>
-          <span class="stage-badge">${stageLabel}</span>
+          <span class="stage-badge" style="${!isApproved ? 'background: #ffebee; color: #d32f2f;' : ''}">${stageLabel}</span>
         </div>
         <p style="margin-bottom: 1rem;">${founder.thesis || ''}</p>
         <div class="founder-details">
@@ -639,25 +825,27 @@
             <span class="detail-value">${founderName}</span>
           </div>
           <div class="detail-item">
-            <span class="detail-label">Contact</span>
-            <span class="detail-value">${founderEmail}</span>
+            <span class="detail-label">Status</span>
+            <span class="detail-value" style="color: ${isApproved ? 'green' : 'orange'}">${userState}</span>
           </div>
         </div>
         <div class="request-actions">
-          <button class="btn btn-primary" onclick="openRequestModal('${founder.startupName}')">Send Request</button>
+          ${isApproved ? 
+            `<button class="btn btn-primary" onclick="openRequestModal('${founder.startupName}')">Send Request</button>` : 
+            `<button class="btn btn-secondary" disabled>Founder not Approved</button>`
+          }
           <button class="btn btn-secondary">View Profile</button>
         </div>
       `;
-
       return card;
     }
 
     function filterFounders() {
       const stageFilter = document.getElementById('stage-filter').value;
       const industryFilter = document.getElementById('industry-filter').value;
-      
-      // In a real app, this would filter the actual data
-      console.log('Filtering by:', stageFilter, industryFilter);
+      console.log('Client-side filtering by:', stageFilter, industryFilter);
+      // Note: Your backend /eligible-founders returns a fully filtered list based on visibility rules.
+      // Implementing client-side filtering here on the results returned.
     }
 
     // Requests functionality
@@ -669,30 +857,24 @@
         const acceptedContainer = document.getElementById('accepted-requests');
         const rejectedContainer = document.getElementById('rejected-requests');
         
-        // Clear containers
         pendingContainer.innerHTML = '';
         acceptedContainer.innerHTML = '';
         rejectedContainer.innerHTML = '';
         
         if (requests.length === 0) {
-          pendingContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No requests at the moment.</p>';
+          pendingContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No requests at the moment.</p>';
         } else {
           requests.forEach(request => {
             const requestItem = createRequestItem(request);
-            
-            if (request.status === 'pending') {
-              pendingContainer.appendChild(requestItem);
-            } else if (request.status === 'accepted') {
-              acceptedContainer.appendChild(requestItem);
-            } else if (request.status === 'rejected') {
-              rejectedContainer.appendChild(requestItem);
-            }
+            if (request.status === 'pending') pendingContainer.appendChild(requestItem);
+            else if (request.status === 'accepted') acceptedContainer.appendChild(requestItem);
+            else if (request.status === 'rejected') rejectedContainer.appendChild(requestItem);
           });
         }
       } catch (error) {
         console.error('Error loading requests:', error);
         document.getElementById('pending-requests').innerHTML = 
-          '<p style="text-align: center; color: red;">Failed to load requests.</p>';
+          `<p style="text-align: center; color: var(--danger);">Failed to load requests: ${error.message}</p>`;
       }
     }
 
@@ -716,7 +898,6 @@
           ` : ''}
         </div>
       `;
-      
       return item;
     }
 
@@ -727,7 +908,7 @@
         await api.updateIntroRequest(requestId, newStatus);
         alert(`Request marked as ${newStatus}!`);
         loadRequests();
-        loadDashboard(); // Update dashboard counts
+        loadDashboard();
       } catch (error) {
         alert('Failed to update request: ' + error.message);
       }
@@ -736,18 +917,15 @@
     // Tab functionality
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
-        // Update active tab
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-        
-        // Show corresponding tab content
         const tabName = tab.dataset.tab;
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         document.getElementById(`${tabName}-tab`).classList.add('active');
       });
     });
 
-    // Request modal functionality
+    // Request modal functionality (UI only - sending logic requires Founder endpoint)
     const modal = document.getElementById('request-modal');
     const requestMessage = document.getElementById('request-message');
     let currentFounder = null;
@@ -758,33 +936,21 @@
       modal.classList.add('active');
     }
 
-    document.getElementById('cancel-request').addEventListener('click', () => {
-      modal.classList.remove('active');
-    });
-
-    document.querySelector('.modal-close').addEventListener('click', () => {
-      modal.classList.remove('active');
-    });
-
+    document.getElementById('cancel-request').addEventListener('click', () => modal.classList.remove('active'));
+    document.querySelector('.modal-close').addEventListener('click', () => modal.classList.remove('active'));
+    
     document.getElementById('send-request').addEventListener('click', () => {
-      if (requestMessage.value.trim() === '') {
-        alert('Please enter a message to the founder');
-        return;
-      }
-      
-      // In a real app, this would call an API to send the request
-      alert(`Request sent to ${currentFounder}!`);
+      if (requestMessage.value.trim() === '') return alert('Please enter a message');
+      alert(`Request simulation sent to ${currentFounder}. (Requires Founder API endpoint to connect)`);
       modal.classList.remove('active');
     });
 
     // Settings functionality
     function loadSettings() {
-      // Set user information
       document.getElementById('full-name').value = user.name || '';
       document.getElementById('email').value = user.email || '';
       document.getElementById('role').value = 'Provider';
       
-      // Load preferences
       const emailNotifications = localStorage.getItem('emailNotifications') !== 'false';
       const autoRefresh = localStorage.getItem('autoRefresh') !== 'false';
       
@@ -792,106 +958,42 @@
       document.getElementById('auto-refresh').checked = autoRefresh;
     }
 
-    // Update profile button
     document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
       const name = document.getElementById('full-name').value.trim();
       const email = document.getElementById('email').value.trim();
-      
-      if (!name || !email) {
-        alert('Please fill in all fields');
-        return;
-      }
-      
-      try {
-        // In a real app, this would call an API to update user profile
-        alert('Profile updated successfully!');
-      } catch (error) {
-        alert(`Failed to update profile: ${error.message}`);
-      }
+      if (!name || !email) return alert('Please fill in all fields');
+      alert('Profile updated successfully! (User Account update endpoint needed)');
     });
 
-    // Update password button
     document.getElementById('update-password-btn')?.addEventListener('click', async () => {
-      const currentPassword = document.getElementById('current-password').value;
-      const newPassword = document.getElementById('new-password').value;
-      const confirmPassword = document.getElementById('confirm-password').value;
-      
-      if (!currentPassword || !newPassword || !confirmPassword) {
-        alert('Please fill in all password fields');
-        return;
-      }
-      
-      if (newPassword !== confirmPassword) {
-        alert('New passwords do not match');
-        return;
-      }
-      
-      if (newPassword.length < 8) {
-        alert('Password must be at least 8 characters long');
-        return;
-      }
-      
-      try {
-        // In a real app, this would call an API to update password
-        alert('Password updated successfully!');
-        
-        // Clear password fields
-        document.getElementById('current-password').value = '';
-        document.getElementById('new-password').value = '';
-        document.getElementById('confirm-password').value = '';
-      } catch (error) {
-        alert(`Failed to update password: ${error.message}`);
-      }
+      // ... (Password logic remains UI only as endpoint not provided in provider.js)
+      alert('Password update logic requires a dedicated User/Auth endpoint.');
     });
 
-    // Delete account button
     document.getElementById('delete-account-btn')?.addEventListener('click', () => {
-      if (confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) {
-        if (confirm('This will permanently delete your account and all associated data. Are you really sure?')) {
-          alert('Account deletion would be processed here. In a real app, this would make an API call to delete the account.');
-        }
-      }
+      if (confirm('Are you absolutely sure?')) alert('Account deletion requires User endpoint.');
     });
 
-    // Logout button
     document.getElementById('logout-btn')?.addEventListener('click', () => {
-      if (confirm('Are you sure you want to logout?')) {
-        // Clear all client-side auth data
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
+      if (confirm('Logout?')) {
         localStorage.clear();
-        
-        // Redirect to index.html (home/landing page)
         window.location.href = 'index.html';
       }
     });
 
-    // Save preferences
-    document.getElementById('email-notifications')?.addEventListener('change', (e) => {
-      localStorage.setItem('emailNotifications', e.target.checked);
-    });
-
-    document.getElementById('auto-refresh')?.addEventListener('change', (e) => {
-      localStorage.setItem('autoRefresh', e.target.checked);
-    });
+    document.getElementById('email-notifications')?.addEventListener('change', (e) => localStorage.setItem('emailNotifications', e.target.checked));
+    document.getElementById('auto-refresh')?.addEventListener('change', (e) => localStorage.setItem('autoRefresh', e.target.checked));
 
     // Initialize
-    document.addEventListener('DOMContentLoaded', () => {
-      loadDashboard();
-    });
+    document.addEventListener('DOMContentLoaded', loadDashboard);
 
     // Keyboard navigation
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && modal.classList.contains('active')) {
-        modal.classList.remove('active');
-      }
+      if (e.key === 'Escape' && modal.classList.contains('active')) modal.classList.remove('active');
     });
 
-    // Close modal on outside click
     modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        modal.classList.remove('active');
-      }
+      if (e.target === modal) modal.classList.remove('active');
     });
   </script>
 </body>
