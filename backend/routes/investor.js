@@ -51,6 +51,8 @@ router.put('/profile', protect, authorize('investor'), async (req, res) => {
   }
 });
 
+const VALIDATION_SCORE_THRESHOLD = 70;
+
 /**
  * INVESTOR VISIBILITY RULE:
  * Startups are visible to investors when they achieve ≥70% on ANY stage validation.
@@ -60,7 +62,6 @@ router.get('/validated-startups', protect, authorize('investor'), async (req, re
     console.log('!!! ROUTE HIT: /api/investor/validated-startups !!!');
     console.log('User ID:', req.user.id, 'Role:', req.user.role);
 
-    // Get all startups
     const allStartups = await Startup.find()
       .populate('founderId', 'name email state stage');
 
@@ -117,27 +118,26 @@ router.get('/validated-startups', protect, authorize('investor'), async (req, re
           name: startup.name,
           thesis: startup.thesis,
           industry: startup.industry, // Added for Frontend
+          industry: startup.industry,
+          validationScore: startup.validationScore ?? 0,
+          overallScore: startup.validationScore ?? 0,
           currentStage: startup.currentStage,
           
           // RENAMED FOR FRONTEND COMPATIBILITY
           bestStageScore: highestScore, 
-          completedStages: Object.values(stages).filter(s => s?.completedAt).length,
+          completedStages: Object.values(st).filter(s => s?.completedAt).length,
           
           // Additional fields used by Frontend
           overallScore: startup.validationScore, 
-          stagesValidated: Object.values(stages).filter(s => s?.isValidated).length,
+          stagesValidated: Object.values(st).filter(s => s?.isValidated).length,
           founder: startup.founderId,
           problemStatement: startup.problemStatement,
           targetUsers: startup.targetUsers,
           createdAt: startup.createdAt,
-          lastValidated: Math.max(
-            ...Object.values(stages)
-              .filter(s => s?.completedAt)
-              .map(s => new Date(s.completedAt).getTime())
-          )
+          lastValidated
         };
       })
-      .sort((a, b) => b.bestStageScore - a.bestStageScore);
+      .sort((a, b) => (b.bestStageScore || 0) - (a.bestStageScore || 0));
 
     // WRAP IN OBJECT TO MATCH FRONTEND: data.startups
     res.json({ startups: startupList });

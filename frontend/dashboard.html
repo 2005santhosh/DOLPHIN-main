@@ -77,6 +77,15 @@
             </svg>
             Analytics
           </a></li>
+          <li><a href="#" class="nav-item" data-page="investors-providers">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            Investors & Providers
+          </a></li>
         </ul>
       </div>
       <div class="nav-section">
@@ -362,6 +371,38 @@
         </div>
       </div>
 
+      <!-- Investors & Providers Page (visible when validationScore >= 70%) -->
+      <div id="investors-providers-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Investors & Providers</h1>
+          <p class="page-subtitle">View investors and service providers (unlocked at 70% overall validation score)</p>
+        </div>
+        <div id="investors-providers-gate-message" class="card" style="display: none;">
+          <div class="card-header">
+            <h3 class="card-title">Feature locked</h3>
+          </div>
+          <p style="padding: 1rem; color: var(--text-secondary);">Reach at least <strong>70%</strong> overall validation score to view and contact investors and providers.</p>
+        </div>
+        <div id="investors-providers-content" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Investors</h3>
+            </div>
+            <div id="founder-investors-list" class="list">
+              <p style="text-align: center; color: var(--text-secondary);">Loading...</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Providers</h3>
+            </div>
+            <div id="founder-providers-list" class="list">
+              <p style="text-align: center; color: var(--text-secondary);">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Settings Page -->
       <div id="settings-page" class="page">
         <div class="page-header">
@@ -526,6 +567,17 @@
     }
   </style>
 
+  <!-- Detail modal (Investor / Provider) -->
+  <div id="detail-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="detail-modal-title">Details</h3>
+        <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="detail-modal-body"></div>
+    </div>
+  </div>
+
   <!-- Include API Client -->
   <script src="./js/api.js"></script>
   
@@ -589,6 +641,9 @@
           break;
         case 'analytics':
           loadAnalytics();
+          break;
+        case 'investors-providers':
+          loadInvestorsProviders();
           break;
         case 'settings':
           loadSettings();
@@ -1274,6 +1329,104 @@
       }, 2000);
     }
 
+    async function loadInvestorsProviders() {
+      const gateEl = document.getElementById('investors-providers-gate-message');
+      const contentEl = document.getElementById('investors-providers-content');
+      const investorsList = document.getElementById('founder-investors-list');
+      const providersList = document.getElementById('founder-providers-list');
+      gateEl.style.display = 'none';
+      contentEl.style.display = 'none';
+      investorsList.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Loading...</p>';
+      providersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Loading...</p>';
+
+      try {
+        const startup = await api.getStartup();
+        const score = startup?.validationScore ?? 0;
+        if (score < 70) {
+          gateEl.style.display = 'block';
+          return;
+        }
+        contentEl.style.display = 'block';
+
+        const [investors, providers] = await Promise.all([api.getFounderInvestors(), api.getFounderProviders()]);
+
+        investorsList.innerHTML = (investors && investors.length) ? investors.map(inv => `
+          <div class="list-item clickable" data-type="investor" data-id="${inv._id}" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>${(inv.name || '').replace(/</g, '&lt;')}</strong>
+              <span style="color: var(--text-secondary); font-size: 0.9rem;"> — ${(inv.email || '').replace(/</g, '&lt;')}</span>
+            </div>
+            <span style="color: var(--text-secondary); font-size: 0.85rem;">View details →</span>
+          </div>
+        `).join('') : '<p style="text-align: center; color: var(--text-secondary);">No investors yet.</p>';
+
+        providersList.innerHTML = (providers && providers.length) ? providers.map(prov => `
+          <div class="list-item clickable" data-type="provider" data-id="${prov._id}" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>${(prov.name || '').replace(/</g, '&lt;')}</strong>
+              <span style="color: var(--text-secondary); font-size: 0.9rem;"> — ${(prov.category || '').replace(/</g, '&lt;')}</span>
+            </div>
+            <span style="color: var(--text-secondary); font-size: 0.85rem;">View details →</span>
+          </div>
+        `).join('') : '<p style="text-align: center; color: var(--text-secondary);">No providers yet.</p>';
+
+        investorsList.querySelectorAll('[data-type="investor"]').forEach(el => {
+          el.addEventListener('click', () => openDetailModal('investor', el.dataset.id));
+        });
+        providersList.querySelectorAll('[data-type="provider"]').forEach(el => {
+          el.addEventListener('click', () => openDetailModal('provider', el.dataset.id));
+        });
+      } catch (err) {
+        investorsList.innerHTML = '<p style="text-align: center; color: var(--danger);">Failed to load. ' + (err.message || '') + '</p>';
+        providersList.innerHTML = '<p style="text-align: center; color: var(--danger);">Failed to load.</p>';
+        contentEl.style.display = 'block';
+      }
+    }
+
+    async function openDetailModal(type, id) {
+      const modal = document.getElementById('detail-modal');
+      const title = document.getElementById('detail-modal-title');
+      const body = document.getElementById('detail-modal-body');
+      if (!modal || !title || !body) return;
+      title.textContent = type === 'investor' ? 'Investor details' : 'Provider details';
+      body.innerHTML = '<p>Loading...</p>';
+      modal.classList.add('active');
+      modal.style.display = 'flex';
+
+      try {
+        const data = type === 'investor' ? await api.getFounderInvestorDetail(id) : await api.getFounderProviderDetail(id);
+        if (type === 'investor') {
+          body.innerHTML = `
+            <p><strong>Name:</strong> ${(data.name || '').replace(/</g, '&lt;')}</p>
+            <p><strong>Email:</strong> <a href="mailto:${(data.email || '').replace(/"/g, '&quot;')}">${(data.email || '').replace(/</g, '&lt;')}</a></p>
+            <p><strong>Interest areas:</strong> ${(data.interestAreas && data.interestAreas.length) ? data.interestAreas.join(', ') : '—'}</p>
+            <p><strong>Stage preference:</strong> ${(data.stagePreference && data.stagePreference.length) ? data.stagePreference.join(', ') : '—'}</p>
+          `;
+        } else {
+          body.innerHTML = `
+            <p><strong>Name:</strong> ${(data.name || '').replace(/</g, '&lt;')}</p>
+            <p><strong>Email:</strong> <a href="mailto:${(data.email || '').replace(/"/g, '&quot;')}">${(data.email || '').replace(/</g, '&lt;')}</a></p>
+            <p><strong>Category:</strong> ${(data.category || '—').replace(/</g, '&lt;')}</p>
+            <p><strong>Description:</strong> ${(data.description || '—').replace(/</g, '&lt;')}</p>
+            <p><strong>Bio:</strong> ${(data.bio || '—').replace(/</g, '&lt;')}</p>
+            <p><strong>Experience:</strong> ${(data.experienceLevel || '—').replace(/</g, '&lt;')}</p>
+            <p><strong>Specialties:</strong> ${(data.specialties && data.specialties.length) ? data.specialties.join(', ') : '—'}</p>
+            <p><strong>Availability:</strong> ${(data.availability || '—').replace(/</g, '&lt;')}</p>
+            <p><strong>Contact method:</strong> ${(data.contactMethod || '—').replace(/</g, '&lt;')}</p>
+            <p><strong>Rating:</strong> ${data.rating != null ? data.rating : '—'}</p>
+          `;
+        }
+      } catch (err) {
+        body.innerHTML = '<p style="color: var(--danger);">Failed to load details.</p>';
+      }
+    }
+
+    function closeDetailModal() {
+      const modal = document.getElementById('detail-modal');
+      if (modal) { modal.classList.remove('active'); modal.style.display = 'none'; }
+    }
+    window.closeDetailModal = closeDetailModal;
+
     // Settings functionality
     function loadSettings() {
       document.getElementById('full-name').value = user.name || '';
@@ -1326,11 +1479,17 @@
       document.getElementById('confirm-password').value = '';
     });
 
-    document.getElementById('delete-account-btn')?.addEventListener('click', () => {
-      if (confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) {
-        if (confirm('This will permanently delete your account and all associated data. Are you really sure?')) {
-          alert('Account deletion would be processed here.');
-        }
+    document.getElementById('delete-account-btn')?.addEventListener('click', async () => {
+      if (!confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) return;
+      if (!confirm('This will permanently delete your account and all associated data. Are you really sure?')) return;
+      try {
+        await api.deleteAccount();
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.clear();
+        window.location.href = 'login.html';
+      } catch (err) {
+        alert(err.message || 'Failed to delete account. Try again.');
       }
     });
 

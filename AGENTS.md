@@ -5,7 +5,7 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 ## Repository layout (big picture)
 - `backend/`: Node/Express API + static file server for the frontend.
 - `frontend/`: Static HTML/CSS/vanilla-JS dashboards (no bundler).
-- Root scripts: `test-dashboards.js` (integration-style checks) and `verify-phases.js` (structure/coverage verification).
+- `backend/test/`: `test-dashboards.js` (integration-style checks), `verify-phases.js` (structure/coverage verification), and `testNotifications.js`.
 
 ## Common commands
 
@@ -40,20 +40,20 @@ This repo does not use Jest/Mocha; tests are implemented as Node scripts.
 
 From repo root:
 ```bash
-node test-dashboards.js
+node backend/test/test-dashboards.js
 ```
 What it does (high level):
 - Hits a few endpoints on `http://localhost:5000` (expects the backend to be running for the full pass rate).
 - Validates dashboard HTML contains `data-require-*` attributes, block message containers, and script references.
 
 #### “Single test” / focused runs
-There isn’t a built-in single-test runner. `test-dashboards.js` is a script that calls grouped functions (e.g. `testServerHealth()`, `testAPIEndpoints()`).
-- To run a subset, temporarily comment out other groups in `runTests()` in `test-dashboards.js`.
+There isn’t a built-in single-test runner. `backend/test/test-dashboards.js` is a script that calls grouped functions (e.g. `testServerHealth()`, `testAPIEndpoints()`).
+- To run a subset, temporarily comment out other groups in `runTests()` in `backend/test/test-dashboards.js`.
 
 ### Verify expected implementation files exist
 From repo root:
 ```bash
-node verify-phases.js
+node backend/test/verify-phases.js
 ```
 Note: this script currently expects several docs files that are not present in the repository (it will report failures for them).
 

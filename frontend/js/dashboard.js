@@ -823,11 +823,17 @@ document.getElementById('update-password-btn')?.addEventListener('click', () => 
   document.getElementById('confirm-password').value = '';
 });
 
-document.getElementById('delete-account-btn')?.addEventListener('click', () => {
-  if (confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) {
-    if (confirm('This will permanently delete your account and all associated data. Are you really sure?')) {
-      alert('Account deletion would be processed here.');
-    }
+document.getElementById('delete-account-btn')?.addEventListener('click', async () => {
+  if (!confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) return;
+  if (!confirm('This will permanently delete your account and all associated data. Are you really sure?')) return;
+  try {
+    await api.deleteAccount();
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.clear();
+    window.location.href = 'login.html';
+  } catch (err) {
+    alert(err.message || 'Failed to delete account. Try again.');
   }
 });
 

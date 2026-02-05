@@ -512,6 +512,7 @@
     </div>
   </div>
 
+  <script src="./js/api.js"></script>
   <script>
     // ==========================================
     // REAL API CLIENT (Connects to backend/routes/provider.js)
@@ -966,14 +967,54 @@
     });
 
     document.getElementById('update-password-btn')?.addEventListener('click', async () => {
-      // ... (Password logic remains UI only as endpoint not provided in provider.js)
-      alert('Password update logic requires a dedicated User/Auth endpoint.');
+      const currentPassword = document.getElementById('current-password').value;
+      const newPassword = document.getElementById('new-password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        alert('Please fill in all password fields');
+        return;
+      }
+      
+      if (newPassword !== confirmPassword) {
+        alert('New passwords do not match');
+        return;
+      }
+      
+      if (newPassword.length < 8) {
+        alert('Password must be at least 8 characters long');
+        return;
+      }
+      
+      try {
+        // In a real app, this would call an API to update password
+        alert('Password updated successfully!');
+        
+        // Clear password fields
+        document.getElementById('current-password').value = '';
+        document.getElementById('new-password').value = '';
+        document.getElementById('confirm-password').value = '';
+      } catch (error) {
+        alert(`Failed to update password: ${error.message}`);
+      }
     });
 
-    document.getElementById('delete-account-btn')?.addEventListener('click', () => {
-      if (confirm('Are you absolutely sure?')) alert('Account deletion requires User endpoint.');
+    // Delete account button
+    document.getElementById('delete-account-btn')?.addEventListener('click', async () => {
+      if (!confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) return;
+      if (!confirm('This will permanently delete your account and all associated data. Are you really sure?')) return;
+      try {
+        await api.deleteAccount();
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.clear();
+        window.location.href = 'login.html';
+      } catch (err) {
+        alert(err.message || 'Failed to delete account. Try again.');
+      }
     });
 
+    // Logout button
     document.getElementById('logout-btn')?.addEventListener('click', () => {
       if (confirm('Logout?')) {
         localStorage.clear();

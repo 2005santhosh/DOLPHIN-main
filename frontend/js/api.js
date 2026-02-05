@@ -178,6 +178,28 @@ const api = {
 
   async getValidationStatus() {
     return this.request('/founder/validation/status');
+  },
+
+  // Founder: investors & providers (when validationScore >= 70%)
+  async getFounderInvestors() {
+    return this.request('/founder/investors');
+  },
+
+  async getFounderInvestorDetail(id) {
+    return this.request(`/founder/investors/${id}`);
+  },
+
+  async getFounderProviders() {
+    return this.request('/founder/providers');
+  },
+
+  async getFounderProviderDetail(id) {
+    return this.request(`/founder/providers/${id}`);
+  },
+
+  // Delete account (all roles)
+  async deleteAccount() {
+    return this.request('/auth/account', { method: 'DELETE' });
   }
 };
 
