@@ -20,7 +20,8 @@ const notificationSchema = new mongoose.Schema({
       'SYSTEM_UPDATE',
       'PROVIDER_MATCHED',
       'INVESTOR_INTEREST',
-      'FEEDBACK_RECEIVED'
+      'FEEDBACK_RECEIVED',
+      'CUSTOM_ADMIN_MESSAGE'
     ],
     required: true
   },
@@ -59,15 +60,22 @@ const notificationSchema = new mongoose.Schema({
   expiresAt: {
     type: Date,
     index: true
+  },
+  sentBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  targetRole: {
+    type: String,
+    enum: ['founder', 'investor', 'provider', 'admin', 'all']
   }
 }, {
   timestamps: true
 });
 
-// Index for querying unread notifications
+// Indexes for performance
 notificationSchema.index({ userId: 1, read: 1, createdAt: -1 });
-
-// Auto-delete expired notifications
+notificationSchema.index({ targetRole: 1, createdAt: -1 });
 notificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Methods
@@ -96,6 +104,15 @@ notificationSchema.statics.deleteOldNotifications = async function(days = 30) {
     createdAt: { $lt: cutoffDate },
     read: true
   });
+};
+
+notificationSchema.statics.createBulkNotifications = async function(userIds, notificationData) {
+  const notifications = userIds.map(userId => ({
+    userId,
+    ...notificationData
+  }));
+  
+  return this.insertMany(notifications);
 };
 
 module.exports = mongoose.model('Notification', notificationSchema);

@@ -4,7 +4,7 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true, select: false },
-  role: { type: String, enum: ['founder', 'investor', 'provider'], required: true },
+  role: { type: String, enum: ['founder', 'investor', 'provider','admin'], required: true },
 
   // Backend-controlled lifecycle state used by both API authorization and frontend visibility.
   // NOTE: we model stages explicitly to support the 7-stage founder roadmap.

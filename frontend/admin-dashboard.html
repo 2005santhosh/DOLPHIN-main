@@ -1,294 +1,474 @@
-<!-- frontend/admin-dashboard.html (New: Admin panel, assume investor uses this) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dolphin • Admin Dashboard</title>
-  <!-- Same styles as dashboard.html -->
-   <style>
-    /* Professional light theme with enhanced typography, shadows, and transitions */
-    :root {
-      --bg: #f8fafc;
-      --surface: #ffffff;
-      --surface-2: #f1f5f9;
-      --primary: #38bdf8;
-      --primary-dark: #0ea5e9;
-      --accent: #6366f1;
-      --text: #0f172a;
-      --text-secondary: #475569;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --border: rgba(0,0,0,0.08);
-      --shadow-sm: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-      --shadow-md: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-      --radius: 16px;
-      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      background-image: 
-        radial-gradient(circle at 15% 50%, rgba(56,189,248,0.08) 0%, transparent 25%),
-        radial-gradient(circle at 85% 30%, rgba(99,102,241,0.06) 0%, transparent 35%);
-      background-attachment: fixed;
-    }
-
-    header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 72px;
-      background: rgba(255,255,255,0.95);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      z-index: 1000;
-      padding: 0 3rem; /* Increased padding for professionalism */
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .logo {
-      font-size: 1.4rem;
-      font-weight: 700;
-      background: linear-gradient(90deg, #000, var(--primary));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      letter-spacing: -0.5px;
-    }
-
-    .logout-btn {
-      background: transparent;
-      border: 1px solid var(--text-secondary);
-      color: var(--text-secondary);
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .logout-btn:hover {
-      background: rgba(0,0,0,0.08);
-      border-color: var(--text);
-      color: #000;
-    }
-
-    /* Sidebar with icons for navigation */
-    .sidebar {
-      position: fixed;
-      top: 72px;
-      left: 0;
-      bottom: 0;
-      width: 260px;
-      background: rgba(255,255,255,0.4);
-      border-right: 1px solid var(--border);
-      padding: 2rem 1rem;
-      overflow-y: auto;
-    }
-
-    .nav-link {
-      display: flex;
-      align-items: center;
-      padding: 12px 1rem;
-      margin-bottom: 0.5rem;
-      border-radius: 8px;
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: var(--transition);
-    }
-
-    .nav-link:hover, .nav-link.active {
-      background: var(--surface-2);
-      color: var(--primary);
-    }
-
-    .nav-icon {
-      width: 20px;
-      height: 20px;
-      margin-right: 12px;
-      fill: currentColor;
-    }
-
-    .main-content {
-      margin-left: 260px;
-      padding: 100px 3rem 2rem; /* Increased padding */
-    }
-
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 2rem;
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.5rem;
-      box-shadow: var(--shadow-md); /* Enhanced shadow */
-      transition: var(--transition);
-    }
-
-    .card:hover {
-      box-shadow: var(--shadow-md), 0 0 0 4px rgba(56,189,248,0.1);
-    }
-
-    h2, h3 {
-      font-weight: 600; /* Professional weight */
-      margin-bottom: 1rem;
-    }
-
-    .subtitle {
-      color: var(--text-secondary);
-      margin-bottom: 1.5rem;
-      line-height: 1.5;
-    }
-
-    input, textarea {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 1rem;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface-2);
-      color: var(--text);
-      transition: var(--transition);
-    }
-
-    input:focus, textarea:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(56,189,248,0.1);
-    }
-
-    .btn-primary {
-      width: 100%;
-      padding: 12px;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .btn-primary:hover {
-      background: var(--primary-dark);
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .progress-container {
-      height: 8px;
-      background: var(--surface-2);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 0.75rem;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--primary), var(--accent));
-      transition: width 0.3s ease;
-    }
-
-    .score-badge {
-      background: var(--surface-2);
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: var(--primary);
-    }
-
-    .milestone-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem;
-      border-bottom: 1px solid var(--border);
-      transition: var(--transition);
-    }
-
-    .milestone-item:hover {
-      background: var(--surface-2);
-    }
-
-    .milestone-item:last-child {
-      border-bottom: none;
-    }
-
-    .milestone-item.completed {
-      color: var(--warning); /* Pending verification */
-    }
-
-    .milestone-item.verified {
-      color: var(--success);
-    }
-
-    .milestone-item input[type="checkbox"] {
-      width: 20px;
-      height: 20px;
-      accent-color: var(--primary);
-    }
-
-    .milestone-item input:disabled {
-      opacity: 0.5;
-    }
-
-    #analytics-section {
-      margin-top: 1rem;
-      padding: 1rem;
-      background: var(--surface-2);
-      border-radius: 8px;
-      font-size: 0.9rem;
-    }
-
-    #audit-list {
-      list-style: none;
-      color: var(--text-secondary);
-      font-size: 0.85rem;
-      line-height: 1.6;
-    }
-  </style>
+  <title>Admin Dashboard - Dolphin</title>
+  <link rel="stylesheet" href="./css/adminDashboard.css">
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 <body>
-  <header>
+  <!-- Header -->
+  <header class="header">
     <div class="logo">Dolphin Admin</div>
-    <button class="logout-btn" onclick="logout()">Logout</button>
+    <div class="header-right">
+      <button class="header-action" id="notification-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span class="notification-badge" id="admin-notification-count">0</span>
+      </button>
+      <div class="user-menu" id="user-menu">
+        <div class="user-avatar">AD</div>
+        <span id="user-name">Admin</span>
+      </div>
+    </div>
   </header>
 
-  <nav class="sidebar">
-    <!-- Nav links -->
-  </nav>
+  <!-- App Container -->
+  <div class="app-container">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="nav-section">
+        <h3 class="nav-title">Main</h3>
+        <ul class="nav-list">
+          <li><a href="#" class="nav-item active" data-page="dashboard">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"></path>
+            </svg>
+            Dashboard
+          </a></li>
+          <li><a href="#" class="nav-item" data-page="users">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            Users
+          </a></li>
+          <li><a href="#" class="nav-item" data-page="startups">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"></path>
+            </svg>
+            Startups
+          </a></li>
+          <li><a href="#" class="nav-item" data-page="providers">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            Providers
+          </a></li>
+          <li><a href="#" class="nav-item" data-page="notifications">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            Send Notifications
+          </a></li>
+        </ul>
+      </div>
+      <div class="nav-section">
+        <h3 class="nav-title">Settings</h3>
+        <ul class="nav-list">
+          <li><a href="#" class="nav-item" data-page="settings">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v6m4.22-10.22l1.42-1.42m-1.42 7.07l1.42 1.42M20 12h-6m-6 0H2m10.22-4.22L10.8 6.36m1.42 7.07l-1.42 1.42"></path>
+            </svg>
+            Settings
+          </a></li>
+        </ul>
+      </div>
+    </nav>
 
-  <main class="main-content">
-    <div class="card">
-      <h2>Startups Overview</h2>
-      <div id="admin-startups-list"></div>
-    </div>
-    <div class="card">
-      <h2>Providers Overview</h2>
-      <div id="admin-providers-list"></div>
-    </div>
-  </main>
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Dashboard Page -->
+      <div id="dashboard-page" class="page active">
+        <div class="page-header">
+          <h1 class="page-title">Admin Dashboard</h1>
+          <p class="page-subtitle">Platform overview and quick actions</p>
+        </div>
 
-  <script src="js/api.js"></script>
-  <script src="js/app.js"></script>
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #dbeafe;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value" id="total-users">0</div>
+              <div class="stat-label">Total Users</div>
+              <div class="stat-change positive">+12 this week</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #fef3c7;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+                <path d="M12 2v6m0 6v6m4.22-10.22l1.42-1.42m-1.42 7.07l1.42 1.42"></path>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value" id="pending-approvals">0</div>
+              <div class="stat-label">Pending Approvals</div>
+              <div class="stat-change">Awaiting review</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #d1fae5;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+                <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"></path>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value" id="validated-startups">0</div>
+              <div class="stat-label">Validated Startups</div>
+              <div class="stat-change positive">75% validation rate</div>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #e0e7ff;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <div class="stat-content">
+              <div class="stat-value" id="active-providers">0</div>
+              <div class="stat-label">Active Providers</div>
+              <div class="stat-change">Ready to engage</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Recent Activity</h3>
+            <button class="btn-secondary" onclick="loadDashboard()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6M1 20v-6h6"></path>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+              Refresh
+            </button>
+          </div>
+          <div id="recent-activity" class="activity-list">
+            <p style="text-align: center; color: var(--text-secondary);">Loading...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users Page -->
+      <div id="users-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">User Management</h1>
+          <p class="page-subtitle">Manage all platform users</p>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-bar">
+          <div class="filter-group">
+            <label>Role:</label>
+            <select id="user-role-filter" class="filter-select">
+              <option value="all">All Roles</option>
+              <option value="founder">Founders</option>
+              <option value="investor">Investors</option>
+              <option value="provider">Providers</option>
+              <option value="admin">Admins</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Status:</label>
+            <select id="user-status-filter" class="filter-select">
+              <option value="all">All Status</option>
+              <option value="PENDING_APPROVAL">Pending</option>
+              <option value="STAGE_1">Active</option>
+              <option value="BLOCKED">Blocked</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <input type="text" id="user-search" class="filter-input" placeholder="Search users...">
+          </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="card">
+          <div class="table-container">
+            <table class="data-table" id="users-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Stage</th>
+                  <th>Joined</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="users-table-body">
+                <tr>
+                  <td colspan="7" style="text-align: center;">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Startups Page -->
+      <div id="startups-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Startup Management</h1>
+          <p class="page-subtitle">Monitor and manage all startups</p>
+        </div>
+
+        <div class="card">
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Startup</th>
+                  <th>Founder</th>
+                  <th>Industry</th>
+                  <th>Stage</th>
+                  <th>Validation Score</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="startups-table-body">
+                <tr>
+                  <td colspan="7" style="text-align: center;">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Providers Page -->
+      <div id="providers-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Provider Management</h1>
+          <p class="page-subtitle">Manage service providers</p>
+        </div>
+
+        <div class="card">
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Provider</th>
+                  <th>Email</th>
+                  <th>Category</th>
+                  <th>Experience</th>
+                  <th>Status</th>
+                  <th>Rating</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="providers-table-body">
+                <tr>
+                  <td colspan="7" style="text-align: center;">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications Page -->
+      <div id="notifications-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Send Notifications</h1>
+          <p class="page-subtitle">Send real-time notifications to users</p>
+        </div>
+
+        <div class="notification-grid">
+          <!-- Send by Role -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📢 Send by Role</h3>
+            </div>
+            <form id="role-notification-form">
+              <div class="form-group">
+                <label class="form-label">Target Role</label>
+                <select class="form-select" id="role-target" required>
+                  <option value="">Select role...</option>
+                  <option value="founder">All Founders</option>
+                  <option value="investor">All Investors</option>
+                  <option value="provider">All Providers</option>
+                  <option value="admin">All Admins</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Title</label>
+                <input type="text" class="form-input" id="role-title" placeholder="Notification title" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Message</label>
+                <textarea class="form-textarea" id="role-message" placeholder="Notification message" required></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Priority</label>
+                <select class="form-select" id="role-priority">
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high" selected>High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Action URL (optional)</label>
+                <input type="text" class="form-input" id="role-action-url" placeholder="/dashboard">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Action Button Text (optional)</label>
+                <input type="text" class="form-input" id="role-action-text" placeholder="View Details">
+              </div>
+              <button type="submit" class="btn-primary">Send to Role</button>
+            </form>
+          </div>
+
+          <!-- Send to All -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">🌐 Broadcast to All Users</h3>
+            </div>
+            <form id="broadcast-notification-form">
+              <div class="form-group">
+                <label class="form-label">Title</label>
+                <input type="text" class="form-input" id="broadcast-title" placeholder="Announcement title" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Message</label>
+                <textarea class="form-textarea" id="broadcast-message" placeholder="Broadcast message" required></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Priority</label>
+                <select class="form-select" id="broadcast-priority">
+                  <option value="low">Low</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Action URL (optional)</label>
+                <input type="text" class="form-input" id="broadcast-action-url" placeholder="/announcements">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Action Button Text (optional)</label>
+                <input type="text" class="form-input" id="broadcast-action-text" placeholder="Read More">
+              </div>
+              <button type="submit" class="btn-primary">Broadcast to All</button>
+            </form>
+          </div>
+
+          <!-- Send to Specific Users -->
+          <div class="card" style="grid-column: 1 / -1;">
+            <div class="card-header">
+              <h3 class="card-title">👥 Send to Specific Users</h3>
+            </div>
+            <form id="users-notification-form">
+              <div class="form-group">
+                <label class="form-label">Select Users</label>
+                <div class="user-selector">
+                  <input type="text" class="form-input" id="user-search-input" placeholder="Search users...">
+                  <div class="user-list" id="user-selection-list">
+                    <!-- Users will be populated here -->
+                  </div>
+                  <div class="selected-users" id="selected-users">
+                    <!-- Selected users will appear here -->
+                  </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Title</label>
+                <input type="text" class="form-input" id="users-title" placeholder="Notification title" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Message</label>
+                <textarea class="form-textarea" id="users-message" placeholder="Notification message" required></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Priority</label>
+                <select class="form-select" id="users-priority">
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high" selected>High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+              <button type="submit" class="btn-primary">Send to Selected Users</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Page -->
+      <div id="settings-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Settings</h1>
+          <p class="page-subtitle">Manage your admin account</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Account Settings</h3>
+          </div>
+          <div class="settings-group">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" class="form-input" id="full-name">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-input" id="email">
+            </div>
+            <button class="btn-primary" id="update-profile-btn">Update Profile</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Danger Zone</h3>
+          </div>
+          <div class="settings-group">
+            <button class="btn-danger" id="logout-btn">Logout</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- User Details Modal -->
+  <div id="user-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">User Details</h3>
+        <button class="modal-close" onclick="closeUserModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="user-modal-body">
+        <!-- User details will be populated here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Include Socket.io client -->
+  <script src="./js/socket-client.js"></script>
+  <script src="./js/api.js"></script>
+  <script src="./js/admin.js"></script>
 </body>
 </html>

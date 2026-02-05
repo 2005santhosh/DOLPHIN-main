@@ -1,11 +1,10 @@
 // backend/services/notificationService.js
 const Notification = require('../models/Notification');
-const { sendNotificationToUser, sendNotificationToRole } = require('./socketService');
+const User = require('../models/User');
+const { sendNotificationToUser, sendNotificationToRole, broadcastNotification } = require('./socketService');
 
 /**
  * Create and send a notification
- * @param {Object} params - Notification parameters
- * @returns {Promise<Object>} Created notification
  */
 async function createNotification({
   userId,
@@ -17,7 +16,9 @@ async function createNotification({
   actionUrl = null,
   actionText = null,
   expiresAt = null,
-  sendRealtime = true
+  sendRealtime = true,
+  sentBy = null,
+  targetRole = null
 }) {
   try {
     const notification = await Notification.create({
@@ -29,7 +30,9 @@ async function createNotification({
       priority,
       actionUrl,
       actionText,
-      expiresAt
+      expiresAt,
+      sentBy,
+      targetRole
     });
 
     // Send real-time notification if enabled
@@ -51,6 +54,160 @@ async function createNotification({
     return notification;
   } catch (error) {
     console.error('Error creating notification:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send notification to multiple users by role
+ */
+async function sendNotificationByRole({
+  role,
+  type,
+  title,
+  message,
+  data = {},
+  priority = 'medium',
+  actionUrl = null,
+  actionText = null,
+  sentBy = null
+}) {
+  try {
+    // Get all users with this role
+    const users = await User.find({ role }).select('_id');
+    const userIds = users.map(u => u._id);
+
+    if (userIds.length === 0) {
+      return { count: 0, message: 'No users found with this role' };
+    }
+
+    // Create notifications for all users
+    const notifications = await Notification.createBulkNotifications(userIds, {
+      type,
+      title,
+      message,
+      data,
+      priority,
+      actionUrl,
+      actionText,
+      sentBy,
+      targetRole: role
+    });
+
+    // Send real-time notifications to all users with this role
+    sendNotificationToRole(role, {
+      type,
+      title,
+      message,
+      data,
+      priority,
+      actionUrl,
+      actionText,
+      createdAt: new Date(),
+      read: false
+    });
+
+    return {
+      count: notifications.length,
+      message: `Notification sent to ${notifications.length} ${role}s`
+    };
+  } catch (error) {
+    console.error('Error sending notification by role:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send notification to all users
+ */
+async function sendNotificationToAll({
+  type,
+  title,
+  message,
+  data = {},
+  priority = 'medium',
+  actionUrl = null,
+  actionText = null,
+  sentBy = null
+}) {
+  try {
+    const users = await User.find().select('_id');
+    const userIds = users.map(u => u._id);
+
+    if (userIds.length === 0) {
+      return { count: 0, message: 'No users found' };
+    }
+
+    const notifications = await Notification.createBulkNotifications(userIds, {
+      type,
+      title,
+      message,
+      data,
+      priority,
+      actionUrl,
+      actionText,
+      sentBy,
+      targetRole: 'all'
+    });
+
+    // Broadcast to all connected users
+    broadcastNotification({
+      type,
+      title,
+      message,
+      data,
+      priority,
+      actionUrl,
+      actionText,
+      createdAt: new Date(),
+      read: false
+    });
+
+    return {
+      count: notifications.length,
+      message: `Notification sent to all ${notifications.length} users`
+    };
+  } catch (error) {
+    console.error('Error sending notification to all:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send custom admin message to specific users
+ */
+async function sendAdminMessage({
+  userIds,
+  title,
+  message,
+  priority = 'high',
+  actionUrl = null,
+  actionText = null,
+  sentBy
+}) {
+  try {
+    const notifications = [];
+
+    for (const userId of userIds) {
+      const notification = await createNotification({
+        userId,
+        type: 'CUSTOM_ADMIN_MESSAGE',
+        title: `📢 ${title}`,
+        message,
+        priority,
+        actionUrl,
+        actionText,
+        sentBy
+      });
+      notifications.push(notification);
+    }
+
+    return {
+      count: notifications.length,
+      message: `Admin message sent to ${notifications.length} user(s)`
+    };
+  } catch (error) {
+    console.error('Error sending admin message:', error);
     throw error;
   }
 }
@@ -179,36 +336,6 @@ async function notifyMilestoneVerified(userId, milestoneTitle, startupId) {
 }
 
 /**
- * Send admin message notification
- */
-async function notifyAdminMessage(userId, title, message, actionUrl = null) {
-  return createNotification({
-    userId,
-    type: 'ADMIN_MESSAGE',
-    title: `📢 ${title}`,
-    message,
-    data: {},
-    priority: 'high',
-    actionUrl,
-    actionText: actionUrl ? 'View Details' : null
-  });
-}
-
-/**
- * Send system update notification
- */
-async function notifySystemUpdate(title, message) {
-  // This should be sent to all users
-  // In practice, you'd query all user IDs and send to each
-  return {
-    type: 'SYSTEM_UPDATE',
-    title,
-    message,
-    priority: 'medium'
-  };
-}
-
-/**
  * Get user's notifications
  */
 async function getUserNotifications(userId, { limit = 50, skip = 0, unreadOnly = false } = {}) {
@@ -221,6 +348,7 @@ async function getUserNotifications(userId, { limit = 50, skip = 0, unreadOnly =
     .sort({ createdAt: -1 })
     .limit(limit)
     .skip(skip)
+    .populate('sentBy', 'name email role')
     .lean();
 
   const unreadCount = await Notification.getUnreadCount(userId);
@@ -273,13 +401,14 @@ async function deleteNotification(notificationId, userId) {
 
 module.exports = {
   createNotification,
+  sendNotificationByRole,
+  sendNotificationToAll,
+  sendAdminMessage,
   notifyValidationComplete,
   notifyStageUnlocked,
   notifyTaskApproved,
   notifyTaskRejected,
   notifyMilestoneVerified,
-  notifyAdminMessage,
-  notifySystemUpdate,
   getUserNotifications,
   markAsRead,
   markAllAsRead,

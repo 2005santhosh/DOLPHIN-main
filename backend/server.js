@@ -27,10 +27,10 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.socket.io"],
       imgSrc: ["'self'", "data:", "https:"],
       fontSrc: ["'self'", "https:", "data:"],
-      connectSrc: ["'self'", "https:", "http:", "ws:", "wss:"], // Added wss: for Socket.io WebSocket
+      connectSrc: ["'self'", "https:", "http:", "ws:", "wss:"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
@@ -46,7 +46,7 @@ app.use(helmet({
 }));
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 100
 });
 app.use('/api/', limiter);
@@ -61,7 +61,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Serve static frontend files
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Public routes (no authentication required)
+// Public routes
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
@@ -83,7 +83,7 @@ app.get('/investor-dashboard.html', securePage(['investor']), (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/investor-dashboard.html'));
 });
 
-app.get('/admin-dashboard.html', securePage(['admin']), (req, res) => {
+app.get('/admin-dashboard.html', securePage(['admin', 'investor']), (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/admin-dashboard.html'));
 });
 
@@ -101,7 +101,8 @@ app.use('/api/founder', require('./routes/founder'));
 app.use('/api/investor', require('./routes/investor'));
 app.use('/api/provider', require('./routes/provider'));
 app.use('/api/admin', require('./routes/admin'));
-app.use('/api/notifications', require('./routes/notifications')); // NEW: Notification routes
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/admin/admin-notifications', require('./routes/admin-notifications'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -134,7 +135,7 @@ setInterval(async () => {
   } catch (error) {
     console.error('Error cleaning up notifications:', error);
   }
-}, 24 * 60 * 60 * 1000); // Run daily
+}, 24 * 60 * 60 * 1000);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
