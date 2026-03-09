@@ -47,10 +47,31 @@ app.use((req, res, next) => {
 
   next();
 });
+// --- CORS SETUP ---
 const corsOptions = {
-  origin: [
-    "https://dolphin-main.vercel.app"
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow any Vercel preview or production URL
+    if (origin.endsWith('vercel.app')) {
+      return callback(null, true);
+    }
+    
+    // Explicitly allow your main domain
+    if (origin === 'https://dolphin-main.vercel.app') {
+      return callback(null, true);
+    }
+
+    // Allow localhost for development
+    if (origin.startsWith('http://localhost')) {
+       return callback(null, true);
+    }
+
+    // Otherwise, reject
+    const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+    return callback(new Error(msg), false);
+  },
   methods: ["GET","POST","PUT","DELETE","OPTIONS"],
   allowedHeaders: ["Content-Type","Authorization"],
   credentials: true
