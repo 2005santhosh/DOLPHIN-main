@@ -25,7 +25,12 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
 }));
-
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "https://dolphin-main.vercel.app");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  next();
+});
 app.options('*', cors());
 // Make io accessible to routes (CRITICAL)
 app.set('socketio', io); 
@@ -41,7 +46,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.socket.io", "https://cdn.jsdelivr.net"],
       imgSrc: ["'self'", "data:", "https:"],
       fontSrc: ["'self'", "https:", "data:"],
-      connectSrc: ["'self'", "https:", "http:", "ws:", "wss:"],
+      connectSrc: ["*"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
