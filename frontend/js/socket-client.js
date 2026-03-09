@@ -5,7 +5,7 @@ let socket = null;
 let isConnected = false;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
-const API_URL = "https://dolphin-main-production.up.railway.app/api";
+// const API_URL = "https://dolphin-main-production.up.railway.app/api";
 /**
  * Initialize Socket.io connection
  */
