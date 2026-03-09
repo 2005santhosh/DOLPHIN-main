@@ -1,7 +1,7 @@
  // ==========================================
         // 1. PASSWORD VISIBILITY TOGGLE (FIXED)
         // ==========================================
-        const API_URL = "https://dolphin-main-production.up.railway.app/api";
+        // const API_URL = "https://dolphin-main-production.up.railway.app/api";
         const togglePassword = document.getElementById('toggle-password');
         const passwordInput = document.getElementById('password');
         const eyeIcon = togglePassword.querySelector('.eye-icon');
