@@ -10,8 +10,8 @@ window.addEventListener('resize', () => {
   }
 });
     const API_URL = "https://dolphin-main-production.up.railway.app/api";
-    const API_BASE = `${API_URL}/api/provider`;
-    const AUTH_BASE = `${API_URL}/api/auth`;
+    const API_BASE = `${API_URL}/provider`;
+    const AUTH_BASE = `${API_URL}/auth`;
 
     // Generic Helper to handle Auth headers and errors
     async function apiCall(endpoint, method = 'GET', body = null, base = API_BASE) {

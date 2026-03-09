@@ -72,10 +72,19 @@
                     throw new Error(data.message || 'Registration failed');
                 }
 
-                console.log('✅ Registration Successful');
-                
-                // Redirect
-                if (role === 'investor') window.location.href = 'investor-dashboard.html';
+               console.log('✅ Registration Successful');
+
+// --- ADD THIS: Save Token and User Data ---
+if (data.token) {
+    localStorage.setItem('token', data.token);
+}
+if (data.user) {
+    localStorage.setItem('user', JSON.stringify(data.user));
+}
+// -------------------------------------------
+
+// Redirect
+if (role === 'investor') window.location.href = 'investor-dashboard.html';
                 else if (role === 'founder') window.location.href = 'dashboard.html';
                 else if (role === 'provider') window.location.href = 'provider-dashboard.html';
                 
