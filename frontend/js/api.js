@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'http://dolphin-main-production.up.railway.app/api';
 
 const api = {
   // Helper to get auth header
