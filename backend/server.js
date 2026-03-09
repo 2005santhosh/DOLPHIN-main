@@ -22,33 +22,18 @@ const io = initializeSocket(server);
 // --- REFINED CORS CONFIGURATION ---
 // We will log the origin to debug in Railway logs
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Log the origin to see what Railway sees
-    console.log('Request Origin:', origin);
-
-    // Allow requests with no origin (like mobile apps, curl, or server-to-server)
-    if (!origin) return callback(null, true);
-
-    // Check against your list OR any Vercel preview URL
-    const allowedOrigins = ['https://dolphin-main.vercel.app'];
-    const isVercelPreview = origin.endsWith('.vercel.app');
-    const isAllowed = allowedOrigins.indexOf(origin) !== -1 || isVercelPreview;
-
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      // Log why it failed but DON'T throw an error (throwing crashes the request)
-      console.warn(`CORS blocked origin: ${origin}`);
-      // Sending false allows the request to continue but strips CORS headers safely
-      callback(null, false); 
-    }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  origin: [
+    "https://dolphin-main.vercel.app"
+  ],
+  methods: ["GET","POST","PUT","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization"],
   credentials: true
 };
-app.use(cors(corsOptions));
 
+app.use(cors(corsOptions));
+app.post("/test-cors", (req, res) => {
+  res.json({ message: "CORS working" });
+});
 // Make io accessible to routes (CRITICAL)
 // 2. Apply Helmet with Cross-Origin Policy
 app.use(helmet({
