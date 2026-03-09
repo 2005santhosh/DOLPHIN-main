@@ -19,7 +19,11 @@ const server = http.createServer(app);
 
 // Call the service function. It should return the 'io' instance.
 const io = initializeSocket(server); 
-
+app.use(cors({
+  origin: "https://dolphin-main.vercel.app",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
 // Make io accessible to routes (CRITICAL)
 app.set('socketio', io); 
 app.locals.tokenBlacklist = new Set();
@@ -56,11 +60,6 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 app.use('/api/chat', chatRoutes);
 app.use('/api/investor', investorRoutes);
-app.use(cors({
-  origin: "https://dolphin-main.vercel.app",
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true
-}));
 app.use('/api/support', supportRoutes);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
