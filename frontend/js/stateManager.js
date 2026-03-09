@@ -1,7 +1,7 @@
 // frontend/js/stateManager.js
 // Production-grade state management for Phase 1-5 implementation
 // Handles state-driven UI rendering, stage gating validation, and visibility/transparency
-const API_URL = "http://dolphin-main-production.up.railway.app/api";
+const API_URL = "https://dolphin-main-production.up.railway.app/api";
 class StateManager {
   constructor() {
     this.user = this.getUser();

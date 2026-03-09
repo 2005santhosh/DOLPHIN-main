@@ -9,7 +9,7 @@ window.addEventListener('resize', () => {
     document.body.style.overflow = '';
   }
 });
-    const API_URL = "http://dolphin-main-production.up.railway.app/api";
+    const API_URL = "https://dolphin-main-production.up.railway.app/api";
     const API_BASE = `${API_URL}/api/provider`;
     const AUTH_BASE = `${API_URL}/api/auth`;
 

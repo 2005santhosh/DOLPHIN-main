@@ -1,5 +1,5 @@
 // Updated validation modal JavaScript - AI scoring only, no manual sliders
-const API_URL = "http://dolphin-main-production.up.railway.app/api";
+const API_URL = "https://dolphin-main-production.up.railway.app/api";
 async function openStageValidationModal(stageKey) {
   const modal = document.getElementById('idea-validation-modal');
   const container = document.getElementById('validation-questions-container');
