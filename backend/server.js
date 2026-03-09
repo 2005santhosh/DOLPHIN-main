@@ -57,7 +57,7 @@ app.use('/api/', limiter);
 app.use('/api/chat', chatRoutes);
 app.use('/api/investor', investorRoutes);
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: "https://dolphin-main.vercel.app",
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
