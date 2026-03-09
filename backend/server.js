@@ -170,7 +170,7 @@ setInterval(async () => {
 }, 24 * 60 * 60 * 1000);
 
 const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`✓ Server running on port ${PORT}`);
   console.log(`✓ Real-time notifications enabled via Socket.io`);
   console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
