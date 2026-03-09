@@ -1,48 +1,37 @@
-// backend/models/Notification.js
 const mongoose = require('mongoose');
 
-const notificationSchema = new mongoose.Schema({
+const NotificationSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
-  },
-  type: {
-    type: String,
-    enum: [
-      'VALIDATION_COMPLETE',
-      'STAGE_UNLOCKED',
-      'TASK_APPROVED',
-      'TASK_REJECTED',
-      'MILESTONE_VERIFIED',
-      'ADMIN_MESSAGE',
-      'SYSTEM_UPDATE',
-      'PROVIDER_MATCHED',
-      'INVESTOR_INTEREST',
-      'FEEDBACK_RECEIVED',
-      'CUSTOM_ADMIN_MESSAGE'
-    ],
     required: true
   },
   title: {
     type: String,
-    required: true,
-    maxlength: 200
+    required: true
   },
   message: {
     type: String,
-    required: true,
-    maxlength: 1000
+    required: true
   },
-  data: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {}
-  },
+  type: {
+    type: String,
+     type: {
+    type: String,
+    enum: [
+      'INFO', 
+      'WARNING', 
+      'SUCCESS', 
+      'ERROR', 
+      'INTRODUCTION_REQUEST', 
+      'STAGE_UNLOCKED', // ✅ ADD THIS
+      'TASK_COMPLETED'  // Optional: add this if you use it elsewhere
+    ],
+    default: 'INFO'
+  }},
   read: {
     type: Boolean,
-    default: false,
-    index: true
+    default: false
   },
   priority: {
     type: String,
@@ -50,69 +39,31 @@ const notificationSchema = new mongoose.Schema({
     default: 'medium'
   },
   actionUrl: {
-    type: String,
-    maxlength: 500
+    type: String
   },
   actionText: {
-    type: String,
-    maxlength: 100
+    type: String
   },
-  expiresAt: {
+  createdAt: {
     type: Date,
-    index: true
+    default: Date.now
   },
-  sentBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  targetRole: {
-    type: String,
-    enum: ['founder', 'investor', 'provider', 'admin', 'all']
-  }
-}, {
-  timestamps: true
 });
 
-// Indexes for performance
-notificationSchema.index({ userId: 1, read: 1, createdAt: -1 });
-notificationSchema.index({ targetRole: 1, createdAt: -1 });
-notificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// ✅ ADD THIS STATIC METHOD
+NotificationSchema.statics.getUnreadCount = async function(userId) {
+  const count = await this.countDocuments({ userId, read: false });
+  return count;
+};
 
-// Methods
-notificationSchema.methods.markAsRead = async function() {
+// Optional: Add a method to delete old notifications
+NotificationSchema.statics.deleteOldNotifications = async function(daysOld) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - daysOld);
+  return this.deleteMany({ createdAt: { $lt: cutoff } });
+};
+NotificationSchema.methods.markAsRead = function() {
   this.read = true;
   return this.save();
 };
-
-// Statics
-notificationSchema.statics.getUnreadCount = async function(userId) {
-  return this.countDocuments({ userId, read: false });
-};
-
-notificationSchema.statics.markAllAsRead = async function(userId) {
-  return this.updateMany(
-    { userId, read: false },
-    { read: true }
-  );
-};
-
-notificationSchema.statics.deleteOldNotifications = async function(days = 30) {
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - days);
-  
-  return this.deleteMany({
-    createdAt: { $lt: cutoffDate },
-    read: true
-  });
-};
-
-notificationSchema.statics.createBulkNotifications = async function(userIds, notificationData) {
-  const notifications = userIds.map(userId => ({
-    userId,
-    ...notificationData
-  }));
-  
-  return this.insertMany(notifications);
-};
-
-module.exports = mongoose.model('Notification', notificationSchema);
+module.exports = mongoose.model('Notification', NotificationSchema);

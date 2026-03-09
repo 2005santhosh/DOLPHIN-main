@@ -8,7 +8,7 @@ const IntroRequest = require('../models/IntroRequest');
 const Log = require('../models/Log');
 
 // Get all users
-router.get('/users', protect, authorize('investor'), async (req, res) => {
+router.get('/users', protect, authorize('admin', 'investor'), async (req, res) => {
   try {
     const users = await User.find().select('-password');
     res.json(users);
@@ -18,7 +18,7 @@ router.get('/users', protect, authorize('investor'), async (req, res) => {
 });
 
 // Get all startups
-router.get('/startups', protect, authorize('investor'), async (req, res) => {
+router.get('/startups', protect, authorize('admin', 'investor'), async (req, res) => {
   try {
     const startups = await Startup.find()
       .populate('founderId', 'name email state stage')
@@ -30,7 +30,7 @@ router.get('/startups', protect, authorize('investor'), async (req, res) => {
 });
 
 // Get all providers
-router.get('/providers', protect, authorize('investor'), async (req, res) => {
+router.get('/providers', protect, authorize('admin', 'investor'), async (req, res) => {
   try {
     const providers = await Provider.find()
       .populate('userId', 'name email state stage');
@@ -41,7 +41,7 @@ router.get('/providers', protect, authorize('investor'), async (req, res) => {
 });
 
 // Approve user
-router.post('/approve-user', protect, authorize('investor'), async (req, res) => {
+router.post('/approve-user', protect, authorize('admin', 'investor'), async (req, res) => {
   const { userId } = req.body;
   
   if (!userId) {
@@ -89,7 +89,7 @@ router.post('/approve-user', protect, authorize('investor'), async (req, res) =>
 });
 
 // Reject user
-router.post('/reject-user', protect, authorize('investor'), async (req, res) => {
+router.post('/reject-user', protect, authorize('admin', 'investor'), async (req, res) => {
   const { userId } = req.body;
   
   if (!userId) {
@@ -129,7 +129,7 @@ router.post('/reject-user', protect, authorize('investor'), async (req, res) => 
 });
 
 // Move user to next stage
-router.post('/move-stage', protect, authorize('investor'), async (req, res) => {
+router.post('/move-stage', protect, authorize('admin', 'investor'), async (req, res) => {
   const { userId } = req.body;
 
   if (!userId) {
@@ -214,7 +214,7 @@ router.post('/move-stage', protect, authorize('investor'), async (req, res) => {
 });
 
 // Block user
-router.post('/block-user', protect, authorize('investor'), async (req, res) => {
+router.post('/block-user', protect, authorize('admin', 'investor'), async (req, res) => {
   const { userId } = req.body;
   
   if (!userId) {
@@ -254,7 +254,7 @@ router.post('/block-user', protect, authorize('investor'), async (req, res) => {
 });
 
 // Get pending approvals dashboard
-router.get('/dashboard', protect, authorize('investor'), async (req, res) => {
+router.get('/dashboard', protect, authorize('admin', 'investor'), async (req, res) => {
   try {
     const pendingUsers = await User.find({ state: 'PENDING_APPROVAL' }).countDocuments();
     const approvedUsers = await User.find({ state: 'APPROVED' }).countDocuments();
@@ -303,7 +303,7 @@ router.get('/dashboard', protect, authorize('investor'), async (req, res) => {
 });
 
 // Get pending users
-router.get('/pending-users', protect, authorize('investor'), async (req, res) => {
+router.get('/pending-users', protect, authorize('admin', 'investor'), async (req, res) => {
   try {
     const users = await User.find({ state: 'PENDING_APPROVAL' }).select('-password');
     res.json(users);
@@ -313,7 +313,7 @@ router.get('/pending-users', protect, authorize('investor'), async (req, res) =>
 });
 
 // Get pending providers
-router.get('/pending-providers', protect, authorize('investor'), async (req, res) => {
+router.get('/pending-providers', protect, authorize('admin', 'investor'), async (req, res) => {
   try {
     const providers = await Provider.find({ verified: false })
       .populate('userId', 'name email state stage');
@@ -324,7 +324,7 @@ router.get('/pending-providers', protect, authorize('investor'), async (req, res
 });
 
 // Verify provider
-router.post('/verify-provider', protect, authorize('investor'), async (req, res) => {
+router.post('/verify-provider', protect, authorize('admin', 'investor'), async (req, res) => {
   const { providerId } = req.body;
   
   if (!providerId) {
@@ -364,7 +364,7 @@ router.post('/verify-provider', protect, authorize('investor'), async (req, res)
 });
 
 // Reject provider
-router.post('/reject-provider', protect, authorize('investor'), async (req, res) => {
+router.post('/reject-provider', protect, authorize('admin', 'investor'), async (req, res) => {
   const { providerId } = req.body;
   
   if (!providerId) {
@@ -400,7 +400,7 @@ router.post('/reject-provider', protect, authorize('investor'), async (req, res)
 });
 
 // Get pending task submissions
-router.get('/pending-tasks', protect, authorize('investor'), async (req, res) => {
+router.get('/pending-tasks', protect, authorize('admin', 'investor'), async (req, res) => {
   try {
     const startups = await Startup.find()
       .populate('founderId', 'name email')
@@ -437,7 +437,7 @@ router.get('/pending-tasks', protect, authorize('investor'), async (req, res) =>
 });
 
 // Approve milestone task
-router.post('/approve-task', protect, authorize('investor'), async (req, res) => {
+router.post('/approve-task', protect, authorize('admin', 'investor'), async (req, res) => {
   const { startupId, milestoneIndex, taskId, notes } = req.body;
   
   if (!startupId || milestoneIndex === undefined || !taskId) {
@@ -511,7 +511,7 @@ router.post('/approve-task', protect, authorize('investor'), async (req, res) =>
 });
 
 // Reject milestone task
-router.post('/reject-task', protect, authorize('investor'), async (req, res) => {
+router.post('/reject-task', protect, authorize('admin', 'investor'), async (req, res) => {
   const { startupId, milestoneIndex, taskId, notes } = req.body;
   
   if (!startupId || milestoneIndex === undefined || !taskId || !notes) {
@@ -572,7 +572,7 @@ router.post('/reject-task', protect, authorize('investor'), async (req, res) => 
 });
 
 // Advance founder to next stage
-router.post('/advance-founder-stage', protect, authorize('investor'), async (req, res) => {
+router.post('/advance-founder-stage', protect, authorize('admin', 'investor'), async (req, res) => {
   const { startupId } = req.body;
   
   if (!startupId) {

@@ -29,8 +29,11 @@ function initializeSocket(server) {
         return next(new Error('Authentication error: No token provided'));
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      socket.userId = decoded.id;
+            // Add fallback secret 'your-secret-key'
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mysecretkey');
+      
+      // Support both 'id' (correct) and fallback just in case
+      socket.userId = decoded.id || decoded.userId; 
       socket.userRole = decoded.role;
       
       next();

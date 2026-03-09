@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service - Dolphin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Reusing same CSS variables and base styles for consistency */
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-body: #f8fafc;
+            --bg-white: #ffffff;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-body);
+            color: var(--text-secondary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Header */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header-container {
+            max-width: 56rem;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            height: 4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .logo-icon { font-size: 1.5rem; }
+        .logo-text { font-size: 1.25rem; font-weight: 700; }
+
+        .back-btn {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .back-btn:hover { color: var(--primary); }
+
+        /* Main Content */
+        .main-container {
+            max-width: 42rem;
+            margin: 0 auto;
+            padding: 4rem 1.5rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .hero-title {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.025em;
+        }
+
+        .hero-subtitle {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            max-width: 36rem;
+            margin: 0 auto 1.5rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background-color: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 9999px;
+        }
+
+        .status-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            background-color: #10b981;
+            border-radius: 50%;
+        }
+
+        .status-text {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #475569;
+        }
+
+        /* Content Sections */
+        .section {
+            margin-bottom: 2.5rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .section-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background-color: #eef2ff;
+            color: var(--primary);
+            font-size: 0.875rem;
+            font-weight: 700;
+            margin-right: 0.75rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .section-text {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .list-group {
+            list-style: none;
+            margin-top: 0.5rem;
+        }
+
+        .list-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .list-icon {
+            width: 1.25rem;
+            height: 1.25rem;
+            margin-right: 0.75rem;
+            margin-top: 0.125rem;
+            color: #ef4444; /* Red for prohibitions in ToS */
+            flex-shrink: 0;
+        }
+
+        .list-icon.check { color: #10b981; }
+
+        /* Contact Card */
+        .contact-card {
+            background-color: #eef2ff;
+            border: 1px solid #e0e7ff;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+            max-width: 28rem;
+            margin: 0 auto;
+        }
+
+        .contact-label {
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .contact-link {
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 1.125rem;
+            text-decoration: none;
+        }
+        .contact-link:hover { text-decoration: underline; }
+
+        .contact-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary);
+            color: white;
+            font-weight: 500;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            margin-top: 1rem;
+            transition: background-color 0.2s;
+        }
+        .contact-btn:hover { background-color: var(--primary-hover); }
+
+        /* Footer */
+        .footer {
+            background-color: #f8fafc;
+            border-top: 1px solid var(--border-color);
+            margin-top: 3rem;
+        }
+
+        .footer-container {
+            max-width: 56rem;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64748b;
+        }
+
+        .footer-text {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .footer-link {
+            color: #64748b;
+            text-decoration: none;
+        }
+        .footer-link:hover { color: var(--primary); }
+
+        @media (min-width: 768px) {
+            .footer-container {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+            .hero-title { font-size: 3rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sticky Header -->
+    <header class="header">
+        <div class="header-container">
+            <a href="index.html" class="logo-group">
+                <span class="logo-icon">🐬</span>
+                <span class="logo-text">Dolphin</span>
+            </a>
+            <a href="javascript:history.back()" class="back-btn">← Back to Platform</a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        
+        <!-- Header Section -->
+        <div class="hero">
+            <h1 class="hero-title">Terms of Service</h1>
+            <p class="hero-subtitle">Rules and guidelines for using Dolphin</p>
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                <span class="status-text">Last Updated: March, 2026</span>
+            </div>
+        </div>
+
+        <!-- Content Sections -->
+        <div class="content-wrapper">
+
+            <!-- 1. Introduction -->
+            <section class="section">
+                <div class="section-header">
+                    <span class="section-number">1</span>
+                    <h2 class="section-title">Introduction</h2>
+                </div>
+                <p class="section-text">
+                    Welcome to Dolphin. By accessing or using our platform, you agree to be bound by these Terms of Service. Please read them carefully. These terms constitute a legally binding agreement between you and Dolphin regarding your use of the service.
+                </p>
+            </section>
+
+            <!-- 2. Eligibility -->
+            <section class="section">
+                <div class="section-header">
+                    <span class="section-number">2</span>
+                    <h2 class="section-title">Eligibility</h2>
+                </div>
+                <p class="section-text">To use Dolphin, you must:</p>
+                <ul class="list-group">
+                    <li class="list-item">
+                        <svg class="list-icon check" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        <span>Be at least the required legal age in your jurisdiction to enter into a binding contract.</span>
+                    </li>
+                    <li class="list-item">
+                        <svg class="list-icon check" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        <span>Provide accurate and complete information during registration.</span>
+                    </li>
+                    <li class="list-item">
+                        <svg class="list-icon check" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        <span>Use the platform in compliance with all applicable laws and regulations.</span>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- 3. User Accounts -->
+            <section class="section">
+                <div class="section-header">
+                    <span class="section-number">3</span>
+                    <h2 class="section-title">User Accounts</h2>
+                </div>
+                <p class="section-text">You are responsible for maintaining the security of your account. This includes:</p>
+                <ul class="list-group">
+                    <li class="list-item">
+                        <svg class="list-icon check" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        <span>Keeping your login credentials confidential.</span>
+                    </li>
+                    <li class="list-item">
+                        <svg class="list-icon check" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        <span>Restricting access to your computer or device.</span>
+                    </li>
+                    <li class="list-item">
+                        <svg class="list-icon check" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        <span>All activities that occur under your account.</span>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- 4. Acceptable Use -->
+            <section class="section">
+                <div class="section-header">
+                    <span class="section-number">4</span>
+                    <h2 class="section-title">Acceptable Use</h2>
+                </div>
+                <p class="section-text">You agree not to engage in prohibited activities, including but not limited to:</p>
+                <ul class="list-group">
+                    <li class="list-item">
+                        <svg class="list-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                        <span>Harassment, abuse, or harm towards other users.</span>
+                    </li>
+                    <li class="list-item">
+                        <svg class="list-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                        <span>Sending spam or unsolicited messages.</span>
+                    </li>
+                    <li class="list-item">
+                        <svg class="list-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                        <span>Attempting to hack, exploit, or disrupt the platform's integrity.</span>
+                    </li>
+                    <li class="list-item">
+                        <svg class="list-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                        <span>Uploading harmful, illegal, or infringing content.</span>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- 5. User Content -->
+            <section class="section">
+                <div class="section-header">
+                    <span class="section-number">5</span>
+                    <h2 class="section-title">User Content</h2>
+                </div>
+                <p class="section-text">
+                    You retain ownership of the content you upload to Dolphin. However, by uploading content, you grant Dolphin a limited, worldwide, non-exclusive license to use, display, and distribute your content solely for the purpose of operating and providing the service to you and other users.
+                </p>
+            </section>
+
+            <!-- 6. Platform Availability -->
+            <section class="section">
+                <div class="section-header">
+                    <span class="section-number">6</span>
+                    <h2 class="section-title">Platform Availability</h2>
+                </div>
+                <p class="section-text">
+                    We strive to keep Dolphin available at all times, but we do not guarantee uninterrupted access. We reserve the right to modify features, temporarily suspend services, or perform maintenance updates without prior notice.
+                </p>
+            </section>
+
+            <!-- 7. Termination -->
+            <section class="section">
+                <div class="section-header">
+                    <span class="section-number">7</span>
+                    <h2 class="section-title">Termination of Accounts</h2>
+                </div>
+                <p class="section-text">
+                    We may suspend or terminate accounts that violate these Terms. You also have the right to delete your account at any time through the platform's settings or by contacting support.
+                </p>
+            </section>
+
+            <!-- 8. Intellectual Property -->
+            <section class="section">
+                <div class="section-header">
+                    <span class="section-number">8</span>
+                    <h2 class="section-title">Intellectual Property</h2>
+                </div>
+                <p class="section-text">
+                    All content, design, logos, and software associated with Dolphin belong to Dolphin or its licensors. You may not copy, modify, distribute, or create derivative works without our express written permission.
+                </p>
+            </section>
+
+            <!-- 9. Limitation of Liability -->
+            <section class="section">
+                <div class="section-header">
+                    <span class="section-number">9</span>
+                    <h2 class="section-title">Limitation of Liability</h2>
+                </div>
+                <p class="section-text">
+                    Dolphin is provided "as is." We are not responsible for any direct, indirect, incidental, or consequential damages resulting from:
+                </p>
+                <ul class="list-group">
+                    <li class="list-item">
+                        <svg class="list-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <span>Misuse of the platform.</span>
+                    </li>
+                    <li class="list-item">
+                        <svg class="list-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <span>Interactions between users.</span>
+                    </li>
+                    <li class="list-item">
+                        <svg class="list-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <span>Service interruptions or data loss.</span>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- 10. Changes to Terms -->
+            <section class="section">
+                <div class="section-header">
+                    <span class="section-number">10</span>
+                    <h2 class="section-title">Changes to Terms</h2>
+                </div>
+                <p class="section-text">
+                    We reserve the right to update these Terms of Service periodically. We will notify users of significant changes via email or a prominent notice on the platform. Continued use of the service after changes constitutes acceptance of the new terms.
+                </p>
+            </section>
+
+            <!-- 11. Governing Law -->
+            <section class="section">
+                <div class="section-header">
+                    <span class="section-number">11</span>
+                    <h2 class="section-title">Governing Law</h2>
+                </div>
+                <p class="section-text">
+                    These Terms shall be governed by and construed in accordance with the laws of the jurisdiction in which Dolphin operates, without regard to its conflict of law provisions.
+                </p>
+            </section>
+
+            <!-- 12. Contact Information -->
+            <section class="section" style="border-top: 1px solid var(--border-color); padding-top: 2.5rem;">
+                <h2 class="section-title" style="text-align: center; margin-bottom: 0.5rem;">Questions?</h2>
+                <p class="section-text" style="text-align: center; margin-bottom: 1.5rem;">If you have any questions about these Terms, please contact our legal team.</p>
+                <div class="contact-card">
+                    <a href="mailto:support@pacificdev.in" class="contact-btn">Contact Support</a>
+                    <p style="margin-top: 1rem; font-size: 0.875rem; color: var(--text-secondary);">
+                        <a href="mailto:support@pacificdev.in" class="contact-link" style="font-size: 1rem;">support@pacificdev.in</a>
+                    </p>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-logo">
+                <span class="logo-icon" style="font-size: 1.2rem;">🐬</span>
+                <span class="logo-text" style="font-size: 1rem;">Dolphin</span>
+            </div>
+            <p class="footer-text">© 2026 Dolphin, a product of Pacific. All rights reserved.</p>
+            <div class="footer-links">
+                <a href="./privacy.html" class="footer-link">Privacy Policy</a>
+                <a href="./termsofservice.html" class="footer-link">Terms of Service</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

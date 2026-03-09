@@ -5,634 +5,311 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dolphin • Investor Dashboard</title>
   <link rel="stylesheet" href="./css/investorDashboard.css">
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 <body>
+
+  <!-- Sidebar Overlay -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- Legal Modal -->
+  <div class="modal-overlay" id="legal-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modal-title">Title</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <!-- Content injected via JS -->
+      </div>
+    </div>
+  </div>
+
   <!-- Header -->
   <header class="header">
-    <div class="logo">Dolphin • Investor</div>
+    
+    <!-- Left Section: Toggle + Logo -->
+    <div class="header-left">
+      <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"></path></svg>
+      </button>
+      <div class="logo">🐬 <span>Dolphin</span></div>
+    </div>
+
+    <!-- Right Section: Actions -->
     <div class="header-right">
       <button class="header-action" id="notification-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
           <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
         </svg>
-        <span class="notification-badge">3</span>
+        <span class="notification-badge" id="notif-badge-count">0</span>
       </button>
+      
+      <div class="notification-dropdown" id="notification-dropdown">
+        <div class="notif-header">
+          <h4>Notifications</h4>
+          <div class="notif-actions">
+             <button class="mark-read-btn" onclick="markAllRead()">Mark all read</button>
+             <button class="clear-btn" onclick="clearNotifications()">Clear</button>
+             <button class="notif-close-btn" onclick="closeNotifDropdown()">&times;</button>
+          </div>
+        </div>
+        <div class="notif-list" id="notif-list"></div>
+      </div>
+
       <div class="user-menu" id="user-menu">
         <div class="user-avatar">AI</div>
-        <span id="user-name">Investor Account</span>
+        <span id="user-name">Investor</span>
       </div>
     </div>
   </header>
 
   <!-- App Container -->
   <div class="app-container">
+    
     <!-- Sidebar -->
-    <nav class="sidebar">
+    <nav class="sidebar" id="sidebar">
       <div class="nav-section">
         <h3 class="nav-title">Main</h3>
         <ul class="nav-list">
-          <li><a href="#" class="nav-item active" data-page="dashboard">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"></path>
-            </svg>
-            Dashboard
+          <li><a href="#" class="nav-item active" data-page="dashboard">Dashboard</a></li>
+          <li><a href="#" class="nav-item" data-page="startups">Startups</a></li>
+          <li><a href="#" class="nav-item" data-page="watchlist">Watchlist</a></li>
+          <li><a href="#" class="nav-item" data-page="requests">
+            Requests
+            <span class="sidebar-badge" id="sidebar-req-badge">0</span>
           </a></li>
-          <li><a href="#" class="nav-item" data-page="startups">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"></path>
-            </svg>
-            Validated Startups
-          </a></li>
-          <li><a href="#" class="nav-item" data-page="watchlist">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path>
-            </svg>
-            Watchlist
+          <li><a href="#" class="nav-item" data-page="chat">
+            Chat
+            <span class="sidebar-badge" id="sidebar-chat-badge">0</span>
           </a></li>
         </ul>
       </div>
       <div class="nav-section">
         <h3 class="nav-title">Settings</h3>
         <ul class="nav-list">
-          <li><a href="#" class="nav-item" data-page="settings">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M12 1v6m0 6v6m4.22-10.22l1.42-1.42m-1.42 7.07l1.42 1.42M20 12h-6m-6 0H2m10.22-4.22L10.8 6.36m1.42 7.07l-1.42 1.42"></path>
-            </svg>
-            Settings
-          </a></li>
+          <li><a href="#" class="nav-item" data-page="settings">Settings</a></li>
         </ul>
       </div>
     </nav>
 
     <!-- Main Content -->
     <main class="main-content">
+      
       <!-- Dashboard Page -->
       <div id="dashboard-page" class="page active">
         <div class="page-header">
           <h1 class="page-title">Investor Dashboard</h1>
-          <p class="page-subtitle">Browse high-potential startups with overall validation score ≥ 70%.</p>
+          <p class="page-subtitle">Browse high-potential startups (Score ≥ 70%).</p>
         </div>
-
-        <!-- Quick Stats -->
         <div class="grid">
-          <div class="stat-card">
-            <div class="stat-value" id="total-startups">0</div>
-            <div class="stat-label">Validated Startups</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="highest-score">0%</div>
-            <div class="stat-label">Highest Stage Score</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="watchlist-count">0</div>
-            <div class="stat-label">Watchlist</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="fully-validated">0</div>
-            <div class="stat-label">Fully Validated (5/5)</div>
-          </div>
+          <div class="stat-card"><div class="stat-value" id="total-startups">0</div><div class="stat-label">Validated Startups</div></div>
+          <div class="stat-card"><div class="stat-value" id="highest-score">0%</div><div class="stat-label">Highest Score</div></div>
+          <div class="stat-card"><div class="stat-value" id="watchlist-count">0</div><div class="stat-label">Watchlist</div></div>
         </div>
-
-        <!-- Validated Startups -->
         <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Validated Startups (Score ≥ 70% on Any Stage)</h3>
-          </div>
-          <div class="form-group">
-            <input type="text" class="form-input" id="search-startup" placeholder="Search by name or thesis...">
-          </div>
-          <div id="validated-startups">
-            <p style="text-align: center; color: var(--text-secondary);">Loading startups...</p>
+          <div class="card-header"><h3 class="card-title">Validated Startups</h3></div>
+          <div style="padding: 1.5rem;">
+              <div class="form-group"><input type="text" class="form-input" id="search-startup" placeholder="Search..."></div>
+              <div id="validated-startups"><p style="text-align: center;">Loading...</p></div>
           </div>
         </div>
       </div>
 
       <!-- Startups Page -->
       <div id="startups-page" class="page">
-        <div class="page-header">
-          <h1 class="page-title">Validated Startups</h1>
-          <p class="page-subtitle">Browse all startups that have reached validation thresholds</p>
-        </div>
-
+        <div class="page-header"><h1 class="page-title">All Startups</h1></div>
         <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">All Validated Startups</h3>
-          </div>
-          <div class="form-group">
-            <input type="text" class="form-input" id="search-all-startups" placeholder="Search by name or industry...">
-          </div>
-          <div id="all-startups">
-            <p style="text-align: center; color: var(--text-secondary);">Loading startups...</p>
-          </div>
+            <div style="padding: 1.5rem;">
+                <div class="form-group"><input type="text" class="form-input" id="search-all-startups" placeholder="Search..."></div>
+                <div id="all-startups"><p style="text-align: center;">Loading...</p></div>
+            </div>
         </div>
       </div>
 
       <!-- Watchlist Page -->
       <div id="watchlist-page" class="page">
-        <div class="page-header">
-          <h1 class="page-title">My Watchlist</h1>
-          <p class="page-subtitle">Startups you're tracking for potential investment</p>
-        </div>
+        <div class="page-header"><h1 class="page-title">My Watchlist</h1></div>
+        <div class="card"><div style="padding: 1.5rem;" id="watchlist-startups"><p style="text-align: center;">Loading...</p></div></div>
+      </div>
 
+      <!-- Requests Page -->
+      <div id="requests-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Requests</h1>
+          <p class="page-subtitle">Manage your connections</p>
+        </div>
         <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Tracked Startups</h3>
+          <div class="tabs">
+            <div class="tab active" data-tab="incoming">Incoming (0)</div>
+            <div class="tab" data-tab="sent">Sent (0)</div>
           </div>
-          <div id="watchlist-startups">
-            <p style="text-align: center; color: var(--text-secondary);">Your watchlist is empty.</p>
+          <div class="tab-content active" id="incoming-tab">
+            <div id="incoming-requests-list" class="list"><p style="text-align: center; padding: 2rem;">Loading...</p></div>
+          </div>
+          <div class="tab-content" id="sent-tab">
+            <div id="sent-requests-list" class="list"><p style="text-align: center; padding: 2rem;">Loading...</p></div>
           </div>
         </div>
       </div>
 
+      <!-- Chat Page -->
+      <div id="chat-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Chat</h1>
+          <p class="page-subtitle">Talk to founders</p>
+        </div>
+        <div class="card">
+            <div id="conversations-list">
+                <div style="padding: 1rem; border-bottom: 1px solid #eee; font-weight: bold; display: none;" class="mobile-list-header">Messages</div>
+            </div>
+            <div id="chat-window">
+                <div id="chat-header">
+                    <button class="back-btn" onclick="closeChatMobile()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    </button>
+                    <div class="header-info"></div>
+                </div>
+                <div id="messages-container"></div>
+                <div id="chat-input-area">
+                    <div class="input-wrapper">
+                        <input type="text" id="message-input" class="form-input" placeholder="Type a message..." style="margin-bottom: 0;">
+                        <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      </div>
+      
       <!-- Settings Page -->
       <div id="settings-page" class="page">
-        <div class="page-header">
-          <h1 class="page-title">Settings</h1>
-          <p class="page-subtitle">Manage your account and preferences</p>
-        </div>
+        
+        <!-- Profile Settings -->
+         <div class="card">
+            <div class="card-header"><h3 class="card-title">Account Settings</h3></div>
+            <div style="padding: 2rem;">
+                 <div class="form-group" style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
+                  <div style="position: relative;">
+                    <img id="settings-profile-preview" src="https://ui-avatars.com/api/?name=User" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid #eee;">
+                    <label for="profile-picture-input" style="position: absolute; bottom: 0; right: 0; background: #3b82f6; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid white;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                    </label>
+                    <input type="file" id="profile-picture-input" accept="image/*" style="display: none;">
+                  </div>
+                  <div style="flex:1;">
+                     <button id="upload-picture-btn" class="btn btn-secondary btn-sm">Upload Photo</button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Full Name</label>
+                  <input type="text" class="form-input" id="settings-full-name" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Email</label>
+                  <input type="email" class="form-input" id="settings-email" readonly style="background:#f3f4f6;">
+                </div>
+                <button class="btn btn-primary" id="update-profile-btn">Update Profile</button>
+            </div>
+         </div>
+         
+         <!-- Password Section -->
+         <div class="card">
+            <div class="card-header"><h3 class="card-title">Change Password</h3></div>
+            <div style="padding: 2rem;">
+                <div class="form-group">
+                    <label class="form-label">Current Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" class="form-input" id="current-password" placeholder="Enter current password">
+                        <button type="button" class="password-toggle" onclick="togglePassword('current-password')">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" class="form-input" id="new-password" placeholder="Enter new password">
+                         <button type="button" class="password-toggle" onclick="togglePassword('new-password')">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                    </div>
+                </div>
+                 <div class="form-group">
+                    <label class="form-label">Confirm New Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" class="form-input" id="confirm-password" placeholder="Confirm new password">
+                         <button type="button" class="password-toggle" onclick="togglePassword('confirm-password')">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="update-password-btn">Update Password</button>
+            </div>
+         </div>
 
-        <!-- Account Settings -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Account Settings</h3>
-          </div>
-          <div class="settings-group">
-            <div class="form-group">
-              <label class="form-label">Full Name</label>
-              <input type="text" class="form-input" id="full-name" value="Investor Account">
+         <!-- Legal & Support Section -->
+         <div class="card">
+            <div class="card-header"><h3 class="card-title">Legal & Support</h3></div>
+            <div style="padding: 0;">
+                <a href="#" class="list-item" style="text-decoration: none; color: inherit;" onclick="openLegalModal('privacy')">
+                    <div class="list-item-content">
+                        <div class="list-item-title">Privacy Policy</div>
+                        <div class="list-item-subtitle">Read our privacy policy</div>
+                    </div>
+                    <div style="color: var(--text-tertiary);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                    </div>
+                </a>
+                <a href="#" class="list-item" style="text-decoration: none; color: inherit;" onclick="openLegalModal('terms')">
+                    <div class="list-item-content">
+                        <div class="list-item-title">Terms of Service</div>
+                        <div class="list-item-subtitle">Read our terms of service</div>
+                    </div>
+                    <div style="color: var(--text-tertiary);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                    </div>
+                </a>
+                <!-- Modified: Direct link to support.html -->
+                <a href="support.html" class="list-item" style="text-decoration: none; color: inherit; border-bottom: none;">
+                    <div class="list-item-content">
+                        <div class="list-item-title">Support</div>
+                        <div class="list-item-subtitle">Contact support team</div>
+                    </div>
+                    <div style="color: var(--text-tertiary);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                    </div>
+                </a>
             </div>
-            <div class="form-group">
-              <label class="form-label">Email</label>
-              <input type="email" class="form-input" id="email" value="investor@example.com">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Role</label>
-              <input type="text" class="form-input" id="role" value="Investor" readonly>
-            </div>
-            <button class="btn btn-primary" id="update-profile-btn">Update Profile</button>
-          </div>
-        </div>
+         </div>
 
-        <!-- Password Settings -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Password</h3>
-          </div>
-          <div class="settings-group">
-            <div class="form-group">
-              <label class="form-label">Current Password</label>
-              <input type="password" class="form-input" id="current-password">
+         <!-- Danger Zone -->
+         <div class="card" style="border-color: var(--error);">
+            <div class="card-header" style="border-bottom: 1px solid rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.05);">
+                <h3 class="card-title" style="color: var(--error);">Danger Zone</h3>
             </div>
-            <div class="form-group">
-              <label class="form-label">New Password</label>
-              <input type="password" class="form-input" id="new-password">
+            <div style="padding: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 0.25rem;">Delete Account</div>
+                        <div style="font-size: 0.9rem; color: var(--text-secondary);">Permanently delete your account and data</div>
+                    </div>
+                    <button class="btn btn-danger btn-sm" id="delete-account-btn">Delete</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 0.25rem;">Logout</div>
+                        <div style="font-size: 0.9rem; color: var(--text-secondary);">Sign out of your account</div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" id="logout-btn">Logout</button>
+                </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Confirm New Password</label>
-              <input type="password" class="form-input" id="confirm-password">
-            </div>
-            <button class="btn btn-primary" id="update-password-btn">Update Password</button>
-          </div>
-        </div>
-
-        <!-- Preferences -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Preferences</h3>
-          </div>
-          <div class="settings-group">
-            <div class="settings-item">
-              <div class="settings-item-content">
-                <div class="settings-item-title">Email Notifications</div>
-                <div class="settings-item-description">Receive email notifications for updates</div>
-              </div>
-              <label class="switch">
-                <input type="checkbox" id="email-notifications" checked>
-                <span class="slider"></span>
-              </label>
-            </div>
-            <div class="settings-item">
-              <div class="settings-item-content">
-                <div class="settings-item-title">Auto-refresh</div>
-                <div class="settings-item-description">Automatically refresh startup data</div>
-              </div>
-              <label class="switch">
-                <input type="checkbox" id="auto-refresh" checked>
-                <span class="slider"></span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- Danger Zone -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Danger Zone</h3>
-          </div>
-          <div class="settings-group">
-            <div class="settings-item">
-              <div class="settings-item-content">
-                <div class="settings-item-title">Delete Account</div>
-                <div class="settings-item-description">Permanently delete your account and all data</div>
-              </div>
-              <button class="btn btn-danger" id="delete-account-btn">Delete Account</button>
-            </div>
-            <div class="settings-item">
-              <div class="settings-item-content">
-                <div class="settings-item-title">Logout</div>
-                <div class="settings-item-description">Sign out of your account</div>
-              </div>
-              <button class="btn btn-secondary" id="logout-btn">Logout</button>
-            </div>
-          </div>
-        </div>
+         </div>
       </div>
     </main>
   </div>
 
-  <!-- Include API Client -->
   <script src="./js/api.js"></script>
-
-  <script>
-    // Get user from localStorage
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const token = localStorage.getItem('token');
-
-    // Update user name in header
-    document.getElementById('user-name').textContent = user.name || 'User';
-
-    // Update user avatar with initials
-    const nameArray = (user.name || 'User').split(' ');
-    const initials = nameArray.map(n => n.charAt(0).toUpperCase()).join('');
-    document.querySelector('.user-avatar').textContent = initials || 'U';
-
-    // Watchlist data stored in localStorage
-    let watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
-
-    // User menu click handler - navigate to settings
-    document.getElementById('user-menu').addEventListener('click', () => {
-      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-      document.getElementById('settings-page').classList.add('active');
-      
-      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-      document.querySelector('[data-page="settings"]').classList.add('active');
-    });
-
-    // Navigation functionality
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        e.preventDefault();
-        
-        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-        item.classList.add('active');
-        
-        const page = item.dataset.page;
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(`${page}-page`).classList.add('active');
-        
-        loadPageContent(page);
-      });
-    });
-
-    // Load page content
-    function loadPageContent(page) {
-      switch(page) {
-        case 'dashboard':
-          loadDashboard();
-          break;
-        case 'startups':
-          loadStartups();
-          break;
-        case 'watchlist':
-          loadWatchlist();
-          break;
-        case 'settings':
-          loadSettings();
-          break;
-      }
-    }
-
-    // Dashboard functionality with NEW VISIBILITY LOGIC
-    async function loadDashboard() {
-      try {
-        // Fetch startups visible to investors (≥70% on any stage)
-        const response = await fetch('/api/investor/validated-startups', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch startups');
-        }
-
-        const data = await response.json();
-        const startups = data.startups || [];
-        
-        // Update stats
-        document.getElementById('total-startups').textContent = startups.length;
-        
-        // Calculate highest stage score across all startups
-        let highestScore = 0;
-        let fullyValidatedCount = 0;
-        
-        startups.forEach(startup => {
-          if (startup.bestStageScore > highestScore) {
-            highestScore = startup.bestStageScore;
-          }
-          if (startup.completedStages === 5) {
-            fullyValidatedCount++;
-          }
-        });
-        
-        document.getElementById('highest-score').textContent = `${highestScore}%`;
-        document.getElementById('watchlist-count').textContent = watchlist.length;
-        document.getElementById('fully-validated').textContent = fullyValidatedCount;
-        
-        // Populate validated startups
-        const startupsContainer = document.getElementById('validated-startups');
-        startupsContainer.innerHTML = '';
-        
-        if (startups.length === 0) {
-          startupsContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No validated startups yet. Startups appear here once they achieve ≥70% on any validation stage.</p>';
-        } else {
-          startups.forEach(startup => {
-            const startupCard = createStartupCard(startup);
-            startupsContainer.appendChild(startupCard);
-          });
-        }
-        
-        // Add search functionality
-        document.getElementById('search-startup').addEventListener('input', (e) => {
-          const term = e.target.value.toLowerCase();
-          document.querySelectorAll('.startup-card').forEach(card => {
-            const text = card.textContent.toLowerCase();
-            card.style.display = text.includes(term) ? '' : 'none';
-          });
-        });
-      } catch (error) {
-        console.error('Error loading dashboard:', error);
-        document.getElementById('validated-startups').innerHTML = 
-          '<p style="text-align: center; color: red;">Failed to load startups. Please try again later.</p>';
-      }
-    }
-
-    // Startups page functionality
-    async function loadStartups() {
-      try {
-        const response = await fetch('/api/investor/validated-startups', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch startups');
-        }
-
-        const data = await response.json();
-        const startups = data.startups || [];
-        
-        const startupsContainer = document.getElementById('all-startups');
-        startupsContainer.innerHTML = '';
-        
-        if (startups.length === 0) {
-          startupsContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No validated startups available.</p>';
-        } else {
-          startups.forEach(startup => {
-            const startupCard = createStartupCard(startup);
-            startupsContainer.appendChild(startupCard);
-          });
-        }
-        
-        // Add search functionality
-        document.getElementById('search-all-startups').addEventListener('input', (e) => {
-          const term = e.target.value.toLowerCase();
-          document.querySelectorAll('.startup-card').forEach(card => {
-            const text = card.textContent.toLowerCase();
-            card.style.display = text.includes(term) ? '' : 'none';
-          });
-        });
-      } catch (error) {
-        console.error('Error loading startups:', error);
-        document.getElementById('all-startups').innerHTML = 
-          '<p style="text-align: center; color: red;">Failed to load startups.</p>';
-      }
-    }
-
-    // Watchlist functionality
-    function loadWatchlist() {
-      const watchlistContainer = document.getElementById('watchlist-startups');
-      watchlistContainer.innerHTML = '';
-      
-      if (watchlist.length === 0) {
-        watchlistContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Your watchlist is empty. Add startups from the validated list.</p>';
-        return;
-      }
-      
-      // In a real app, fetch full startup data for watchlist items
-      const watchlistStartups = watchlist.map(id => ({
-        id,
-        name: `Startup ${id}`,
-        industry: 'Technology',
-        bestStageScore: 75 + Math.random() * 20,
-        completedStages: Math.floor(Math.random() * 5) + 1
-      }));
-      
-      watchlistStartups.forEach(startup => {
-        const watchlistItem = createWatchlistItem(startup);
-        watchlistContainer.appendChild(watchlistItem);
-      });
-    }
-
-    // Create startup card with NEW VISIBILITY INDICATORS
-    function createStartupCard(startup) {
-      const card = document.createElement('div');
-      card.className = 'startup-card';
-      
-      const scoreClass = startup.bestStageScore >= 85 ? 'score-high' : 
-                        startup.bestStageScore >= 70 ? 'score-medium' : 'score-low';
-      
-      const isInWatchlist = watchlist.includes(startup._id || startup.id);
-      
-      // Determine badge based on completion status
-      const fullyValidated = startup.completedStages === 5;
-      const badgeHtml = fullyValidated 
-        ? '<span style="background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">✓ Fully Validated</span>'
-        : '<span style="background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 600;">Early Stage Opportunity</span>';
-      
-      card.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-          <div>
-            <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">${startup.name}</h3>
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
-              <span class="${scoreClass}" style="font-size: 1rem; font-weight: 600;">${startup.bestStageScore}% Best Stage</span>
-              ${badgeHtml}
-            </div>
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0;">
-              ${startup.completedStages}/5 stages validated
-              ${fullyValidated ? ' • Ready for investment' : ' • Early opportunity'}
-            </p>
-          </div>
-          <div style="display: flex; gap: 0.5rem;">
-            <button class="btn btn-secondary" onclick="toggleWatchlist('${startup._id || startup.id}')">
-              ${isInWatchlist ? 'Remove' : 'Add to Watchlist'}
-            </button>
-            <button class="btn btn-primary">Express Interest</button>
-          </div>
-        </div>
-        <p style="color: var(--text-secondary); margin-bottom: 1rem;">${startup.thesis || 'No description available'}</p>
-        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
-          <div>
-            <span style="color: var(--text-secondary); font-size: 0.9rem;">Industry: ${startup.industry || 'Not specified'}</span>
-            <span style="color: var(--text-secondary); font-size: 0.9rem; margin-left: 1rem;">
-              Current Stage: Stage ${startup.currentStage || 1}
-            </span>
-          </div>
-          ${fullyValidated ? '<span style="color: #10b981; font-weight: 600; font-size: 0.9rem;">✓ All Validation Complete</span>' : ''}
-        </div>
-      `;
-      
-      return card;
-    }
-
-    // Create watchlist item
-    function createWatchlistItem(startup) {
-      const item = document.createElement('div');
-      item.className = 'list-item';
-      
-      const fullyValidated = startup.completedStages === 5;
-      
-      item.innerHTML = `
-        <div class="list-item-content">
-          <div class="list-item-title">${startup.name}</div>
-          <div class="list-item-subtitle">
-            ${startup.industry} • ${startup.bestStageScore}% Best Stage • ${startup.completedStages}/5 Stages
-          </div>
-        </div>
-        <div style="display: flex; gap: 0.5rem; align-items: center;">
-          ${fullyValidated 
-            ? '<span style="background: #d1fae5; color: #065f46; padding: 4px 8px; border-radius: 8px; font-size: 0.8rem;">Fully Validated</span>'
-            : '<span class="list-item-status status-watchlisted">In Progress</span>'}
-          <button class="btn btn-danger" onclick="removeFromWatchlist('${startup.id}')">Remove</button>
-        </div>
-      `;
-      
-      return item;
-    }
-
-    // Toggle watchlist
-    window.toggleWatchlist = function(startupId) {
-      const index = watchlist.indexOf(startupId);
-      if (index === -1) {
-        watchlist.push(startupId);
-        alert('Added to watchlist!');
-      } else {
-        watchlist.splice(index, 1);
-        alert('Removed from watchlist!');
-      }
-      
-      localStorage.setItem('watchlist', JSON.stringify(watchlist));
-      
-      const activePage = document.querySelector('.nav-item.active').dataset.page;
-      loadPageContent(activePage);
-    };
-
-    // Remove from watchlist
-    window.removeFromWatchlist = function(startupId) {
-      const index = watchlist.indexOf(startupId);
-      if (index !== -1) {
-        watchlist.splice(index, 1);
-        localStorage.setItem('watchlist', JSON.stringify(watchlist));
-        loadWatchlist();
-      }
-    };
-
-    // Settings functionality
-    function loadSettings() {
-      document.getElementById('full-name').value = user.name || '';
-      document.getElementById('email').value = user.email || '';
-      document.getElementById('role').value = 'Investor';
-      
-      const emailNotifications = localStorage.getItem('emailNotifications') !== 'false';
-      const autoRefresh = localStorage.getItem('autoRefresh') !== 'false';
-      
-      document.getElementById('email-notifications').checked = emailNotifications;
-      document.getElementById('auto-refresh').checked = autoRefresh;
-    }
-
-    // Settings button handlers
-    document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
-      const name = document.getElementById('full-name').value.trim();
-      const email = document.getElementById('email').value.trim();
-      
-      if (!name || !email) {
-        alert('Please fill in all fields');
-        return;
-      }
-      
-      alert('Profile updated successfully!');
-    });
-
-    document.getElementById('update-password-btn')?.addEventListener('click', async () => {
-      const currentPassword = document.getElementById('current-password').value;
-      const newPassword = document.getElementById('new-password').value;
-      const confirmPassword = document.getElementById('confirm-password').value;
-      
-      if (!currentPassword || !newPassword || !confirmPassword) {
-        alert('Please fill in all password fields');
-        return;
-      }
-      
-      if (newPassword !== confirmPassword) {
-        alert('New passwords do not match');
-        return;
-      }
-      
-      if (newPassword.length < 8) {
-        alert('Password must be at least 8 characters long');
-        return;
-      }
-      
-      alert('Password updated successfully!');
-      document.getElementById('current-password').value = '';
-      document.getElementById('new-password').value = '';
-      document.getElementById('confirm-password').value = '';
-    });
-
-    document.getElementById('delete-account-btn')?.addEventListener('click', async () => {
-      if (!confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) return;
-      if (!confirm('This will permanently delete your account and all associated data. Are you really sure?')) return;
-      try {
-        await api.deleteAccount();
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-        localStorage.clear();
-        window.location.href = 'login.html';
-      } catch (err) {
-        alert(err.message || 'Failed to delete account. Try again.');
-      }
-    });
-
-    document.getElementById('logout-btn')?.addEventListener('click', () => {
-      if (confirm('Are you sure you want to logout?')) {
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-        localStorage.clear();
-        window.location.href = 'login.html';
-      }
-    });
-
-    document.getElementById('email-notifications')?.addEventListener('change', (e) => {
-      localStorage.setItem('emailNotifications', e.target.checked);
-    });
-
-    document.getElementById('auto-refresh')?.addEventListener('change', (e) => {
-      localStorage.setItem('autoRefresh', e.target.checked);
-    });
-
-    // Initialize
-    document.addEventListener('DOMContentLoaded', () => {
-      loadDashboard();
-    });
-  </script>
+  <script src="./js/investorDashboard.js"></script>
 </body>
 </html>

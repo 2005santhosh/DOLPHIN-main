@@ -351,7 +351,8 @@ async function getUserNotifications(userId, { limit = 50, skip = 0, unreadOnly =
     .populate('sentBy', 'name email role')
     .lean();
 
-  const unreadCount = await Notification.getUnreadCount(userId);
+  // FIX: Use standard Mongoose countDocuments instead of custom static method
+  const unreadCount = await Notification.countDocuments({ userId, read: false });
 
   return {
     notifications,
@@ -373,16 +374,26 @@ async function markAsRead(notificationId, userId) {
     throw new Error('Notification not found');
   }
 
-  return notification.markAsRead();
+  // FIX: Manually set property and save (standard Mongoose)
+  // This avoids the "method not found" error
+  notification.read = true;
+  await notification.save();
+  
+  return notification;
 }
 
 /**
  * Mark all notifications as read
  */
 async function markAllAsRead(userId) {
-  return Notification.markAllAsRead(userId);
-}
+  // FIX: Use standard updateMany instead of custom static method
+  const result = await Notification.updateMany(
+    { userId, read: false }, 
+    { $set: { read: true } }
+  );
 
+  return { success: true, modifiedCount: result.modifiedCount };
+}
 /**
  * Delete notification
  */

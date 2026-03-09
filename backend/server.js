@@ -8,26 +8,30 @@ const path = require('path');
 const connectDB = require('./config/db');
 const { securePage } = require('./middleware/securePage');
 const { initializeSocket } = require('./services/socketService');
-
+const chatRoutes = require('./routes/chat');
+const investorRoutes = require('./routes/investor'); 
 dotenv.config();
+const supportRoutes = require('./routes/support');
 connectDB();
 
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.io for real-time notifications
-initializeSocket(server);
+// Call the service function. It should return the 'io' instance.
+const io = initializeSocket(server); 
 
-// Initialize token blacklist
+// Make io accessible to routes (CRITICAL)
+app.set('socketio', io); 
 app.locals.tokenBlacklist = new Set();
-
 // Security middleware
+app.use(express.json()); 
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.socket.io"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      // ✅ ADDED "https://cdn.jsdelivr.net" BELOW
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.socket.io", "https://cdn.jsdelivr.net"],
       imgSrc: ["'self'", "data:", "https:"],
       fontSrc: ["'self'", "https:", "data:"],
       connectSrc: ["'self'", "https:", "http:", "ws:", "wss:"],
@@ -44,17 +48,19 @@ app.use(helmet({
     },
   },
 }));
-
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100
 });
 app.use('/api/', limiter);
-
+app.use('/api/chat', chatRoutes);
+app.use('/api/investor', investorRoutes);
 app.use(cors({
   origin: process.env.FRONTEND_URL || '*',
   credentials: true
 }));
+app.use('/api/support', supportRoutes);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -97,12 +103,14 @@ app.get('/marketplace.html', securePage(['founder', 'investor', 'provider']), (r
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/resources', require('./routes/resources'));
 app.use('/api/founder', require('./routes/founder'));
 app.use('/api/investor', require('./routes/investor'));
 app.use('/api/provider', require('./routes/provider'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/admin/admin-notifications', require('./routes/admin-notifications'));
+
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

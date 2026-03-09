@@ -6,22 +6,56 @@
   <title>Founder Dashboard - Dolphin</title>
   <link rel="stylesheet" href="./css/founderDashboard.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 <body>
+  
+  <!-- MOBILE SIDEBAR OVERLAY -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
   <!-- Header -->
   <header class="header">
-    <div class="logo">Dolphin</div>
+    <!-- Mobile Menu Toggle (Left) -->
+    <button class="menu-toggle" id="mobile-menu-btn" aria-label="Open Menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+
+    <!-- Logo (Center/Left depending on flex) -->
+    <div class="logo">🐬 Dolphin</div>
+    
+    <!-- Right Side Actions -->
     <div class="header-right">
+      <div class="user-menu" style="cursor: default;">
+        <span style="color: var(--text-secondary); font-size: 0.9rem;">⭐ <strong id="header-points">0</strong></span>
+      </div>
+      
       <button class="header-action" id="notification-btn">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
           <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
         </svg>
-        <span class="notification-badge">3</span>
+        <span class="notification-badge" id="notif-badge-count">0</span>
       </button>
+      
+      <div class="notification-dropdown" id="notification-dropdown" style="display: none;">
+        <div class="notif-header">
+          <h4>Notifications</h4>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="mark-read-btn" onclick="markAllRead()">Mark all read</button>
+            <button class="mark-read-btn" style="color: var(--error);" onclick="clearNotifications()">Clear</button>
+            <button class="notif-close-btn" onclick="closeNotifDropdown()">&times;</button>
+          </div>
+        </div>
+        <div class="notif-list" id="notif-list"></div>
+      </div>
+      
       <div class="user-menu" id="user-menu">
         <div class="user-avatar">JD</div>
-        <span id="user-name">John Doe</span>
+        <span class="user-name" id="user-name">John Doe</span>
       </div>
     </div>
   </header>
@@ -29,7 +63,7 @@
   <!-- App Container -->
   <div class="app-container">
     <!-- Sidebar -->
-    <nav class="sidebar">
+    <nav class="sidebar" id="sidebar">
       <div class="nav-section">
         <h3 class="nav-title">Main</h3>
         <ul class="nav-list">
@@ -57,18 +91,20 @@
             </svg>
             Validation Stages
           </a></li>
+          <li><a href="#" class="nav-item" data-page="tasks">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            Growth Roadmap
+          </a></li>
         </ul>
       </div>
       <div class="nav-section">
         <h3 class="nav-title">Resources</h3>
         <ul class="nav-list">
-          <li><a href="#" class="nav-item" data-page="resources">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 0 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-            </svg>
-            Resources
-          </a></li>
           <li><a href="#" class="nav-item" data-page="analytics">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -86,6 +122,22 @@
             </svg>
             Investors & Providers
           </a></li>
+          <li><a href="#" class="nav-item" data-page="requests">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+            Requests
+            <span class="sidebar-badge" id="requests-badge">0</span>
+          </a></li>
+         
+          <li><a href="#" class="nav-item" data-page="chat">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            Chat
+            <span class="sidebar-badge" id="chat-badge">0</span>
+          </a></li>
         </ul>
       </div>
       <div class="nav-section">
@@ -94,7 +146,7 @@
           <li><a href="#" class="nav-item" data-page="settings">
             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="3"></circle>
-              <path d="M12 1v6m0 6v6m4.22-10.22l1.42-1.42m-1.42 7.07l1.42 1.42M20 12h-6m-6 0H2m10.22-4.22L10.8 6.36m1.42 7.07l-1.42 1.42"></path>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             </svg>
             Settings
           </a></li>
@@ -111,21 +163,19 @@
           <p class="page-subtitle">Track your startup validation progress</p>
         </div>
 
-        <!-- Progress Card -->
         <div class="card progress-card">
           <div class="progress-header">
             <div>
               <h2 class="progress-title" id="startup-name-display">Loading...</h2>
               <p class="page-subtitle" id="progress-text">0% Complete</p>
             </div>
-            <span class="progress-badge" id="progress-badge">0% Validated</span>
+            <span class="list-item-status status-approved" id="progress-badge">0% Validated</span>
           </div>
           <div class="progress-bar">
             <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
           </div>
         </div>
 
-        <!-- Stats Grid -->
         <div class="grid">
           <div class="stat-card">
             <div class="stat-value" id="stages-completed">0/5</div>
@@ -136,18 +186,17 @@
             <div class="stat-label">Tasks Completed</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value" id="resources-viewed">0</div>
-            <div class="stat-label">Resources Viewed</div>
+            <div class="stat-value" id="reward-points">0</div>
+            <div class="stat-label">Reward Points</div>
           </div>
         </div>
 
-        <!-- Validation Stages -->
         <div class="card">
           <div class="card-header">
             <h3 class="card-title">Validation Roadmap</h3>
           </div>
           <div class="list" id="stages-list">
-            <!-- Stages will be populated by JavaScript -->
+             <!-- Items loaded by JS -->
           </div>
         </div>
       </div>
@@ -158,7 +207,6 @@
           <h1 class="page-title">Startup Profile</h1>
           <p class="page-subtitle">Manage your startup information</p>
         </div>
-
         <div class="card">
           <form id="profile-form">
             <div class="form-group">
@@ -167,7 +215,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">Problem Statement</label>
-              <textarea class="form-textarea" id="problem-statement" required></textarea>
+              <textarea class="form-textarea" id="problem-statement" rows="4" required></textarea>
             </div>
             <div class="form-group">
               <label class="form-label">Target Users</label>
@@ -188,7 +236,6 @@
           <h1 class="page-title">Validation Stages</h1>
           <p class="page-subtitle">Complete each stage to validate your startup idea</p>
         </div>
-
         <div id="validation-roadmap" class="list">
           <div id="validation-roadmap-message" style="display:none; margin-bottom: 1rem; color: var(--text-secondary); text-align:center;"></div>
           <div id="overall-validation-summary" class="card" style="margin-bottom: 1.25rem; display:none;">
@@ -200,151 +247,76 @@
             </p>
           </div>
           
-          <!-- Stage 1: Idea Validation -->
+          <!-- Stage Cards -->
           <div id="stage-card-idea" class="card" style="margin-bottom: 1.25rem;">
             <div class="card-header">
-              <h3 class="card-title">
-                💡 Idea Validation
-                <span id="stage-status-idea" style="font-size: 0.85rem; margin-left: 10px; padding: 4px 8px; background: #fef3c7; color: #92400e; border-radius: 4px;">Not Started</span>
-              </h3>
-              <span id="stage-lock-idea" style="display:none; color: var(--text-secondary); font-size: 0.9rem;">(Locked)</span>
+              <h3 class="card-title">💡 Idea Validation <span id="stage-status-idea" class="list-item-status status-pending" style="margin-left:10px;">Not Started</span></h3>
             </div>
-            <div id="stage-summary-idea" style="display:none; margin-bottom: 1rem;">
-              <div style="background: #f9fafb; border-radius: 12px; padding: 1rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap: 1rem;">
-                  <div>
-                    <strong>Score:</strong> <span id="stage-score-idea">--</span>
-                    <span style="margin-left: 0.75rem;"><strong>Completed:</strong> <span id="stage-date-idea">--</span></span>
-                  </div>
-                  <div style="font-weight: 700;" id="stage-badge-idea">--</div>
-                </div>
-              </div>
-            </div>
-            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-              Answer 10 questions about your idea. AI will evaluate your responses. Score ≥ 70% to unlock the next stage.
-            </p>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">Answer 10 questions about your idea. AI will evaluate your responses.</p>
             <div style="display: flex; gap: 1rem;">
               <button id="stage-start-idea" onclick="openStageValidationModal('idea')" class="btn btn-primary" style="flex: 1;">Start</button>
               <button id="stage-results-idea" onclick="showStageValidationResults('idea')" class="btn btn-secondary" style="flex: 1; display: none;">View Results</button>
             </div>
           </div>
 
-          <!-- Stage 2: Problem Definition -->
           <div id="stage-card-problem" class="card" style="margin-bottom: 1.25rem;">
-            <div class="card-header">
-              <h3 class="card-title">
-                🧩 Problem Definition
-                <span id="stage-status-problem" style="font-size: 0.85rem; margin-left: 10px; padding: 4px 8px; background: #fef3c7; color: #92400e; border-radius: 4px;">Locked</span>
-              </h3>
-              <span id="stage-lock-problem" style="display:none; color: var(--text-secondary); font-size: 0.9rem;">(Locked)</span>
+             <div class="card-header">
+              <h3 class="card-title">🧩 Problem Definition <span id="stage-status-problem" class="list-item-status status-pending" style="margin-left:10px;">Locked</span></h3>
             </div>
-            <div id="stage-summary-problem" style="display:none; margin-bottom: 1rem;">
-              <div style="background: #f9fafb; border-radius: 12px; padding: 1rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap: 1rem;">
-                  <div>
-                    <strong>Score:</strong> <span id="stage-score-problem">--</span>
-                    <span style="margin-left: 0.75rem;"><strong>Completed:</strong> <span id="stage-date-problem">--</span></span>
-                  </div>
-                  <div style="font-weight: 700;" id="stage-badge-problem">--</div>
-                </div>
-              </div>
-            </div>
-            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-              Validate that the problem is real, painful, frequent, and backed by evidence.
-            </p>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">Validate that the problem is real, painful, frequent, and backed by evidence.</p>
             <div style="display: flex; gap: 1rem;">
-              <button id="stage-start-problem" onclick="openStageValidationModal('problem')" class="btn btn-primary" style="flex: 1;">Start</button>
+              <button id="stage-start-problem" onclick="openStageValidationModal('problem')" class="btn btn-primary" style="flex: 1;" disabled>Locked</button>
               <button id="stage-results-problem" onclick="showStageValidationResults('problem')" class="btn btn-secondary" style="flex: 1; display: none;">View Results</button>
             </div>
           </div>
 
-          <!-- Stage 3: Solution Development -->
           <div id="stage-card-solution" class="card" style="margin-bottom: 1.25rem;">
-            <div class="card-header">
-              <h3 class="card-title">
-                🛠️ Solution Development
-                <span id="stage-status-solution" style="font-size: 0.85rem; margin-left: 10px; padding: 4px 8px; background: #fef3c7; color: #92400e; border-radius: 4px;">Locked</span>
-              </h3>
-              <span id="stage-lock-solution" style="display:none; color: var(--text-secondary); font-size: 0.9rem;">(Locked)</span>
+             <div class="card-header">
+              <h3 class="card-title">🛠️ Solution Development <span id="stage-status-solution" class="list-item-status status-pending" style="margin-left:10px;">Locked</span></h3>
             </div>
-            <div id="stage-summary-solution" style="display:none; margin-bottom: 1rem;">
-              <div style="background: #f9fafb; border-radius: 12px; padding: 1rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap: 1rem;">
-                  <div>
-                    <strong>Score:</strong> <span id="stage-score-solution">--</span>
-                    <span style="margin-left: 0.75rem;"><strong>Completed:</strong> <span id="stage-date-solution">--</span></span>
-                  </div>
-                  <div style="font-weight: 700;" id="stage-badge-solution">--</div>
-                </div>
-              </div>
-            </div>
-            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-              Validate the solution approach, MVP scope, differentiators, and feasibility.
-            </p>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">Validate the solution approach, MVP scope, differentiators, and feasibility.</p>
             <div style="display: flex; gap: 1rem;">
-              <button id="stage-start-solution" onclick="openStageValidationModal('solution')" class="btn btn-primary" style="flex: 1;">Start</button>
+              <button id="stage-start-solution" onclick="openStageValidationModal('solution')" class="btn btn-primary" style="flex: 1;" disabled>Locked</button>
               <button id="stage-results-solution" onclick="showStageValidationResults('solution')" class="btn btn-secondary" style="flex: 1; display: none;">View Results</button>
             </div>
           </div>
 
-          <!-- Stage 4: Market Validation -->
           <div id="stage-card-market" class="card" style="margin-bottom: 1.25rem;">
-            <div class="card-header">
-              <h3 class="card-title">
-                📈 Market Validation
-                <span id="stage-status-market" style="font-size: 0.85rem; margin-left: 10px; padding: 4px 8px; background: #fef3c7; color: #92400e; border-radius: 4px;">Locked</span>
-              </h3>
-              <span id="stage-lock-market" style="display:none; color: var(--text-secondary); font-size: 0.9rem;">(Locked)</span>
+             <div class="card-header">
+              <h3 class="card-title">📈 Market Validation <span id="stage-status-market" class="list-item-status status-pending" style="margin-left:10px;">Locked</span></h3>
             </div>
-            <div id="stage-summary-market" style="display:none; margin-bottom: 1rem;">
-              <div style="background: #f9fafb; border-radius: 12px; padding: 1rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap: 1rem;">
-                  <div>
-                    <strong>Score:</strong> <span id="stage-score-market">--</span>
-                    <span style="margin-left: 0.75rem;"><strong>Completed:</strong> <span id="stage-date-market">--</span></span>
-                  </div>
-                  <div style="font-weight: 700;" id="stage-badge-market">--</div>
-                </div>
-              </div>
-            </div>
-            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-              Validate market size, distribution channels, competitors, and willingness-to-pay.
-            </p>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">Validate market size, distribution channels, competitors, and willingness-to-pay.</p>
             <div style="display: flex; gap: 1rem;">
-              <button id="stage-start-market" onclick="openStageValidationModal('market')" class="btn btn-primary" style="flex: 1;">Start</button>
+              <button id="stage-start-market" onclick="openStageValidationModal('market')" class="btn btn-primary" style="flex: 1;" disabled>Locked</button>
               <button id="stage-results-market" onclick="showStageValidationResults('market')" class="btn btn-secondary" style="flex: 1; display: none;">View Results</button>
             </div>
           </div>
 
-          <!-- Stage 5: Business Model Validation -->
           <div id="stage-card-business" class="card" style="margin-bottom: 1.25rem;">
-            <div class="card-header">
-              <h3 class="card-title">
-                💼 Business Model Validation
-                <span id="stage-status-business" style="font-size: 0.85rem; margin-left: 10px; padding: 4px 8px; background: #fef3c7; color: #92400e; border-radius: 4px;">Locked</span>
-              </h3>
-              <span id="stage-lock-business" style="display:none; color: var(--text-secondary); font-size: 0.9rem;">(Locked)</span>
+             <div class="card-header">
+              <h3 class="card-title">💼 Business Model Validation <span id="stage-status-business" class="list-item-status status-pending" style="margin-left:10px;">Locked</span></h3>
             </div>
-            <div id="stage-summary-business" style="display:none; margin-bottom: 1rem;">
-              <div style="background: #f9fafb; border-radius: 12px; padding: 1rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap: 1rem;">
-                  <div>
-                    <strong>Score:</strong> <span id="stage-score-business">--</span>
-                    <span style="margin-left: 0.75rem;"><strong>Completed:</strong> <span id="stage-date-business">--</span></span>
-                  </div>
-                  <div style="font-weight: 700;" id="stage-badge-business">--</div>
-                </div>
-              </div>
-            </div>
-            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-              Validate pricing, unit economics, margins, CAC/LTV assumptions, and scalability.
-            </p>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">Validate pricing, unit economics, margins, CAC/LTV assumptions, and scalability.</p>
             <div style="display: flex; gap: 1rem;">
-              <button id="stage-start-business" onclick="openStageValidationModal('business')" class="btn btn-primary" style="flex: 1;">Start</button>
+              <button id="stage-start-business" onclick="openStageValidationModal('business')" class="btn btn-primary" style="flex: 1;" disabled>Locked</button>
               <button id="stage-results-business" onclick="showStageValidationResults('business')" class="btn btn-secondary" style="flex: 1; display: none;">View Results</button>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Tasks Page -->
+      <div id="tasks-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Growth Roadmap</h1>
+          <p class="page-subtitle">Your step-by-step journey from Idea to Launch</p>
+        </div>
+        <div id="tasks-locked-message" class="card" style="display:none;">
+          <p style="text-align:center; padding: 2rem; color: var(--text-secondary);">
+            🔒 Complete all 5 Validation Stages to unlock your Growth Roadmap.
+          </p>
+        </div>
+        <div id="tasks-container"></div>
       </div>
 
       <!-- Resources Page -->
@@ -353,10 +325,7 @@
           <h1 class="page-title">Resources</h1>
           <p class="page-subtitle">Handpicked resources for your current stage</p>
         </div>
-
-        <div class="resource-list" id="resources-list">
-          <!-- Resources will be populated by JavaScript -->
-        </div>
+        <div class="resource-list" id="resources-list"></div>
       </div>
 
       <!-- Analytics Page -->
@@ -365,45 +334,88 @@
           <h1 class="page-title">Analytics</h1>
           <p class="page-subtitle">Track your progress and performance</p>
         </div>
+        <div class="analytics-grid" id="analytics-grid"></div>
+      </div>
 
-        <div class="analytics-grid" id="analytics-grid">
-          <!-- Analytics will be populated by JavaScript -->
+      <!-- Requests Page -->
+      <div id="requests-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Requests</h1>
+          <p class="page-subtitle">Manage your connections</p>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Incoming Requests</h3>
+          </div>
+          <div id="founder-requests-list" class="list">
+            <p style="text-align:center; padding: 2rem; color: var(--text-secondary);">Loading...</p>
+          </div>
+        </div>
+        <div class="card" style="margin-top: 1.5rem;">
+          <div class="card-header">
+            <h3 class="card-title">Sent Requests</h3>
+          </div>
+          <div id="founder-sent-requests-list" class="list">
+            <p style="text-align:center; padding: 2rem; color: var(--text-secondary);">Loading...</p>
+          </div>
         </div>
       </div>
 
-      <!-- Investors & Providers Page (visible when validationScore >= 70%) -->
+      <!-- Chat Page (WhatsApp Style) -->
+      <div id="chat-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Messages</h1>
+          <p class="page-subtitle">Chat with your connections</p>
+        </div>
+        <div class="card" style="display: flex; height: 70vh; padding: 0; overflow: hidden; position: relative;">
+            <div id="conversations-list" style="width: 30%; border-right: 1px solid var(--border-color); overflow-y: auto; background: white; display: flex; flex-direction: column;"></div>
+            <div id="chat-window" style="flex: 1; display: none; flex-direction: column; background: var(--bg-base); position: relative;">
+                <div id="chat-header" style="padding: 1rem; border-bottom: 1px solid var(--border-color); font-weight: bold; display:flex; align-items: center; gap: 0.5rem; background: white; height: 60px; flex-shrink: 0;"></div>
+                <div id="messages-container" style="flex: 1; padding: 1rem; overflow-y: auto; background: var(--bg-base); display: flex; flex-direction: column; gap: 8px;"></div>
+                <div id="chat-input-area" style="padding: 1rem; border-top: 1px solid var(--border-color); display: none; gap: 0.5rem; align-items: center; background: white; flex-shrink: 0;">
+                  <input type="text" id="message-input" class="form-input" placeholder="Type a message..." style="margin-bottom: 0;">
+                  <button class="btn btn-primary" onclick="sendMessage()" style="margin-bottom: 0;">Send</button>
+                </div>
+            </div>
+        </div>
+      </div>
+
+      <!-- Investors & Providers Page -->
       <div id="investors-providers-page" class="page">
         <div class="page-header">
           <h1 class="page-title">Investors & Providers</h1>
-          <p class="page-subtitle">View investors and service providers (unlocked at 70% overall validation score)</p>
+          <p class="page-subtitle">View investors and service providers (unlocked at 70% validation)</p>
         </div>
         <div id="investors-providers-gate-message" class="card" style="display: none;">
-          <div class="card-header">
-            <h3 class="card-title">Feature locked</h3>
-          </div>
           <p style="padding: 1rem; color: var(--text-secondary);">Reach at least <strong>70%</strong> overall validation score to view and contact investors and providers.</p>
         </div>
         <div id="investors-providers-content" style="display: none;">
           <div class="card">
-            <div class="card-header">
-              <h3 class="card-title">Investors</h3>
+            <div class="card-header"><h3 class="card-title">Investors</h3></div>
+            <div style="padding: 1rem; border-bottom: 1px solid var(--border-color); display: flex; gap: 1rem; flex-wrap: wrap;">
+                <input type="text" id="investor-search" class="form-input" placeholder="Search by name..." style="flex: 1; margin-bottom: 0;">
+                <button class="btn btn-secondary" onclick="searchInvestors()">Search</button>
             </div>
-            <div id="founder-investors-list" class="list">
-              <p style="text-align: center; color: var(--text-secondary);">Loading...</p>
-            </div>
+            <div id="founder-investors-list" class="list"></div>
           </div>
-          <div class="card">
-            <div class="card-header">
-              <h3 class="card-title">Providers</h3>
+          <div class="card" style="margin-top: 1.5rem;">
+            <div class="card-header"><h3 class="card-title">Providers</h3></div>
+            <div style="padding: 1rem; border-bottom: 1px solid var(--border-color); display: flex; gap: 1rem; flex-wrap: wrap;">
+                <input type="text" id="provider-search" class="form-input" placeholder="Search by name..." style="flex: 1; margin-bottom: 0;">
+                <select id="provider-category" class="form-select" style="width: auto; margin-bottom: 0;">
+                    <option value="all">All Categories</option>
+                    <option value="Legal">Legal</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Development">Development</option>
+                </select>
+                <button class="btn btn-secondary" onclick="searchProviders()">Search</button>
             </div>
-            <div id="founder-providers-list" class="list">
-              <p style="text-align: center; color: var(--text-secondary);">Loading...</p>
-            </div>
+            <div id="founder-providers-list" class="list"></div>
           </div>
         </div>
       </div>
 
-      <!-- Settings Page -->
+            <!-- Settings Page -->
       <div id="settings-page" class="page">
         <div class="page-header">
           <h1 class="page-title">Settings</h1>
@@ -412,164 +424,160 @@
 
         <!-- Account Settings -->
         <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Account Settings</h3>
+          <div class="card-header"><h3 class="card-title">Account Settings</h3></div>
+                    <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;">
+              <img id="settings-profile-preview" src="https://ui-avatars.com/api/?name=User&background=e2e8f0&color=64748b&size=100" alt="Profile" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--border-color);">
+              
+              <!-- Hidden File Input -->
+              <input type="file" id="profile-picture-input" accept="image/jpeg, image/png" style="display: none;">
+              
+              <div style="flex: 1;">
+                <h4 style="margin: 0 0 0.25rem 0;">Profile Picture</h4>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 0.5rem 0;">JPG or PNG. Max size 5MB.</p>
+                <button id="upload-picture-btn" class="btn btn-secondary btn-sm" type="button">Upload New Photo</button>
+              </div>
           </div>
-          <div class="settings-group">
-            <div class="form-group">
-              <label class="form-label">Full Name</label>
-              <input type="text" class="form-input" id="full-name" required>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Email</label>
-              <input type="email" class="form-input" id="email" required>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Role</label>
-              <input type="text" class="form-input" id="role" value="Founder" readonly>
-            </div>
-            <button class="btn btn-primary" id="update-profile-btn">Update Profile</button>
+          <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="settings-full-name"></div>
+          <div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" id="settings-email" readonly style="background:#f1f5f9;"></div>
+          <button class="btn btn-primary" id="update-profile-btn">Update Profile</button>
+        </div>
+
+        <!-- Password -->
+        <div class="card">
+          <div class="card-header"><h3 class="card-title">Change Password</h3></div>
+          <div class="form-group"><label class="form-label">Current Password</label><div class="password-wrapper"><input type="password" class="form-input" id="current-password"><button type="button" class="password-toggle" onclick="togglePasswordVisibility('current-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button></div></div>
+          <div class="form-group"><label class="form-label">New Password</label><div class="password-wrapper"><input type="password" class="form-input" id="new-password"><button type="button" class="password-toggle" onclick="togglePasswordVisibility('new-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button></div></div>
+          <button class="btn btn-primary" id="update-password-btn">Update Password</button>
+        </div>
+
+        <!-- Legal: Privacy Policy -->
+        <div class="card legal-card">
+          <div class="card-header legal-toggle" onclick="toggleLegalSection(this)">
+            <h3 class="card-title">
+              🔒 Privacy Policy
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </h3>
+          </div>
+          <div class="legal-content">
+            <p><strong>Last updated: March 2026</strong></p>
+            <p>At Dolphin, we prioritize your privacy. This policy outlines how we collect, use, and protect your personal information.</p>
+            <h4 style="margin-top: 1rem;">1. Information We Collect</h4>
+            <p>We collect information you provide directly to us, such as when you create an account, fill out a form, or communicate with us. This includes your name, email address, startup details, and any other information you choose to provide.</p>
+            <h4 style="margin-top: 1rem;">2. How We Use Your Information</h4>
+            <p>We use the information we collect to provide, maintain, and improve our services, to communicate with you, and to protect our platform. We do not sell your personal data to third parties.</p>
+            <h4 style="margin-top: 1rem;">3. Data Security</h4>
+            <p>We implement industry-standard security measures to protect your data. However, no method of transmission over the Internet is 100% secure, and we cannot guarantee absolute security.</p>
           </div>
         </div>
 
-        <!-- Password Settings -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Password</h3>
+        <!-- Legal: Terms of Service -->
+        <div class="card legal-card">
+          <div class="card-header legal-toggle" onclick="toggleLegalSection(this)">
+            <h3 class="card-title">
+              📄 Terms of Service
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </h3>
           </div>
-          <div class="settings-group">
-            <div class="form-group">
-              <label class="form-label">Current Password</label>
-              <input type="password" class="form-input" id="current-password">
-            </div>
-            <div class="form-group">
-              <label class="form-label">New Password</label>
-              <input type="password" class="form-input" id="new-password">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Confirm New Password</label>
-              <input type="password" class="form-input" id="confirm-password">
-            </div>
-            <button class="btn btn-primary" id="update-password-btn">Update Password</button>
+          <div class="legal-content">
+            <p><strong>Last updated: March 2026</strong></p>
+            <p>Welcome to Dolphin. By accessing or using our platform, you agree to be bound by these Terms of Service and all applicable laws and regulations.</p>
+            <h4 style="margin-top: 1rem;">1. User Responsibilities</h4>
+            <p>You are responsible for maintaining the confidentiality of your account and password. You agree to accept responsibility for all activities that occur under your account.</p>
+            <h4 style="margin-top: 1rem;">2. Intellectual Property</h4>
+            <p>The content, features, and functionality of the Service are owned by Dolphin and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.</p>
+            <h4 style="margin-top: 1rem;">3. Termination</h4>
+            <p>We may terminate or suspend your access to the Service immediately, without prior notice or liability, for any reason, including breach of these Terms.</p>
+            <h4 style="margin-top: 1rem;">4. Limitation of Liability</h4>
+            <p>In no event shall Dolphin be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, or other intangible losses.</p>
           </div>
         </div>
 
-        <!-- Preferences -->
+        <!-- Support Center Link -->
         <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Preferences</h3>
-          </div>
-          <div class="settings-group">
-            <div class="settings-item">
-              <div class="settings-item-content">
-                <div class="settings-item-title">Email Notifications</div>
-                <div class="settings-item-description">Receive email notifications for updates</div>
-              </div>
-              <label class="switch">
-                <input type="checkbox" id="email-notifications" checked>
-                <span class="slider"></span>
-              </label>
+          <a href="support.html" style="text-decoration: none; color: inherit; display: block;">
+            <div class="card-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+              <h3 class="card-title">🛟 Support Center</h3>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
             </div>
-            <div class="settings-item">
-              <div class="settings-item-content">
-                <div class="settings-item-title">Auto-save</div>
-                <div class="settings-item-description">Automatically save your progress</div>
-              </div>
-              <label class="switch">
-                <input type="checkbox" id="auto-save" checked>
-                <span class="slider"></span>
-              </label>
-            </div>
-          </div>
+          </a>
         </div>
 
         <!-- Danger Zone -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Danger Zone</h3>
-          </div>
-          <div class="settings-group">
-            <div class="settings-item">
-              <div class="settings-item-content">
-                <div class="settings-item-title">Delete Account</div>
-                <div class="settings-item-description">Permanently delete your account and all data</div>
-              </div>
-              <button class="btn btn-danger" id="delete-account-btn">Delete Account</button>
-            </div>
-            <div class="settings-item">
-              <div class="settings-item-content">
-                <div class="settings-item-title">Logout</div>
-                <div class="settings-item-description">Sign out of your account</div>
-              </div>
-              <button class="btn btn-secondary" id="logout-btn">Logout</button>
-            </div>
-          </div>
+        <div class="card danger-zone-card">
+           <div class="card-header">
+              <h3 class="card-title">⚠️ Danger Zone</h3>
+              <p style="font-size: 0.85rem; color: var(--error); margin: 0;">Irreversible and critical actions</p>
+           </div>
+           <div style="padding: 0 24px;">
+             <div class="danger-item">
+                <div class="danger-item-content">
+                  <div class="danger-item-title">Logout</div>
+                  <div class="danger-item-description">Sign out of your current session.</div>
+                </div>
+                <button class="btn btn-secondary" id="logout-btn">Logout</button>
+             </div>
+             <div class="danger-item">
+                <div class="danger-item-content">
+                  <div class="danger-item-title">Delete Account</div>
+                  <div class="danger-item-description">Permanently delete your account and all associated data. This action cannot be undone.</div>
+                </div>
+                <button class="btn btn-danger" id="delete-account-btn">Delete Account</button>
+             </div>
+           </div>
         </div>
       </div>
     </main>
   </div>
 
-  <!-- Validation Modal (NO MANUAL SCORING) -->
+  <!-- Founder Request Modal -->
+  <div id="founder-request-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="founder-request-modal-title">Send Request</h3>
+        <button class="modal-close" onclick="document.getElementById('founder-request-modal').classList.remove('active')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Your Message</label>
+          <textarea id="founder-request-message" class="form-textarea" rows="3" placeholder="Why do you want to connect?"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('founder-request-modal').classList.remove('active')">Cancel</button>
+        <button class="btn btn-primary" id="submit-founder-request">Send Request</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Validation Modal -->
   <div id="idea-validation-modal" class="modal">
-    <div class="modal-content" style="max-width: 700px; max-height: 85vh; overflow-y: auto;">
+    <div class="modal-content" style="max-width: 700px;">
       <div class="modal-header">
         <h3 class="modal-title" id="stage-validation-modal-title">Validate Stage</h3>
         <button class="modal-close" onclick="closeIdeaValidationModal()">&times;</button>
       </div>
       <div class="modal-body">
-        <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-          <p style="margin: 0; color: #1e40af; font-weight: 500;">
-            🤖 AI-Powered Validation
-          </p>
-          <p style="margin: 0.5rem 0 0 0; color: #1e3a8a; font-size: 0.9rem;">
-            Answer these questions honestly. Our AI will evaluate the quality of your responses automatically.
-          </p>
-        </div>
-        
         <form id="idea-validation-form">
-          <div id="validation-questions-container">
-            <!-- Questions will be dynamically loaded here (TEXT ONLY) -->
-          </div>
-          
+          <div id="validation-questions-container"></div>
           <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-            <button type="submit" class="btn btn-primary" style="flex: 1;">
-              Submit for AI Evaluation
-            </button>
+            <button type="submit" class="btn btn-primary" style="flex: 1;">Submit for AI Evaluation</button>
             <button type="button" class="btn btn-secondary" onclick="closeIdeaValidationModal()" style="flex: 1;">Cancel</button>
           </div>
         </form>
-
-        <!-- Progress Indicator -->
-        <div id="validation-progress" style="margin-top: 1.5rem; display: none;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-            <span style="font-weight: 500;">Progress</span>
-            <span id="validation-progress-text">0/10 questions answered</span>
-          </div>
-          <div class="progress-bar" style="height: 8px;">
-            <div id="validation-progress-fill" class="progress-fill" style="width: 0%; transition: width 0.3s ease;"></div>
-          </div>
-        </div>
-
-        <!-- Loading State -->
         <div id="validation-loading" style="display: none; text-align: center; padding: 2rem;">
           <div style="display: inline-block; width: 50px; height: 50px; border: 5px solid #f3f4f6; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-          <p style="margin-top: 1rem; color: var(--text-secondary);">
-            AI is evaluating your answers...
-          </p>
+          <p style="margin-top: 1rem; color: var(--text-secondary);">AI is evaluating your answers...</p>
         </div>
       </div>
     </div>
   </div>
+  <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 
-  <style>
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-  </style>
-
-  <!-- Detail modal (Investor / Provider) -->
+  <!-- Detail Modal -->
   <div id="detail-modal" class="modal" style="display: none;">
-    <div class="modal-content" style="max-width: 500px;">
+    <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title" id="detail-modal-title">Details</h3>
         <button class="modal-close" onclick="closeDetailModal()">&times;</button>
@@ -578,1252 +586,7 @@
     </div>
   </div>
 
-  <!-- Include API Client -->
   <script src="./js/api.js"></script>
-  
-  <script>
-    // Get user from localStorage
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const token = localStorage.getItem('token');
-
-    // Update user name in header
-    document.getElementById('user-name').textContent = user.name || 'User';
-
-    // Update user avatar with initials
-    const nameArray = (user.name || 'User').split(' ');
-    const initials = nameArray.map(n => n.charAt(0).toUpperCase()).join('');
-    document.querySelector('.user-avatar').textContent = initials || 'U';
-
-    // Check if user is authenticated
-    if (!token) {
-      window.location.href = 'login.html';
-    }
-
-    // User menu click handler
-    document.getElementById('user-menu').addEventListener('click', () => {
-      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-      document.getElementById('settings-page').classList.add('active');
-      
-      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-      document.querySelector('[data-page="settings"]').classList.add('active');
-    });
-
-    // Navigation functionality
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        e.preventDefault();
-        
-        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-        item.classList.add('active');
-        
-        const page = item.dataset.page;
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(`${page}-page`).classList.add('active');
-        
-        loadPageContent(page);
-      });
-    });
-
-    // Load page content
-    function loadPageContent(page) {
-      switch(page) {
-        case 'dashboard':
-          loadDashboard();
-          break;
-        case 'profile':
-          loadProfile();
-          break;
-        case 'stages':
-          loadStages();
-          break;
-        case 'resources':
-          loadResources();
-          break;
-        case 'analytics':
-          loadAnalytics();
-          break;
-        case 'investors-providers':
-          loadInvestorsProviders();
-          break;
-        case 'settings':
-          loadSettings();
-          break;
-      }
-    }
-
-    // Dashboard functionality
-    async function loadDashboard() {
-      try {
-        const startup = await api.getStartup();
-        const progressCard = document.querySelector('.progress-card');
-        const existingCreateBtn = document.getElementById('create-startup-btn');
-
-        if (startup) {
-          if (existingCreateBtn) existingCreateBtn.remove();
-          if (progressCard) {
-            progressCard.querySelectorAll('button').forEach(btn => {
-              if ((btn.textContent || '').trim().toLowerCase() === 'create startup') {
-                btn.remove();
-              }
-            });
-          }
-
-          const validatedStages = (startup.validationStages && Object.keys(startup.validationStages).length > 0)
-            ? VALIDATION_STAGES
-                .map(s => startup.validationStages?.[s.key])
-                .filter(v => v && v.isValidated)
-                .length
-            : startup.milestones.filter(m => m.verified).length;
-
-          const totalStages = VALIDATION_STAGES.length;
-          const completionPercent = Math.round((validatedStages / totalStages) * 100);
-
-          const completedCount = VALIDATION_STAGES
-            .map(s => startup.validationStages?.[s.key])
-            .filter(v => v && v.completedAt)
-            .length;
-          const allCompleted = completedCount === VALIDATION_STAGES.length;
-
-          document.getElementById('startup-name-display').textContent = startup.name;
-          document.getElementById('progress-text').textContent = `${completionPercent}% Complete (${validatedStages}/${totalStages} stages validated)`;
-          document.getElementById('progress-badge').textContent = allCompleted
-            ? `${startup.validationScore}% Overall`
-            : `Overall: Pending`;
-          document.getElementById('progress-fill').style.width = `${completionPercent}%`;
-
-          document.getElementById('stages-completed').textContent = `${validatedStages}/${totalStages}`;
-
-          const completedTasks = startup.milestones.filter(m => m.isCompleted).length;
-          const totalTasks = startup.milestones.length;
-          document.getElementById('tasks-completed').textContent = `${completedTasks}/${totalTasks}`;
-
-          populateStagesList(startup);
-        } else {
-          document.getElementById('startup-name-display').textContent = 'No Startup Found';
-          document.getElementById('progress-text').textContent = 'Create a startup to get started';
-          document.getElementById('progress-badge').textContent = 'Overall: Pending';
-          document.getElementById('progress-fill').style.width = '0%';
-          document.getElementById('stages-completed').textContent = '0/5';
-          document.getElementById('tasks-completed').textContent = '0/15';
-
-          if (!existingCreateBtn && progressCard) {
-            const createButton = document.createElement('button');
-            createButton.id = 'create-startup-btn';
-            createButton.textContent = 'Create Startup';
-            createButton.className = 'btn btn-primary';
-            createButton.style.marginTop = '1rem';
-            createButton.onclick = () => {
-              document.querySelector('[data-page="profile"]').click();
-            };
-            progressCard.appendChild(createButton);
-          }
-
-          populateStagesList(null);
-        }
-      } catch (error) {
-        console.error('Error loading dashboard:', error);
-        document.getElementById('startup-name-display').textContent = 'Error';
-        document.getElementById('progress-text').textContent = 'Failed to load data';
-      }
-    }
-
-    function populateStagesList(startup) {
-      const stagesList = document.getElementById('stages-list');
-      stagesList.innerHTML = '';
-
-      if (!startup) return;
-
-      const validationStages = startup.validationStages || {};
-
-      VALIDATION_STAGES.forEach(({ key, title }, idx) => {
-        const stageElement = document.createElement('div');
-        stageElement.className = 'list-item';
-
-        const rec = validationStages[key];
-        const hasCompleted = !!rec?.completedAt;
-        const passed = !!rec?.isValidated;
-
-        let locked = idx > 0;
-        if (idx === 0) locked = false;
-        if (idx > 0) {
-          const prevKey = VALIDATION_STAGES[idx - 1].key;
-          locked = !validationStages?.[prevKey]?.isValidated;
-        }
-
-        const scoreText = hasCompleted ? `${rec.score}%` : '--';
-        const statusText = locked
-          ? 'Locked'
-          : !hasCompleted
-            ? 'Not Started'
-            : passed
-              ? 'Validated'
-              : 'Needs Improvement';
-
-        const statusClass = locked
-          ? 'status-pending'
-          : !hasCompleted
-            ? 'status-pending'
-            : passed
-              ? 'status-approved'
-              : 'status-submitted';
-
-        stageElement.innerHTML = `
-          <div class="list-item-content">
-            <div class="list-item-title">${title}</div>
-            <div class="list-item-subtitle">Score: ${scoreText}</div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 16px;">
-            <span style="font-size: 12px; color: var(--text-secondary);">${scoreText}</span>
-            <span class="list-item-status ${statusClass}">${statusText}</span>
-          </div>
-        `;
-
-        stagesList.appendChild(stageElement);
-      });
-    }
-
-    // Profile functionality
-    async function loadProfile() {
-      try {
-        const startup = await api.getStartup();
-        
-        if (startup) {
-          document.getElementById('startup-name').value = startup.name;
-          document.getElementById('problem-statement').value = startup.thesis || '';
-          document.getElementById('target-users').value = 'Your target users';
-          document.getElementById('industry').value = startup.industry || '';
-        }
-      } catch (error) {
-        console.error('Error loading profile:', error);
-      }
-    }
-
-    document.getElementById('profile-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const startupData = {
-        name: document.getElementById('startup-name').value,
-        thesis: document.getElementById('problem-statement').value,
-        industry: document.getElementById('industry').value,
-        targetUsers: document.getElementById('target-users').value
-      };
-      
-      try {
-        await api.createStartup(startupData);
-        alert('Profile updated successfully!');
-        loadDashboard();
-      } catch (error) {
-        alert(`Failed to update profile: ${error.message}`);
-      }
-    });
-
-    // Stages functionality
-    async function loadStages() {
-      try {
-        const startup = await api.getStartup();
-        const msg = document.getElementById('validation-roadmap-message');
-
-        if (!startup) {
-          if (msg) {
-            msg.style.display = 'block';
-            msg.textContent = 'Create a startup first to access validation stages.';
-          }
-
-          const summaryCard = document.getElementById('overall-validation-summary');
-          if (summaryCard) summaryCard.style.display = 'none';
-
-          VALIDATION_STAGES.forEach(({ key }) => {
-            const statusEl = document.getElementById(`stage-status-${key}`);
-            const startBtn = document.getElementById(`stage-start-${key}`);
-            const resultsBtn = document.getElementById(`stage-results-${key}`);
-            const summaryEl = document.getElementById(`stage-summary-${key}`);
-            const lockEl = document.getElementById(`stage-lock-${key}`);
-
-            if (statusEl) setBadge(statusEl, 'Create Startup', 'default');
-            if (startBtn) {
-              startBtn.disabled = true;
-              startBtn.textContent = 'Locked';
-            }
-            if (resultsBtn) resultsBtn.style.display = 'none';
-            if (summaryEl) summaryEl.style.display = 'none';
-            if (lockEl) lockEl.style.display = 'inline';
-          });
-
-          return;
-        }
-
-        if (msg) msg.style.display = 'none';
-        renderValidationRoadmap(startup);
-      } catch (error) {
-        console.error('Error loading stages:', error);
-        const msg = document.getElementById('validation-roadmap-message');
-        if (msg) {
-          msg.style.display = 'block';
-          msg.style.color = 'red';
-          msg.textContent = 'Failed to load validation stages.';
-        }
-      }
-    }
-
-    // Resources functionality
-    function loadResources() {
-      const resourcesList = document.getElementById('resources-list');
-      resourcesList.innerHTML = '';
-      
-      const resources = [
-        { id: 1, title: 'Market Research Guide', description: 'How to conduct effective market research', type: 'guide' },
-        { id: 2, title: 'Competitor Analysis Template', description: 'Template for analyzing competitors', type: 'template' },
-        { id: 3, title: 'Idea Validation Checklist', description: 'Checklist for validating your idea', type: 'checklist' }
-      ];
-      
-      resources.forEach(resource => {
-        const resourceElement = document.createElement('div');
-        resourceElement.className = 'resource-item';
-        resourceElement.innerHTML = `
-          <div class="resource-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              ${getResourceIcon(resource.type)}
-            </svg>
-          </div>
-          <div class="resource-content">
-            <div class="resource-title">${resource.title}</div>
-            <div class="resource-description">${resource.description}</div>
-          </div>
-        `;
-        
-        resourceElement.addEventListener('click', () => {
-          alert(`Opening ${resource.title}...`);
-        });
-        
-        resourcesList.appendChild(resourceElement);
-      });
-    }
-
-    function getResourceIcon(type) {
-      switch (type) {
-        case 'guide': return '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 0 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>';
-        case 'template': return '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line>';
-        case 'checklist': return '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line>';
-        default: return '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline>';
-      }
-    }
-
-    // ============= ENHANCED ANALYTICS =============
-    function loadAnalytics() {
-      const analyticsGrid = document.getElementById('analytics-grid');
-      
-      // Clear existing content
-      analyticsGrid.innerHTML = `
-        <!-- Filter Bar -->
-        <div class="filter-bar" style="grid-column: 1 / -1;">
-          <button class="filter-btn active" onclick="setAnalyticsPeriod('7d')">Last 7 Days</button>
-          <button class="filter-btn" onclick="setAnalyticsPeriod('30d')">Last 30 Days</button>
-          <button class="filter-btn" onclick="setAnalyticsPeriod('90d')">Last 90 Days</button>
-          <button class="filter-btn" onclick="setAnalyticsPeriod('all')">All Time</button>
-        </div>
-
-        <!-- Stats Overview -->
-        <div class="stats-overview" style="grid-column: 1 / -1;">
-          <div class="stat-box">
-            <div class="stat-value">1/5</div>
-            <div class="stat-label">Stages Completed</div>
-            <div class="stat-change">↑ 20% vs last week</div>
-          </div>
-          <div class="stat-box green">
-            <div class="stat-value">68%</div>
-            <div class="stat-label">Avg. Validation Score</div>
-            <div class="stat-change">↑ 12% improvement</div>
-          </div>
-          <div class="stat-box orange">
-            <div class="stat-value">3/15</div>
-            <div class="stat-label">Tasks Completed</div>
-            <div class="stat-change">↑ 3 this week</div>
-          </div>
-          <div class="stat-box blue">
-            <div class="stat-value">5</div>
-            <div class="stat-label">Resources Viewed</div>
-            <div class="stat-change">↑ 2 new views</div>
-          </div>
-        </div>
-
-        <!-- Progress Over Time -->
-        <div class="chart-card" style="grid-column: 1 / -1;">
-          <h3>📈 Validation Progress Over Time</h3>
-          <div class="chart-container">
-            <canvas id="progressChart"></canvas>
-          </div>
-          <div class="insight-card">
-            <h4>💡 Key Insight</h4>
-            <p>Your validation progress has accelerated by 35% in the last two weeks. Keep up the momentum by completing at least 2 tasks per week.</p>
-          </div>
-        </div>
-
-        <!-- Stage Performance -->
-        <div class="chart-card">
-          <h3>🎯 Stage Performance Breakdown</h3>
-          <div class="chart-container">
-            <canvas id="stagePerformanceChart"></canvas>
-          </div>
-          <div class="insight-card">
-            <h4>💡 Next Steps</h4>
-            <p>Focus on Problem Definition and Market Validation to unlock the next stages.</p>
-          </div>
-        </div>
-
-        <!-- Time Distribution -->
-        <div class="chart-card">
-          <h3>⏱️ Time Spent by Activity</h3>
-          <div class="chart-container">
-            <canvas id="timeDistributionChart"></canvas>
-          </div>
-        </div>
-
-        <!-- Task Completion Rate -->
-        <div class="chart-card" style="grid-column: 1 / -1;">
-          <h3>✅ Weekly Task Completion Rate</h3>
-          <div class="chart-container small">
-            <canvas id="taskCompletionChart"></canvas>
-          </div>
-        </div>
-
-        <!-- Resource Engagement -->
-        <div class="chart-card">
-          <h3>📚 Resource Engagement</h3>
-          <div class="chart-container small">
-            <canvas id="resourceChart"></canvas>
-          </div>
-        </div>
-
-        <!-- Validation Scores -->
-        <div class="chart-card">
-          <h3>🏆 Validation Score Trends</h3>
-          <div class="chart-container small">
-            <canvas id="validationScoreChart"></canvas>
-          </div>
-        </div>
-      `;
-
-      // Initialize all charts
-      setTimeout(() => {
-        initializeProgressChart();
-        initializeStagePerformanceChart();
-        initializeTimeDistributionChart();
-        initializeTaskCompletionChart();
-        initializeResourceChart();
-        initializeValidationScoreChart();
-      }, 100);
-    }
-
-    function initializeProgressChart() {
-      const ctx = document.getElementById('progressChart');
-      if (!ctx) return;
-
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6', 'Week 7', 'Week 8'],
-          datasets: [{
-            label: 'Overall Progress (%)',
-            data: [5, 12, 18, 25, 32, 45, 58, 68],
-            borderColor: '#3b82f6',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            tension: 0.4,
-            fill: true,
-            pointRadius: 5,
-            pointHoverRadius: 7
-          }, {
-            label: 'Tasks Completed',
-            data: [1, 2, 3, 5, 7, 10, 12, 15],
-            borderColor: '#10b981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            tension: 0.4,
-            fill: true,
-            pointRadius: 5,
-            pointHoverRadius: 7
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: true,
-              position: 'top',
-            },
-            tooltip: {
-              mode: 'index',
-              intersect: false,
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              }
-            },
-            x: {
-              grid: {
-                display: false
-              }
-            }
-          }
-        }
-      });
-    }
-
-    function initializeStagePerformanceChart() {
-      const ctx = document.getElementById('stagePerformanceChart');
-      if (!ctx) return;
-
-      new Chart(ctx, {
-        type: 'radar',
-        data: {
-          labels: ['Idea Validation', 'Problem Definition', 'Solution Dev', 'Market Validation', 'Business Model'],
-          datasets: [{
-            label: 'Your Score',
-            data: [85, 72, 0, 0, 0],
-            backgroundColor: 'rgba(59, 130, 246, 0.2)',
-            borderColor: '#3b82f6',
-            pointBackgroundColor: '#3b82f6',
-            pointBorderColor: '#fff',
-            pointHoverBackgroundColor: '#fff',
-            pointHoverBorderColor: '#3b82f6'
-          }, {
-            label: 'Average User Score',
-            data: [78, 75, 68, 65, 62],
-            backgroundColor: 'rgba(16, 185, 129, 0.2)',
-            borderColor: '#10b981',
-            pointBackgroundColor: '#10b981',
-            pointBorderColor: '#fff',
-            pointHoverBackgroundColor: '#fff',
-            pointHoverBorderColor: '#10b981'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            r: {
-              beginAtZero: true,
-              max: 100,
-              ticks: {
-                stepSize: 20
-              }
-            }
-          },
-          plugins: {
-            legend: {
-              position: 'top',
-            }
-          }
-        }
-      });
-    }
-
-    function initializeTimeDistributionChart() {
-      const ctx = document.getElementById('timeDistributionChart');
-      if (!ctx) return;
-
-      new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Validation Stages', 'Reading Resources', 'Profile Setup', 'Research', 'Planning'],
-          datasets: [{
-            data: [45, 25, 10, 15, 5],
-            backgroundColor: [
-              '#3b82f6',
-              '#10b981',
-              '#f59e0b',
-              '#ef4444',
-              '#8b5cf6'
-            ],
-            borderWidth: 2,
-            borderColor: '#fff'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-            },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  return context.label + ': ' + context.parsed + '%';
-                }
-              }
-            }
-          }
-        }
-      });
-    }
-
-    function initializeTaskCompletionChart() {
-      const ctx = document.getElementById('taskCompletionChart');
-      if (!ctx) return;
-
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-          datasets: [{
-            label: 'Completed',
-            data: [3, 5, 4, 3],
-            backgroundColor: '#10b981',
-          }, {
-            label: 'In Progress',
-            data: [2, 1, 2, 4],
-            backgroundColor: '#f59e0b',
-          }, {
-            label: 'Pending',
-            data: [5, 4, 4, 3],
-            backgroundColor: '#e5e7eb',
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: {
-              stacked: true,
-              grid: {
-                display: false
-              }
-            },
-            y: {
-              stacked: true,
-              beginAtZero: true,
-              grid: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              }
-            }
-          },
-          plugins: {
-            legend: {
-              position: 'top',
-            }
-          }
-        }
-      });
-    }
-
-    function initializeResourceChart() {
-      const ctx = document.getElementById('resourceChart');
-      if (!ctx) return;
-
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Guides', 'Templates', 'Videos', 'Articles', 'Tools'],
-          datasets: [{
-            label: 'Resources Viewed',
-            data: [12, 8, 5, 15, 6],
-            backgroundColor: [
-              '#3b82f6',
-              '#10b981',
-              '#f59e0b',
-              '#ef4444',
-              '#8b5cf6'
-            ],
-            borderRadius: 8
-          }]
-        },
-        options: {
-          indexAxis: 'y',
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false
-            }
-          },
-          scales: {
-            x: {
-              beginAtZero: true,
-              grid: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              }
-            },
-            y: {
-              grid: {
-                display: false
-              }
-            }
-          }
-        }
-      });
-    }
-
-    function initializeValidationScoreChart() {
-      const ctx = document.getElementById('validationScoreChart');
-      if (!ctx) return;
-
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['Stage 1', 'Stage 2', 'Stage 3', 'Stage 4', 'Stage 5'],
-          datasets: [{
-            label: 'First Attempt',
-            data: [65, 58, null, null, null],
-            borderColor: '#ef4444',
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            tension: 0.4,
-            borderDash: [5, 5]
-          }, {
-            label: 'Best Score',
-            data: [85, 72, null, null, null],
-            borderColor: '#10b981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            tension: 0.4,
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'top',
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              max: 100,
-              grid: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              }
-            },
-            x: {
-              grid: {
-                display: false
-              }
-            }
-          }
-        }
-      });
-    }
-
-    function setAnalyticsPeriod(period) {
-      // Update active button
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      event.target.classList.add('active');
-      
-      // In a real app, you would fetch new data based on the period
-      console.log('Analytics period changed to:', period);
-      
-      // Show a subtle notification
-      const notification = document.createElement('div');
-      notification.textContent = `Showing data for: ${period === '7d' ? 'Last 7 Days' : period === '30d' ? 'Last 30 Days' : period === '90d' ? 'Last 90 Days' : 'All Time'}`;
-      notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #10b981; color: white; padding: 12px 20px; border-radius: 8px; z-index: 1000; animation: slideIn 0.3s ease;';
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => notification.remove(), 300);
-      }, 2000);
-    }
-
-    async function loadInvestorsProviders() {
-      const gateEl = document.getElementById('investors-providers-gate-message');
-      const contentEl = document.getElementById('investors-providers-content');
-      const investorsList = document.getElementById('founder-investors-list');
-      const providersList = document.getElementById('founder-providers-list');
-      gateEl.style.display = 'none';
-      contentEl.style.display = 'none';
-      investorsList.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Loading...</p>';
-      providersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Loading...</p>';
-
-      try {
-        const startup = await api.getStartup();
-        const score = startup?.validationScore ?? 0;
-        if (score < 70) {
-          gateEl.style.display = 'block';
-          return;
-        }
-        contentEl.style.display = 'block';
-
-        const [investors, providers] = await Promise.all([api.getFounderInvestors(), api.getFounderProviders()]);
-
-        investorsList.innerHTML = (investors && investors.length) ? investors.map(inv => `
-          <div class="list-item clickable" data-type="investor" data-id="${inv._id}" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <strong>${(inv.name || '').replace(/</g, '&lt;')}</strong>
-              <span style="color: var(--text-secondary); font-size: 0.9rem;"> — ${(inv.email || '').replace(/</g, '&lt;')}</span>
-            </div>
-            <span style="color: var(--text-secondary); font-size: 0.85rem;">View details →</span>
-          </div>
-        `).join('') : '<p style="text-align: center; color: var(--text-secondary);">No investors yet.</p>';
-
-        providersList.innerHTML = (providers && providers.length) ? providers.map(prov => `
-          <div class="list-item clickable" data-type="provider" data-id="${prov._id}" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <strong>${(prov.name || '').replace(/</g, '&lt;')}</strong>
-              <span style="color: var(--text-secondary); font-size: 0.9rem;"> — ${(prov.category || '').replace(/</g, '&lt;')}</span>
-            </div>
-            <span style="color: var(--text-secondary); font-size: 0.85rem;">View details →</span>
-          </div>
-        `).join('') : '<p style="text-align: center; color: var(--text-secondary);">No providers yet.</p>';
-
-        investorsList.querySelectorAll('[data-type="investor"]').forEach(el => {
-          el.addEventListener('click', () => openDetailModal('investor', el.dataset.id));
-        });
-        providersList.querySelectorAll('[data-type="provider"]').forEach(el => {
-          el.addEventListener('click', () => openDetailModal('provider', el.dataset.id));
-        });
-      } catch (err) {
-        investorsList.innerHTML = '<p style="text-align: center; color: var(--danger);">Failed to load. ' + (err.message || '') + '</p>';
-        providersList.innerHTML = '<p style="text-align: center; color: var(--danger);">Failed to load.</p>';
-        contentEl.style.display = 'block';
-      }
-    }
-
-    async function openDetailModal(type, id) {
-      const modal = document.getElementById('detail-modal');
-      const title = document.getElementById('detail-modal-title');
-      const body = document.getElementById('detail-modal-body');
-      if (!modal || !title || !body) return;
-      title.textContent = type === 'investor' ? 'Investor details' : 'Provider details';
-      body.innerHTML = '<p>Loading...</p>';
-      modal.classList.add('active');
-      modal.style.display = 'flex';
-
-      try {
-        const data = type === 'investor' ? await api.getFounderInvestorDetail(id) : await api.getFounderProviderDetail(id);
-        if (type === 'investor') {
-          body.innerHTML = `
-            <p><strong>Name:</strong> ${(data.name || '').replace(/</g, '&lt;')}</p>
-            <p><strong>Email:</strong> <a href="mailto:${(data.email || '').replace(/"/g, '&quot;')}">${(data.email || '').replace(/</g, '&lt;')}</a></p>
-            <p><strong>Interest areas:</strong> ${(data.interestAreas && data.interestAreas.length) ? data.interestAreas.join(', ') : '—'}</p>
-            <p><strong>Stage preference:</strong> ${(data.stagePreference && data.stagePreference.length) ? data.stagePreference.join(', ') : '—'}</p>
-          `;
-        } else {
-          body.innerHTML = `
-            <p><strong>Name:</strong> ${(data.name || '').replace(/</g, '&lt;')}</p>
-            <p><strong>Email:</strong> <a href="mailto:${(data.email || '').replace(/"/g, '&quot;')}">${(data.email || '').replace(/</g, '&lt;')}</a></p>
-            <p><strong>Category:</strong> ${(data.category || '—').replace(/</g, '&lt;')}</p>
-            <p><strong>Description:</strong> ${(data.description || '—').replace(/</g, '&lt;')}</p>
-            <p><strong>Bio:</strong> ${(data.bio || '—').replace(/</g, '&lt;')}</p>
-            <p><strong>Experience:</strong> ${(data.experienceLevel || '—').replace(/</g, '&lt;')}</p>
-            <p><strong>Specialties:</strong> ${(data.specialties && data.specialties.length) ? data.specialties.join(', ') : '—'}</p>
-            <p><strong>Availability:</strong> ${(data.availability || '—').replace(/</g, '&lt;')}</p>
-            <p><strong>Contact method:</strong> ${(data.contactMethod || '—').replace(/</g, '&lt;')}</p>
-            <p><strong>Rating:</strong> ${data.rating != null ? data.rating : '—'}</p>
-          `;
-        }
-      } catch (err) {
-        body.innerHTML = '<p style="color: var(--danger);">Failed to load details.</p>';
-      }
-    }
-
-    function closeDetailModal() {
-      const modal = document.getElementById('detail-modal');
-      if (modal) { modal.classList.remove('active'); modal.style.display = 'none'; }
-    }
-    window.closeDetailModal = closeDetailModal;
-
-    // Settings functionality
-    function loadSettings() {
-      document.getElementById('full-name').value = user.name || '';
-      document.getElementById('email').value = user.email || '';
-      document.getElementById('role').value = 'Founder';
-      
-      const emailNotifications = localStorage.getItem('emailNotifications') !== 'false';
-      const autoSave = localStorage.getItem('autoSave') !== 'false';
-      
-      document.getElementById('email-notifications').checked = emailNotifications;
-      document.getElementById('auto-save').checked = autoSave;
-    }
-
-    // Settings button handlers
-    document.getElementById('update-profile-btn')?.addEventListener('click', () => {
-      const name = document.getElementById('full-name').value.trim();
-      const email = document.getElementById('email').value.trim();
-      
-      if (!name || !email) {
-        alert('Please fill in all fields');
-        return;
-      }
-      
-      alert('Profile updated successfully!');
-    });
-
-    document.getElementById('update-password-btn')?.addEventListener('click', () => {
-      const currentPassword = document.getElementById('current-password').value;
-      const newPassword = document.getElementById('new-password').value;
-      const confirmPassword = document.getElementById('confirm-password').value;
-      
-      if (!currentPassword || !newPassword || !confirmPassword) {
-        alert('Please fill in all password fields');
-        return;
-      }
-      
-      if (newPassword !== confirmPassword) {
-        alert('New passwords do not match');
-        return;
-      }
-      
-      if (newPassword.length < 8) {
-        alert('Password must be at least 8 characters long');
-        return;
-      }
-      
-      alert('Password updated successfully!');
-      document.getElementById('current-password').value = '';
-      document.getElementById('new-password').value = '';
-      document.getElementById('confirm-password').value = '';
-    });
-
-    document.getElementById('delete-account-btn')?.addEventListener('click', async () => {
-      if (!confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) return;
-      if (!confirm('This will permanently delete your account and all associated data. Are you really sure?')) return;
-      try {
-        await api.deleteAccount();
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-        localStorage.clear();
-        window.location.href = 'login.html';
-      } catch (err) {
-        alert(err.message || 'Failed to delete account. Try again.');
-      }
-    });
-
-    document.getElementById('logout-btn')?.addEventListener('click', () => {
-      if (confirm('Are you sure you want to logout?')) {
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-        localStorage.clear();
-        window.location.href = 'login.html';
-      }
-    });
-
-    document.getElementById('email-notifications')?.addEventListener('change', (e) => {
-      localStorage.setItem('emailNotifications', e.target.checked);
-    });
-
-    document.getElementById('auto-save')?.addEventListener('change', (e) => {
-      localStorage.setItem('autoSave', e.target.checked);
-    });
-
-    // ============= VALIDATION STAGES (NO MANUAL SCORING) =============
-
-    const VALIDATION_STAGES = [
-      { key: 'idea', title: 'Idea Validation' },
-      { key: 'problem', title: 'Problem Definition' },
-      { key: 'solution', title: 'Solution Development' },
-      { key: 'market', title: 'Market Validation' },
-      { key: 'business', title: 'Business Model Validation' }
-    ];
-
-    const stageOrder = (key) => VALIDATION_STAGES.findIndex(s => s.key === key) + 1;
-
-    function setBadge(el, text, variant) {
-      el.textContent = text;
-      if (variant === 'success') {
-        el.style.background = '#d1fae5';
-        el.style.color = '#065f46';
-      } else if (variant === 'danger') {
-        el.style.background = '#fee2e2';
-        el.style.color = '#991b1b';
-      } else {
-        el.style.background = '#fef3c7';
-        el.style.color = '#92400e';
-      }
-    }
-
-    function renderValidationRoadmap(startup) {
-      const validationStages = startup.validationStages || {};
-      const currentStage = startup.currentStage || 1;
-
-      const summaryCard = document.getElementById('overall-validation-summary');
-      const summaryText = document.getElementById('overall-validation-summary-text');
-      if (summaryCard && summaryText) {
-        const completedCount = VALIDATION_STAGES
-          .map(s => validationStages?.[s.key])
-          .filter(v => v && v.completedAt)
-          .length;
-        const allCompleted = completedCount === VALIDATION_STAGES.length;
-
-        summaryCard.style.display = 'block';
-        summaryText.textContent = allCompleted
-          ? `${startup.validationScore}% (final score across all 5 stages)`
-          : `Pending (${completedCount}/${VALIDATION_STAGES.length} stages completed)`;
-      }
-
-      VALIDATION_STAGES.forEach(({ key, title }) => {
-        const order = stageOrder(key);
-        const statusEl = document.getElementById(`stage-status-${key}`);
-        const summaryEl = document.getElementById(`stage-summary-${key}`);
-        const scoreEl = document.getElementById(`stage-score-${key}`);
-        const badgeEl = document.getElementById(`stage-badge-${key}`);
-        const dateEl = document.getElementById(`stage-date-${key}`);
-        const startBtn = document.getElementById(`stage-start-${key}`);
-        const resultsBtn = document.getElementById(`stage-results-${key}`);
-        const lockEl = document.getElementById(`stage-lock-${key}`);
-
-        const rec = validationStages[key];
-        const hasCompleted = !!rec?.completedAt;
-        const passed = !!rec?.isValidated;
-
-        let locked = order > currentStage;
-        if (order > 1) {
-          const prevKey = VALIDATION_STAGES[order - 2].key;
-          const prev = validationStages[prevKey];
-          if (!prev?.isValidated) locked = true;
-        }
-
-        if (lockEl) lockEl.style.display = locked ? 'inline' : 'none';
-        if (startBtn) startBtn.disabled = locked;
-
-        if (!hasCompleted) {
-          setBadge(statusEl, locked ? 'Locked' : 'Not Started', 'default');
-          summaryEl.style.display = 'none';
-          resultsBtn.style.display = 'none';
-          startBtn.textContent = locked ? 'Locked' : 'Start';
-          badgeEl.textContent = '--';
-        } else {
-          summaryEl.style.display = 'block';
-          scoreEl.textContent = `${rec.score}%`;
-          badgeEl.textContent = `${rec.score}%`;
-          dateEl.textContent = new Date(rec.completedAt).toLocaleDateString();
-
-          if (passed) {
-            setBadge(statusEl, '✓ Validated', 'success');
-          } else {
-            setBadge(statusEl, 'Needs Improvement', 'danger');
-          }
-
-          resultsBtn.style.display = 'block';
-          startBtn.textContent = 'Retake';
-        }
-      });
-    }
-
-    // Open validation modal (NO SLIDERS - TEXT ONLY)
-    async function openStageValidationModal(stageKey) {
-      const modal = document.getElementById('idea-validation-modal');
-      const container = document.getElementById('validation-questions-container');
-      const titleEl = document.getElementById('stage-validation-modal-title');
-
-      modal.dataset.stageKey = stageKey;
-      titleEl.textContent = `Validate: ${VALIDATION_STAGES.find(s => s.key === stageKey)?.title || stageKey}`;
-
-      try {
-        const response = await fetch(`/api/founder/validate-stage/${stageKey}/questions`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
-
-        if (!data.success) {
-          alert(data.message || 'Failed to load questions');
-          return;
-        }
-
-        const questions = data.questions || [];
-        container.innerHTML = '';
-
-        questions.forEach((q) => {
-          const questionDiv = document.createElement('div');
-          questionDiv.style.marginBottom = '2rem';
-          questionDiv.innerHTML = `
-            <div style="background: #f9fafb; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
-              <label class="form-label" style="margin-bottom: 0.5rem;">
-                <strong>Q${q.id}:</strong> ${q.question}
-              </label>
-              <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 0.75rem;">💡 ${q.hint}</p>
-              
-              <textarea 
-                class="form-textarea validation-answer" 
-                data-question-id="${q.id}" 
-                data-category="${q.category}"
-                data-weight="${q.weight}"
-                placeholder="Your answer..." 
-                style="margin-bottom: 0; resize: vertical; min-height: 100px;"
-                oninput="updateAnswerProgress()"
-              ></textarea>
-            </div>
-          `;
-          container.appendChild(questionDiv);
-        });
-
-        document.getElementById('validation-progress').style.display = 'block';
-        document.getElementById('idea-validation-form').onsubmit = submitStageValidation;
-
-        document.getElementById('validation-progress-text').textContent = '0/10 questions answered';
-        document.getElementById('validation-progress-fill').style.width = '0%';
-
-        modal.classList.add('active');
-      } catch (error) {
-        console.error('Error loading questions:', error);
-        alert('Failed to load validation questions');
-      }
-    }
-
-    function updateAnswerProgress() {
-      const allAnswers = document.querySelectorAll('.validation-answer');
-      const answeredCount = Array.from(allAnswers).filter(a => a.value.trim() !== '').length;
-      const totalQuestions = allAnswers.length || 10;
-
-      const percent = Math.round((answeredCount / totalQuestions) * 100);
-      const progressText = document.getElementById('validation-progress-text');
-      const progressFill = document.getElementById('validation-progress-fill');
-
-      if (progressText) progressText.textContent = `${answeredCount}/${totalQuestions} questions answered`;
-      if (progressFill) progressFill.style.width = `${percent}%`;
-    }
-
-    async function submitStageValidation(e) {
-      e.preventDefault();
-
-      const modal = document.getElementById('idea-validation-modal');
-      const stageKey = modal.dataset.stageKey;
-      const formEl = document.getElementById('idea-validation-form');
-      const loadingEl = document.getElementById('validation-loading');
-
-      const answers = [];
-      const answerElements = document.querySelectorAll('.validation-answer');
-
-      for (let elem of answerElements) {
-        if (elem.value.trim() === '') {
-          alert('Please answer all questions before submitting');
-          return;
-        }
-      }
-
-      answerElements.forEach(elem => {
-        const questionId = parseInt(elem.dataset.questionId);
-        answers.push({
-          id: questionId,
-          answer: elem.value.trim(),
-          category: elem.dataset.category
-        });
-      });
-
-      // Show loading state
-      formEl.style.display = 'none';
-      loadingEl.style.display = 'block';
-
-      try {
-        const response = await fetch(`/api/founder/validate-stage/${stageKey}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ answers })
-        });
-
-        const result = await response.json();
-
-        // Hide loading
-        formEl.style.display = 'block';
-        loadingEl.style.display = 'none';
-
-        if (result.success) {
-          closeIdeaValidationModal();
-
-          let overallLine = `Overall Validation Score: Pending`;
-          try {
-            const startup = await api.getStartup();
-            const completedCount = VALIDATION_STAGES
-              .map(s => startup?.validationStages?.[s.key])
-              .filter(v => v && v.completedAt)
-              .length;
-            const allCompleted = completedCount === VALIDATION_STAGES.length;
-
-            overallLine = allCompleted
-              ? `Overall Validation Score: ${startup.validationScore}%`
-              : `Overall Validation Score: Pending (${completedCount}/${VALIDATION_STAGES.length} stages completed)`;
-          } catch (_) {}
-
-          const message = result.isValidated
-            ? `✓ Stage Validated (${result.validationScore}%)\n\n${overallLine}`
-            : `Stage Score: ${result.validationScore}% (need 70%)\n\n${overallLine}`;
-
-          alert(message);
-
-          loadStages();
-          loadDashboard();
-        } else {
-          alert(`Error: ${result.message || 'Validation failed'}`);
-        }
-      } catch (error) {
-        formEl.style.display = 'block';
-        loadingEl.style.display = 'none';
-        console.error('Error submitting validation:', error);
-        alert('Failed to submit validation');
-      }
-    }
-
-    function closeIdeaValidationModal() {
-      document.getElementById('idea-validation-modal').classList.remove('active');
-    }
-
-    async function showStageValidationResults(stageKey) {
-      try {
-        const startup = await api.getStartup();
-        const rec = startup?.validationStages?.[stageKey];
-
-        if (!rec || !rec.completedAt) {
-          alert('No results yet for this stage.');
-          return;
-        }
-
-        const lines = [];
-        lines.push(`${VALIDATION_STAGES.find(s => s.key === stageKey)?.title || stageKey}`);
-        lines.push(`Stage Score: ${rec.score}%`);
-        lines.push(`Completed: ${new Date(rec.completedAt).toLocaleDateString()}`);
-
-        const completedCount = VALIDATION_STAGES
-          .map(s => startup?.validationStages?.[s.key])
-          .filter(v => v && v.completedAt)
-          .length;
-        const allCompleted = completedCount === VALIDATION_STAGES.length;
-
-        lines.push(allCompleted
-          ? `Overall Validation Score: ${startup.validationScore}%`
-          : `Overall Validation Score: Pending (${completedCount}/${VALIDATION_STAGES.length} stages completed)`);
-
-        lines.push('');
-
-        (rec.answers || []).forEach((a, idx) => {
-          const short = (a.answer || '').replace(/\s+/g, ' ').slice(0, 120);
-          lines.push(`Q${idx + 1} (${a.score}%): ${short}${(a.answer || '').length > 120 ? '...' : ''}`);
-        });
-
-        alert(lines.join('\n'));
-      } catch (error) {
-        console.error('Failed to load results:', error);
-        alert('Failed to load results');
-      }
-    }
-
-    // ============= END VALIDATION =============
-
-    // Initialize
-    document.addEventListener('DOMContentLoaded', () => {
-      loadDashboard();
-    });
-
-    // Keyboard navigation
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && document.getElementById('idea-validation-modal').classList.contains('active')) {
-        closeIdeaValidationModal();
-      }
-    });
-
-    // Close modal on outside click
-    document.getElementById('idea-validation-modal').addEventListener('click', (e) => {
-      if (e.target === document.getElementById('idea-validation-modal')) {
-        closeIdeaValidationModal();
-      }
-    });
-  </script>
+  <script src="./js/dashboard.js"></script>
 </body>
 </html>
-

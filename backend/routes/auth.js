@@ -9,13 +9,16 @@ const IntroRequest = require('../models/IntroRequest');
 const Notification = require('../models/Notification');
 const Log = require('../models/Log');
 const { protect } = require('../middleware/authMiddleware');
+const { forgotPassword, resetPassword } = require('../controller/auth');
+
+// ✅ UPDATED: Import Cloudinary config instead of local multer
+const { upload, cloudinary } = require('../config/cloudinary');
 
 // Register
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
-    // Validation
     if (!name || !email || !password) {
       return res.status(400).json({ 
         message: 'Name, email and password are required',
@@ -30,7 +33,6 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Check if user exists
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(409).json({ 
@@ -40,11 +42,9 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
     const user = await User.create({
       name,
       email: email.toLowerCase(),
@@ -53,7 +53,6 @@ router.post('/register', async (req, res) => {
       state: 'PENDING_APPROVAL'
     });
 
-    // Create provider profile if needed
     if (role === 'provider') {
       await Provider.create({
         userId: user._id,
@@ -65,11 +64,10 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Generate token (30 days validity)
     const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '30d' }
+      { id: user._id, role: user.role }, 
+      process.env.JWT_SECRET || 'mysecretkey',
+      { expiresIn: '7d' }
     );
 
     res.status(201).json({
@@ -98,94 +96,62 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validation
     if (!email || !password) {
-      return res.status(400).json({ 
-        message: 'Email and password required',
-        nextSteps: 'Please enter your email and password'
-      });
+      return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    // Find user
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
-      return res.status(401).json({ 
-        message: 'Invalid credentials',
-        reason: 'No account found with this email',
-        nextSteps: 'Check your email or register a new account'
-      });
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Check password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ 
-        message: 'Invalid credentials',
-        reason: 'Incorrect password',
-        nextSteps: 'Check your password or use "Forgot Password"'
-      });
+    if (user.password) {
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+    } else {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Check if user is blocked
-    if (user.state === 'BLOCKED') {
-      return res.status(403).json({ 
-        message: 'Account blocked',
-        reason: 'Your account has been blocked by an administrator',
-        nextSteps: 'Contact support for assistance'
-      });
-    }
-
-    // Generate token (30 days validity)
     const token = jwt.sign(
       { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '30d' }
+      process.env.JWT_SECRET || 'mysecretkey',
+      { expiresIn: '7d' }
     );
 
     res.json({
-      message: 'Login successful',
-      token,
-      user: {
-        id: user._id,
+      success: true,
+      user: { 
+        _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
         state: user.state,
-        nextSteps: user.state === 'PENDING_APPROVAL' 
-          ? 'Wait for admin approval to access the platform'
-          : 'You can now access the platform'
-      }
+        profilePicture: user.profilePicture || "" 
+      },
+      token
     });
+
   } catch (error) {
-    res.status(500).json({ 
-      message: 'Server error during login',
-      reason: error.message,
-      nextSteps: 'Try again or contact support'
-    });
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Server error during login' });
   }
 });
 
-// Logout - Add token to blacklist
+// Logout
 router.post('/logout', protect, (req, res) => {
   try {
-    // Initialize token blacklist if not exists
     if (!req.app.locals.tokenBlacklist) {
       req.app.locals.tokenBlacklist = new Set();
     }
-
-    // Get token from header
     const token = req.headers.authorization?.split(' ')[1];
-    
     if (token) {
-      // Add token to blacklist
       req.app.locals.tokenBlacklist.add(token);
-      
-      // Set a timer to remove token after 30 days (prevent memory leaks)
       setTimeout(() => {
         req.app.locals.tokenBlacklist.delete(token);
       }, 30 * 24 * 60 * 60 * 1000);
     }
-
     res.status(200).json({
       message: 'Logged out successfully',
       nextSteps: 'You can now safely close the browser'
@@ -198,30 +164,20 @@ router.post('/logout', protect, (req, res) => {
   }
 });
 
-// Email verification endpoint
+// Email verification
 router.post('/verify-email', async (req, res) => {
   try {
     const { email, verificationCode } = req.body;
-
     if (!email || !verificationCode) {
-      return res.status(400).json({
-        message: 'Email and verification code required'
-      });
+      return res.status(400).json({ message: 'Email and verification code required' });
     }
-
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({
-        message: 'User not found'
-      });
+      return res.status(404).json({ message: 'User not found' });
     }
-
     user.emailVerified = true;
     await user.save();
-
-    res.status(200).json({
-      message: 'Email verified successfully'
-    });
+    res.status(200).json({ message: 'Email verified successfully' });
   } catch (error) {
     res.status(500).json({
       message: 'Server error during email verification',
@@ -230,29 +186,13 @@ router.post('/verify-email', async (req, res) => {
   }
 });
 
-// Send verification email endpoint
+// Send verification email
 router.post('/send-verification-email', async (req, res) => {
   try {
     const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({
-        message: 'Email is required'
-      });
-    }
-
+    if (!email) return res.status(400).json({ message: 'Email is required' });
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({
-        message: 'User not found'
-      });
-    }
-
-    const verificationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    
-    // TODO: In production, implement real SMTP sending with nodemailer/SendGrid
-    // For now, this endpoint generates a code and would send via email
-    
+    if (!user) return res.status(404).json({ message: 'User not found' });
     res.status(200).json({
       message: 'Verification email sent',
       nextSteps: 'Check your email for the verification code'
@@ -265,18 +205,15 @@ router.post('/send-verification-email', async (req, res) => {
   }
 });
 
-// Get user profile (Phase 1: State-Driven Dashboards - Frontend state sync)
+// @route   GET /api/auth/profile
 router.get('/profile', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select(
-      'name email role state stage emailVerified watchlist interestAreas stagePreference createdAt updatedAt'
+      'name email role state stage emailVerified watchlist interestAreas stagePreference createdAt updatedAt rewardPoints emailNotifications profilePicture'
     );
 
     if (!user) {
-      return res.status(404).json({
-        message: 'User not found',
-        reason: 'Session user record missing'
-      });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     res.status(200).json({
@@ -286,18 +223,17 @@ router.get('/profile', protect, async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        // Phase 1: State-driven UI control
-        state: user.state || 'PENDING_APPROVAL', // PENDING_APPROVAL | APPROVED | STAGE_1-5 | BLOCKED
+        state: user.state || 'PENDING_APPROVAL',
         stage: user.stage || 0,
         emailVerified: user.emailVerified || false,
-        // Role-specific data
         watchlist: user.watchlist || [],
         interestAreas: user.interestAreas || [],
         stagePreference: user.stagePreference || [],
-        // Timestamps for phase tracking
         joinedAt: user.createdAt,
         lastUpdated: user.updatedAt,
-        // Phase 5: Visibility - Status messages
+        rewardPoints: user.rewardPoints || 0,
+        emailNotifications: user.emailNotifications ?? true,
+        profilePicture: user.profilePicture || "",
         status: {
           isApproved: user.state === 'APPROVED' || user.state?.startsWith('STAGE_'),
           isBlocked: user.state === 'BLOCKED',
@@ -307,23 +243,79 @@ router.get('/profile', protect, async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({
-      message: 'Error fetching profile',
-      reason: error.message,
-      nextSteps: 'Try refreshing the page or logging in again'
-    });
+    console.error('Profile error:', error);
+    res.status(500).json({ message: 'Server error fetching profile' });
   }
 });
 
-// Delete account: remove user and all associated data (cascade)
+// @route   PUT /api/auth/profile
+router.put('/profile', protect, async (req, res) => {
+  const { name, emailNotifications } = req.body;
+  const updateFields = {};
+  if (name) updateFields.name = name;
+  if (typeof emailNotifications !== 'undefined') updateFields.emailNotifications = emailNotifications;
+
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updateFields },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.json({ 
+      success: true, 
+      message: 'Profile updated',
+      user: user
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+// @route   PUT /api/auth/password
+router.put('/password', protect, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Please provide both current and new password' });
+    }
+
+    const user = await User.findById(req.user.id).select('+password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (!user.password) {
+       return res.status(400).json({ message: 'Password cannot be changed for this account type' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Current password is incorrect' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: 'New password must be at least 8 characters' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.json({ success: true, message: 'Password updated successfully' });
+
+  } catch (error) {
+    console.error('Update password error:', error);
+    res.status(500).json({ message: 'Server error updating password' });
+  }
+});
+
+// Delete account
 router.delete('/account', protect, async (req, res) => {
   try {
     const userId = req.user.id;
-
     const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
     if (user.role === 'founder') {
       const founderStartups = await Startup.find({ founderId: userId }).select('_id');
@@ -343,7 +335,6 @@ router.delete('/account', protect, async (req, res) => {
     await IntroRequest.deleteMany({ $or: [{ providerId: userId }, { founderId: userId }] });
     await Notification.deleteMany({ userId });
     await Log.deleteMany({ userId });
-
     await User.findByIdAndDelete(userId);
 
     if (req.app.locals.tokenBlacklist) {
@@ -363,5 +354,49 @@ router.delete('/account', protect, async (req, res) => {
     });
   }
 });
+
+// @route   POST /api/auth/upload-profile-picture
+// ✅ UPDATED: Now uploads to Cloudinary
+router.post('/upload-profile-picture', protect, (req, res) => {
+  // Use the imported upload middleware from cloudinary config
+  upload.single('profilePicture')(req, res, function (err) {
+    if (err) {
+      // Handle Multer or Cloudinary errors
+      console.error('Upload Error:', err);
+      return res.status(400).json({ message: err.message || 'Image upload failed' });
+    }
+    // Proceed to handler
+    handleUpload(req, res);
+  });
+});
+router.post('/forgot-password', forgotPassword);
+router.put('/reset-password/:token', resetPassword);
+async function handleUpload(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // ✅ UPDATED: 
+    // 1. 'req.file.path' contains the full Cloudinary URL.
+    // 2. We no longer need to construct a relative path like '/uploads/...'.
+    // 3. We can optionally delete the old image from Cloudinary if needed (omitted for simplicity here).
+    
+    user.profilePicture = req.file.path; 
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Profile picture uploaded',
+      profilePicture: user.profilePicture // Returns the full HTTPS URL
+    });
+  } catch (err) {
+    console.error('Handle Upload Error:', err);
+    res.status(500).json({ message: 'Server error saving profile picture' });
+  }
+}
 
 module.exports = router;

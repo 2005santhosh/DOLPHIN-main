@@ -7,15 +7,49 @@
     <link rel="stylesheet" href="./css/index.css">
 </head>
 <body>
+    <!-- HEADER -->
     <header>
         <div class="logo">🐬 Dolphin</div>
-        <nav class="nav-links">
+        
+        <!-- Desktop Nav -->
+        <nav class="desktop-nav">
             <a href="#features" class="nav-link">Features</a>
             <a href="#how-it-works" class="nav-link">How It Works</a>
             <a href="login.html" class="btn btn-primary">Launch Platform</a>
         </nav>
+
+        <!-- Mobile Toggle Button -->
+        <button class="menu-toggle" id="mobile-menu-btn" aria-label="Open Menu">
+            <!-- Hamburger Icon -->
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
     </header>
 
+    <!-- MOBILE NAVIGATION (Sits outside header for proper layering) -->
+    <nav class="mobile-nav" id="mobile-nav">
+        <div class="mobile-nav-header">
+            <div class="logo">🐬 Dolphin</div>
+            <button class="menu-close" id="mobile-close-btn" aria-label="Close Menu">
+                <!-- X Icon -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        
+        <div class="mobile-nav-links">
+            <a href="#features" class="mobile-nav-link">Features</a>
+            <a href="#how-it-works" class="mobile-nav-link">How It Works</a>
+        </div>
+
+        <div class="mobile-nav-actions">
+            <a href="login.html" class="btn btn-primary btn-block">Launch Platform</a>
+            <a href="register.html" class="btn btn-secondary btn-block">Get Started Free</a>
+        </div>
+    </nav>
+
+    <!-- OVERLAY (Dark background when menu is open) -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- CONTENT -->
     <section class="hero">
         <div class="hero-content">
             <div class="hero-badge">
@@ -148,116 +182,49 @@
 
     <footer>
         <div class="footer-content">
-            <div class="footer-column">
+            <div class="footer-column brand-col">
                 <h3>🐬 Dolphin</h3>
-                <p style="color: rgba(255, 255, 255, 0.7); margin-top: 1rem; line-height: 1.7;">
-                    The Operating System for modern entrepreneurship. Validate, build, and scale with confidence.
-                </p>
-                <div class="social-links">
+                <p>The Operating System for modern entrepreneurship. Validate, build, and scale with confidence.</p>
+                <!-- <div class="social-links">
                     <a href="#" class="social-link">📘</a>
                     <a href="#" class="social-link">🐦</a>
                     <a href="#" class="social-link">💼</a>
-                    <a href="#" class="social-link">📸</a>
-                </div>
+                </div> -->
             </div>
+            
             <div class="footer-column">
                 <h3>Platform</h3>
                 <ul>
                     <li><a href="register.html">For Founders</a></li>
                     <li><a href="register.html">For Investors</a></li>
-                    <li><a href="register.html">For Service Providers</a></li>
-                    <li><a href="#">Pricing</a></li>
+                    <li><a href="register.html">For Providers</a></li>
+                    <!-- <li><a href="#">Pricing</a></li> -->
                 </ul>
             </div>
             <div class="footer-column">
                 <h3>Resources</h3>
                 <ul>
-                    <li><a href="#">Validation Methodology</a></li>
+                    <!-- <li><a href="#">Methodology</a></li>
                     <li><a href="#">Success Stories</a></li>
-                    <li><a href="#">Blog & Insights</a></li>
-                    <li><a href="#">Help Center</a></li>
+                    <li><a href="#">Blog</a></li> -->
+                    <li><a href="./support.html">Support</a></li>
                 </ul>
             </div>
             <div class="footer-column">
                 <h3>Company</h3>
                 <ul>
-                    <li><a href="#">About Us</a></li>
-                    <li><a href="#">Careers</a></li>
-                    <li><a href="#">Privacy Policy</a></li>
-                    <li><a href="#">Terms of Service</a></li>
+                    <!-- <li><a href="#">About Us</a></li>
+                    <li><a href="#">Careers</a></li> -->
+                    <li><a href="./privacy.html">Privacy</a></li>
+                    <li><a href="./termsofservice.html">Terms</a></li>
                 </ul>
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2026 Dolphin. All rights reserved. Built with ❤️ for entrepreneurs.</p>
+            <p>&copy; 2026 Dolphin. All rights reserved.</p>
         </div>
     </footer>
 
-    <script>
-        // Smooth scroll reveal animation
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('active');
-                }
-            });
-        }, observerOptions);
-
-        // Observe all elements with reveal class
-        document.querySelectorAll('.reveal').forEach(element => {
-            observer.observe(element);
-        });
-
-        // Smooth scroll for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        });
-
-        // Animate numbers on stats section
-        const animateValue = (element, start, end, duration) => {
-            let startTimestamp = null;
-            const step = (timestamp) => {
-                if (!startTimestamp) startTimestamp = timestamp;
-                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                const value = Math.floor(progress * (end - start) + start);
-                element.textContent = value.toLocaleString() + (element.dataset.suffix || '');
-                if (progress < 1) {
-                    window.requestAnimationFrame(step);
-                }
-            };
-            window.requestAnimationFrame(step);
-        };
-
-        const statsObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting && !entry.target.dataset.animated) {
-                    const statNumber = entry.target.querySelector('.stat-number');
-                    const text = statNumber.textContent;
-                    const number = parseInt(text.replace(/\D/g, ''));
-                    statNumber.dataset.suffix = text.replace(/[0-9,]/g, '');
-                    animateValue(statNumber, 0, number, 2000);
-                    entry.target.dataset.animated = 'true';
-                }
-            });
-        }, { threshold: 0.5 });
-
-        document.querySelectorAll('.stat-item').forEach(item => {
-            statsObserver.observe(item);
-        });
-    </script>
+    <script src="./js/index.js"></script>
 </body>
 </html>

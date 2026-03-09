@@ -2,12 +2,14 @@
 // UPDATED WITH NOTIFICATIONS AND GEMINI AI
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware');
+const { protect, authorize } = require('../middleware/authMiddleware');
 const checkStageAccess = require('../middleware/stageGating');
 const Startup = require('../models/Startup');
 const Log = require('../models/Log');
 const User = require('../models/User');
 const Provider = require('../models/Provider');
+const IntroRequest = require('../models/IntroRequest');
+const Notification = require('../models/Notification');
 const { updateMilestone } = require('../services/milestoneService');
 const { batchValidateStage } = require('../services/geminiValidationService'); // CHANGED TO GEMINI
 const {
@@ -48,7 +50,7 @@ router.post('/', protect, async (req, res) => {
       return res.status(401).json({ message: 'User not authenticated' });
     }
     
-    const { name, thesis, industry } = req.body;
+    const { name, thesis, industry, targetUsers } = req.body;
 
     if (!name || !thesis) {
       return res.status(400).json({ 
@@ -70,6 +72,7 @@ router.post('/', protect, async (req, res) => {
       name,
       thesis,
       industry,
+      targetUsers,
       milestones: initialMilestones,
       auditLogs: []
     });
@@ -140,7 +143,57 @@ router.put('/my-startup', protect, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+router.post('/send-request', protect, async (req, res) => {
+  const { providerId, message, servicesOffered } = req.body;
 
+  try {
+    const startup = await Startup.findOne({ founderId: req.user.id });
+    if (!startup) return res.status(400).json({ message: 'Create a startup first.' });
+
+    const existing = await IntroRequest.findOne({
+      providerId: providerId,
+      founderId: req.user.id,
+      status: { $in: ['pending', 'accepted'] }
+    });
+
+    if (existing) return res.status(400).json({ message: 'Request already sent.' });
+
+    const newRequest = await IntroRequest.create({
+      providerId: providerId,
+      founderId: req.user.id,
+      startupId: startup._id,
+      message,
+      servicesOffered,
+      status: 'pending',
+      initiator: 'founder'
+    });
+
+    // ✅ NOTIFY PROVIDER
+    const notification = await Notification.create({
+      userId: providerId,
+      type: 'new_request',
+      title: 'New Connection Request',
+      message: `${req.user.name} wants to connect with you!`,
+      relatedId: newRequest._id
+    });
+
+    const io = req.app.get('socketio');
+    if (io) {
+      // 1. Update Notification Bell
+      io.to(providerId.toString()).emit('newNotification', notification);
+      // 2. Update Requests Sidebar Badge
+      io.to(providerId.toString()).emit('newRequest', { 
+        message: 'You have a new request!',
+        request: newRequest 
+      });
+    }
+
+    res.json({ success: true, request: newRequest });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 // Submit task for a milestone
 router.post('/submit-task', protect, async (req, res) => {
   try {
@@ -629,6 +682,107 @@ router.post('/validate-idea', protect, (req, res) => {
 router.get('/validate-idea/status', protect, (req, res) => {
   return getStageStatus('idea', req, res);
 });
+// backend/routes/founder.js
+
+// Helper to define the static roadmap tasks
+const getRoadmapTasks = () => [
+  { key: 'market-research', title: 'Deep Market Research', description: 'Analyze 3 competitors and define your unique value prop.', phase: 'Pre-Build', points: 50, order: 1, status: 'unlocked' }, // First one is unlocked by default
+  { key: 'mvp-scope', title: 'Define MVP Scope', description: 'List the absolute minimum features needed for launch.', phase: 'Pre-Build', points: 50, order: 2 },
+  { key: 'landing-page', title: 'Create Landing Page', description: 'Build a simple page to capture emails/interest.', phase: 'Pre-Build', points: 100, order: 3 },
+  { key: 'prototype', title: 'Build Functional Prototype', description: 'Develop the core functionality (no polish needed yet).', phase: 'Build', points: 150, order: 4 },
+  { key: 'alpha-test', title: 'Alpha Testing', description: 'Get 5 users to try your prototype and give feedback.', phase: 'Build', points: 100, order: 5 },
+  { key: 'iterate-feedback', title: 'Iterate on Feedback', description: 'Fix the top 3 critical issues found in Alpha.', phase: 'Build', points: 100, order: 6 },
+  { key: 'payment-setup', title: 'Setup Payments', description: 'Integrate Stripe/PayPal and test a transaction.', phase: 'Launch Prep', points: 50, order: 7 },
+  { key: 'marketing-plan', title: 'Launch Marketing Plan', description: 'Prepare your launch day social posts and email list.', phase: 'Launch Prep', points: 50, order: 8 },
+  { key: 'public-launch', title: 'Public Launch', description: 'Go live! Submit to Product Hunt/communities.', phase: 'Launch', points: 200, order: 9 },
+  { key: 'first-ten', title: 'First 10 Customers', description: 'Acquire your first 10 paying customers.', phase: 'Growth', points: 300, order: 10 }
+];
+
+// @route   GET /api/founder/roadmap
+// @desc    Get tasks roadmap (Unlocked only after 5 stages validated)
+router.get('/roadmap', protect, async (req, res) => {
+  try {
+    const startup = await Startup.findOne({ founderId: req.user.id });
+    if (!startup) return res.status(404).json({ message: 'Startup not found' });
+
+    // Check unlock condition: All 5 stages validated
+    const stages = startup.validationStages || {};
+    const validatedCount = Object.values(stages).filter(s => s?.isValidated).length;
+    
+    if (validatedCount < 5) {
+      return res.json({ 
+        unlocked: false, 
+        message: 'Complete all 5 Validation Stages to unlock the Growth Roadmap',
+        tasks: [] 
+      });
+    }
+
+    // Initialize tasks if they don't exist
+    if (!startup.roadmapTasks || startup.roadmapTasks.length === 0) {
+      startup.roadmapTasks = getRoadmapTasks();
+      await startup.save();
+    }
+
+    res.json({ 
+      unlocked: true, 
+      tasks: startup.roadmapTasks 
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/founder/roadmap/complete
+// @desc    Complete a task and unlock next
+router.post('/roadmap/complete', protect, async (req, res) => {
+  const { taskKey } = req.body;
+  
+  try {
+    const startup = await Startup.findOne({ founderId: req.user.id });
+    const user = await User.findById(req.user.id);
+
+    if (!startup || !user) return res.status(404).json({ message: 'Data not found' });
+
+    const taskIndex = startup.roadmapTasks.findIndex(t => t.key === taskKey);
+    if (taskIndex === -1) return res.status(404).json({ message: 'Task not found' });
+
+    const task = startup.roadmapTasks[taskIndex];
+
+    // Validation: Must be unlocked
+    if (task.status === 'locked') {
+      return res.status(400).json({ message: 'Task is locked. Complete previous tasks first.' });
+    }
+    if (task.status === 'completed') {
+      return res.status(400).json({ message: 'Task already completed' });
+    }
+
+    // Complete current task
+    task.status = 'completed';
+    task.completedAt = new Date();
+
+    // Award Points
+    const points = task.points || 50;
+    user.rewardPoints = (user.rewardPoints || 0) + points;
+
+    // Unlock next task
+    if (startup.roadmapTasks[taskIndex + 1]) {
+      startup.roadmapTasks[taskIndex + 1].status = 'unlocked';
+    }
+
+    await startup.save();
+    await user.save();
+
+    res.json({ 
+      success: true, 
+      message: `Task completed! +${points} Points.`,
+      totalPoints: user.rewardPoints,
+      tasks: startup.roadmapTasks
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // ============= FOUNDER: VIEW INVESTORS & PROVIDERS (when validationScore >= 70%) =============
 const FOUNDER_VALIDATION_THRESHOLD = 70;
@@ -656,100 +810,496 @@ const requireFounderValidationScore = async (req, res, next) => {
 };
 
 // List all investors (for founders with score >= 70%)
+// @route   GET /api/founder/investors
+// @route   GET /api/founder/investors
 router.get('/investors', protect, requireFounderValidationScore, async (req, res) => {
   try {
-    const investors = await User.find({ role: 'investor' })
-      .select('name email interestAreas stagePreference createdAt')
-      .sort({ name: 1 });
-    res.json(investors.map(u => ({
-      _id: u._id,
-      name: u.name,
-      email: u.email,
-      interestAreas: u.interestAreas || [],
-      stagePreference: u.stagePreference || [],
-      joinedAt: u.createdAt
-    })));
+    const { search, sort } = req.query;
+    let query = { role: 'investor' };
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { interestAreas: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    let investors = await User.find(query)
+      .select('name email interestAreas stagePreference createdAt profilePicture rewardPoints state ratings')
+      .lean();
+
+    // Calculate Ratings & Sort
+    let results = investors.map(u => {
+      const ratings = u.ratings || [];
+      // ✅ FIX: Robust Average Calculation
+      const totalScore = ratings.reduce((sum, r) => sum + (r.score || 0), 0);
+      const avgRating = ratings.length > 0 ? (totalScore / ratings.length) : 0;
+
+      return {
+        _id: u._id,
+        name: u.name,
+        email: u.email,
+        interestAreas: u.interestAreas || [],
+        stagePreference: u.stagePreference || [],
+        joinedAt: u.createdAt,
+        profilePicture: u.profilePicture || "",
+        rewardPoints: u.rewardPoints || 0,
+        state: u.state,
+        rating: avgRating.toFixed(1) // Return calculated average
+      };
+    });
+
+    // Sort
+    if (sort === 'rating') {
+      results.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
+    } else if (sort === 'name') {
+      results.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sort === 'newest') {
+      results.sort((a, b) => new Date(b.joinedAt) - new Date(a.joinedAt));
+    }
+
+    res.json(results);
   } catch (err) {
     console.error('Error fetching investors:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
+// backend/routes/founder.js
 
 // Get single investor detail (for founders with score >= 70%)
 router.get('/investors/:id', protect, requireFounderValidationScore, async (req, res) => {
   try {
-    const investor = await User.findById(req.params.id).select('name email interestAreas stagePreference createdAt');
-    if (!investor || investor.role !== 'investor') {
-      return res.status(404).json({ message: 'Investor not found' });
-    }
+    const investor = await User.findById(req.params.id)
+      .select('name email interestAreas stagePreference createdAt profilePicture rewardPoints state ratings');
+
+    if (!investor) return res.status(404).json({ message: 'Investor not found' });
+
+    const ratings = investor.ratings || [];
+    const totalScore = ratings.reduce((sum, r) => sum + (r.score || 0), 0);
+    const avgRating = ratings.length > 0 ? (totalScore / ratings.length) : 0;
+
     res.json({
       _id: investor._id,
       name: investor.name,
       email: investor.email,
       interestAreas: investor.interestAreas || [],
       stagePreference: investor.stagePreference || [],
-      joinedAt: investor.createdAt
+      joinedAt: investor.createdAt,
+      profilePicture: investor.profilePicture || "",
+      rewardPoints: investor.rewardPoints || 0,
+      state: investor.state,
+      rating: avgRating.toFixed(1) // Calculated Average
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 });
+// @route   POST /api/founder/rate
+// @route   POST /api/founder/rate
+router.post('/rate', protect, async (req, res) => {
+  const { targetUserId, score, comment } = req.body;
 
-// List all providers (for founders with score >= 70%)
+  if (!targetUserId || !score) {
+    return res.status(400).json({ message: 'Target User ID and Score are required' });
+  }
+
+  try {
+    // 1. Find Target User (No verification check)
+    const targetUser = await User.findById(targetUserId);
+    if (!targetUser) return res.status(404).json({ message: 'User not found' });
+
+    // 2. Update or Add Rating
+    // Initialize ratings array if missing
+    if (!targetUser.ratings) targetUser.ratings = [];
+
+    const existingRatingIndex = targetUser.ratings.findIndex(r => r.fromUserId.toString() === req.user.id);
+
+    if (existingRatingIndex > -1) {
+      targetUser.ratings[existingRatingIndex].score = score;
+      targetUser.ratings[existingRatingIndex].comment = comment;
+      targetUser.ratings[existingRatingIndex].createdAt = new Date();
+    } else {
+      targetUser.ratings.push({
+        fromUserId: req.user.id,
+        score: score,
+        comment: comment
+      });
+    }
+
+    await targetUser.save();
+
+    // 3. Calculate new average to return immediately
+    const avgRating = targetUser.ratings.reduce((sum, r) => sum + r.score, 0) / targetUser.ratings.length;
+
+    res.json({ 
+      success: true, 
+      message: 'Rating submitted successfully',
+      averageRating: avgRating.toFixed(1)
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+// @route   GET /api/founder/providers
+// @route   GET /api/founder/providers
+// @route   GET /api/founder/providers
 router.get('/providers', protect, requireFounderValidationScore, async (req, res) => {
   try {
-    const providers = await Provider.find({ verified: true })
-      .populate('userId', 'name email')
-      .sort({ name: 1 });
-    res.json(providers.map(p => ({
-      _id: p._id,
-      userId: p.userId?._id,
-      name: p.name,
-      email: p.userId?.email,
-      category: p.category,
-      description: p.description,
-      bio: p.bio,
-      experienceLevel: p.experienceLevel,
-      specialties: p.specialties || [],
-      availability: p.availability,
-      contactMethod: p.contactMethod,
-      rating: p.rating
-    })));
+    const { search, sort, category } = req.query;
+    let query = {}; 
+    
+    if (category && category !== 'all') {
+      query.category = new RegExp(category, 'i');
+    }
+
+    let providers = await Provider.find(query)
+      .populate('userId', 'name email profilePicture state rewardPoints ratings')
+      .select('name category description bio experienceLevel specialties availability contactMethod rating userId verified')
+      .lean();
+
+    // ✅ 1. Find Requests SENT by the current Founder
+    const providerUserIds = providers.map(p => p.userId?._id).filter(id => id);
+    const myRequests = await IntroRequest.find({
+      founderId: req.user.id,
+      providerId: { $in: providerUserIds }
+    }).select('providerId status').lean();
+
+    // 2. Create a map: userId -> status
+    const requestMap = {};
+    myRequests.forEach(r => {
+      requestMap[r.providerId.toString()] = r.status;
+    });
+
+    // 3. Calculate Ratings & Format
+    let results = providers.map(p => {
+      const user = p.userId || {};
+      const ratings = user.ratings || [];
+      const totalScore = ratings.reduce((sum, r) => sum + (parseFloat(r.score) || 0), 0);
+      const avgRating = ratings.length > 0 ? (totalScore / ratings.length) : 0;
+
+      return {
+        _id: p._id,
+        userId: user._id,
+        name: user.name || p.name || 'Unknown',
+        profilePicture: user.profilePicture || "", 
+        state: user.state || '',
+        category: p.category || 'General',
+        description: p.description || p.bio || 'No description provided.',
+        bio: p.bio,
+        experienceLevel: p.experienceLevel || 'N/A',
+        specialties: p.specialties || [],
+        availability: p.availability || 'N/A',
+        contactMethod: p.contactMethod || 'N/A',
+        rating: avgRating.toFixed(1),
+        verified: p.verified || false,
+        // ✅ NEW: Attach request status
+        requestStatus: requestMap[user._id?.toString()] || null 
+      };
+    });
+
+   // Sort
+    if (sort === 'rating') {
+      results.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
+    } else if (sort === 'name') {
+      results.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+
+    res.json(results);
   } catch (err) {
-    console.error('Error fetching providers:', err);
+    console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Get single provider detail (for founders with score >= 70%)
+// @route   GET /api/founder/providers/:id
+// @desc    Get single provider detail
+// @route   GET /api/founder/providers/:id
 router.get('/providers/:id', protect, requireFounderValidationScore, async (req, res) => {
   try {
     const provider = await Provider.findById(req.params.id)
-      .populate('userId', 'name email');
-    if (!provider) {
-      return res.status(404).json({ message: 'Provider not found' });
-    }
+      .populate('userId', 'name email profilePicture state rewardPoints ratings');
+      
+    if (!provider) return res.status(404).json({ message: 'Provider not found' });
+
+    const user = provider.userId || {};
+    const ratings = user.ratings || [];
+    const totalScore = ratings.reduce((sum, r) => sum + (parseFloat(r.score) || 0), 0);
+    const avgRating = ratings.length > 0 ? (totalScore / ratings.length) : 0;
+
+    // ✅ Check Request Status
+    const existingRequest = await IntroRequest.findOne({
+      founderId: req.user.id,
+      providerId: user._id
+    }).select('status');
+
     res.json({
       _id: provider._id,
-      userId: provider.userId?._id,
-      name: provider.name,
-      email: provider.userId?.email,
-      category: provider.category,
-      description: provider.description,
+      userId: user._id,
+      name: user.name || provider.name || 'Unknown',
+      email: user.email,
+      profilePicture: user.profilePicture || "", 
+      state: user.state || '',
+      category: provider.category || 'General',
+      description: provider.description || provider.bio || 'No description provided.',
       bio: provider.bio,
-      experienceLevel: provider.experienceLevel,
+      experienceLevel: provider.experienceLevel || 'N/A',
       specialties: provider.specialties || [],
-      availability: provider.availability,
-      contactMethod: provider.contactMethod,
-      rating: provider.rating,
-      engagementCount: provider.engagementCount,
-      responseRate: provider.responseRate,
-      stageCategories: provider.stageCategories || [],
-      createdAt: provider.createdAt
+      availability: provider.availability || 'N/A',
+      contactMethod: provider.contactMethod || 'N/A',
+      rating: avgRating.toFixed(1),
+      // ✅ Attach status
+      requestStatus: existingRequest ? existingRequest.status : null
     });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 });
+// backend/routes/founder.js
 
+// ... existing imports and routes ...
+
+// @route   GET /api/founder/analytics
+// @desc    Get analytics data for the dashboard
+// @access  Private (Founder)
+// Update Analytics to separate Stages and Tasks
+// backend/routes/founder.js
+
+router.get('/analytics', protect, authorize('founder'), async (req, res) => {
+  try {
+    const startup = await Startup.findOne({ founderId: req.user.id });
+    if (!startup) return res.status(404).json({ success: false, message: 'No startup found' });
+
+    // 1. Stage Performance
+    const stageLabels = ['Idea', 'Problem', 'Solution', 'Market', 'Business'];
+    const stageKeys = ['idea', 'problem', 'solution', 'market', 'business'];
+    const stageScores = stageKeys.map(key => startup.validationStages?.[key]?.score || 0);
+
+    // 2. Growth Tasks (Roadmap) - FIX: Use 'roadmapTasks' and check status string
+    const roadmapTasks = startup.roadmapTasks || [];
+    const completedTasks = roadmapTasks.filter(t => t.status === 'completed').length;
+    const totalTasks = roadmapTasks.length || 10; 
+
+    // 3. Overall Progress
+    const validatedStagesCount = Object.values(startup.validationStages || {}).filter(s => s?.isValidated).length;
+    const overallProgress = Math.round((validatedStagesCount / 5) * 100);
+
+    res.json({
+      success: true,
+      analytics: {
+        stagePerformance: {
+          labels: stageLabels,
+          scores: stageScores
+        },
+        growthTasks: { // Keep this name for frontend compatibility
+          completed: completedTasks,
+          total: totalTasks,
+          pending: totalTasks - completedTasks
+        },
+        validationProgress: {
+            completed: validatedStagesCount,
+            total: 5
+        },
+        overallProgress: overallProgress,
+        validationScore: startup.validationScore || 0
+      }
+    });
+  } catch (error) {
+    console.error('Analytics Error:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+// ... module.exports ...
+// ==========================================
+// Founder sends request to Provider
+// ==========================================
+router.post('/request-intro', protect, async (req, res) => {
+  try {
+    const { providerId, message } = req.body;
+
+    if (!providerId) {
+      return res.status(400).json({ message: 'providerId is required' });
+    }
+
+    // 1. Get Startup info (Context)
+    const startup = await Startup.findOne({ founderId: req.user.id });
+    if (!startup) {
+      return res.status(404).json({ message: 'Startup not found' });
+    }
+
+    // 2. Prevent duplicates
+    const existingRequest = await IntroRequest.findOne({
+      providerId: providerId,
+      founderId: req.user.id,
+      startupId: startup._id,
+      status: { $in: ['pending', 'accepted'] }
+    });
+
+    if (existingRequest) {
+      return res.status(409).json({ message: 'Request already exists' });
+    }
+
+    // 3. Create Request (Founder is sender, Provider is receiver)
+    const request = await IntroRequest.create({
+      providerId: providerId,     // Receiver (Provider User ID)
+      founderId: req.user.id,       // Sender (Founder User ID)
+      startupId: startup._id,
+      message: message,              // "How I can help"
+      status: 'pending'
+    });
+
+    res.status(201).json({
+      message: 'Request sent to provider',
+      request
+    });
+  } catch (error) {
+    console.error('Founder request error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+// backend/routes/founder.js
+
+// ... existing imports ...
+
+// @route   GET /api/founder/requests
+// @desc    Get incoming requests for founder
+// @route   GET /api/founder/requests
+router.get('/requests', protect, async (req, res) => {
+  try {
+    // ✅ FIX: Only show requests SENT TO ME (initiator != 'founder')
+    const requests = await IntroRequest.find({ 
+      founderId: req.user.id,
+      initiator: { $ne: 'founder' } 
+    })
+      .populate('providerId', 'name email profilePicture')
+      .populate('startupId', 'name')
+      .sort({ createdAt: -1 });
+    res.json(requests);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+router.put('/requests/:id/accept', protect, async (req, res) => {
+  try {
+    const request = await IntroRequest.findById(req.params.id).populate('providerId startupId');
+    if (!request) return res.status(404).json({ message: 'Not found' });
+
+    if (request.founderId.toString() !== req.user.id) return res.status(403).json({ message: 'Forbidden' });
+
+    request.status = 'accepted';
+    await request.save();
+
+    // ✅ NOTIFY PROVIDER
+    const notification = await Notification.create({
+      userId: request.providerId._id,
+      type: 'request_accepted',
+      title: 'Request Accepted!',
+      message: `Your request for ${request.startupId.name} was accepted.`,
+      relatedId: request._id
+    });
+
+    const io = req.app.get('socketio');
+    if (io) {
+      io.to(`user:${request.providerId._id}`).emit('newNotification', notification);
+      // Also notify specifically that their sent request status changed
+      io.to(request.providerId._id.toString()).emit('requestStatusUpdate', { 
+        requestId: request._id, 
+        status: 'accepted' 
+      });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+router.put('/requests/:id/reject', protect, async (req, res) => {
+  try {
+    const request = await IntroRequest.findById(req.params.id).populate('providerId startupId');
+    if (!request) return res.status(404).json({ message: 'Not found' });
+    
+    if (request.founderId.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    request.status = 'rejected';
+    await request.save();
+
+    // ✅ NOTIFY PROVIDER
+    const notification = await Notification.create({
+      userId: request.providerId._id,
+      type: 'request_rejected',
+      title: 'Request Update',
+      message: `Your request for ${request.startupId.name} was declined.`,
+      relatedId: request._id
+    });
+
+    const io = req.app.get('socketio');
+    if (io) {
+      io.to(request.providerId._id.toString()).emit('newNotification', notification);
+      io.to(request.providerId._id.toString()).emit('requestStatusUpdate', { 
+        requestId: request._id, 
+        status: 'rejected' 
+      });
+    }
+
+    res.json({ success: true, message: 'Request rejected' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+router.post('/send-request', protect, async (req, res) => {
+  const { providerId, message, servicesOffered } = req.body;
+
+  try {
+    const startup = await Startup.findOne({ founderId: req.user.id });
+    if (!startup) return res.status(400).json({ message: 'Create a startup first.' });
+
+    const existing = await IntroRequest.findOne({
+      providerId: providerId,
+      founderId: req.user.id,
+      status: { $in: ['pending', 'accepted'] }
+    });
+
+    if (existing) return res.status(400).json({ message: 'Request already sent.' });
+
+    const newRequest = await IntroRequest.create({
+      providerId: providerId,
+      founderId: req.user.id,
+      startupId: startup._id,
+      message,
+      servicesOffered,
+      status: 'pending',
+      initiator: 'founder' // ✅ FIX: Set initiator
+    });
+
+    res.json({ success: true, request: newRequest });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+// @route   GET /api/founder/requests/sent
+// @desc    Get requests sent BY the founder
+router.get('/requests/sent', protect, async (req, res) => {
+  try {
+    const requests = await IntroRequest.find({ 
+      founderId: req.user.id, 
+      initiator: 'founder' 
+    })
+      .populate('providerId', 'name email profilePicture')
+      .populate('startupId', 'name')
+      .sort({ createdAt: -1 });
+    res.json(requests);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
 module.exports = router;

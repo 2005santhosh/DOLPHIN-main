@@ -78,7 +78,19 @@ const startupSchema = new mongoose.Schema({
   investorInterests: [investorInterestSchema],
   auditLogs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Log' }],
   createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: { type: Date, default: Date.now },
+  roadmapTasks: [
+    {
+      key: { type: String }, // e.g., 'mvp-features'
+      title: { type: String },
+      description: { type: String },
+      phase: { type: String }, // e.g., 'Pre-Build', 'Launch'
+      points: { type: Number, default: 50 },
+      order: { type: Number },
+      status: { type: String, enum: ['locked', 'unlocked', 'completed'], default: 'locked' },
+      completedAt: { type: Date }
+    }
+  ],
 });
 
 module.exports = mongoose.model('Startup', startupSchema);

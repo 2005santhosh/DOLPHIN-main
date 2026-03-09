@@ -107,7 +107,12 @@ const api = {
       body: JSON.stringify({ milestoneId, isCompleted })
     });
   },
-
+  async updateStartup(startupData) {
+    return this.request('/founder/my-startup', {
+      method: 'PUT',
+      body: JSON.stringify(startupData)
+    });
+  },
   async getValidatedStartups() {
     return this.request('/investor/validated-startups');
   },
@@ -116,7 +121,19 @@ const api = {
   async getEligibleFounders() {
     return this.request('/provider/eligible-founders');
   },
-
+  async getNotifications() {
+    return this.request('/notifications');
+  },
+  async markAllRead() {
+    return this.request('/notifications/read-all', {
+      method: 'PUT'
+    });
+  },
+  async clearNotifications() {
+    return this.request('/notifications/clear', {
+      method: 'DELETE'
+    });
+  },
   async getMyRequests() {
     const data = await this.request('/provider/my-requests');
     // Backend returns { requests, stats }
@@ -198,9 +215,33 @@ const api = {
   },
 
   // Delete account (all roles)
+    // Delete account (all roles)
   async deleteAccount() {
     return this.request('/auth/account', { method: 'DELETE' });
-  }
+  },
+
+  // Analytics endpoints
+  async getAnalytics() {
+    return this.request('/founder/analytics');
+  },
+
+  async getResources() {
+    return this.request('/resources');
+  },
+ // frontend/js/api.js
+
+  // Get Roadmap Tasks
+  async getRoadmap() {
+    return this.request('/founder/roadmap');
+  },
+
+  // Complete Roadmap Task
+  async completeRoadmapTask(taskKey) {
+    return this.request('/founder/roadmap/complete', {
+      method: 'POST',
+      body: JSON.stringify({ taskKey })
+    });
+  },
 };
 
 // Expose globally

@@ -1,5 +1,6 @@
 /* Professional Design System */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+
 :root {
     /* Colors */
     --primary: #1e40af;
@@ -10,10 +11,7 @@
     --surface-2: #f1f5f9;
     --border: #e2e8f0;
     --text-primary: #1e293b;
-    --text-secondary: #647569;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --error: #ef4444;
+    --text-secondary: #64748b;
     
     /* Spacing */
     --spacing-xs: 4px;
@@ -25,13 +23,11 @@
     /* Border Radius */
     --radius-sm: 6px;
     --radius-md: 8px;
-    --radius-lg: 12px;
+    --radius-lg: 16px;
     
     /* Shadows */
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     
     /* Transitions */
     --transition: all 0.2s ease;
@@ -52,60 +48,29 @@ body {
     align-items: center;
     min-height: 100vh;
     margin: 0;
-    overflow: auto;
-    position: relative;
     padding: var(--spacing-md);
-}
-
-/* Background pattern */
-body::before {
-    content: '';
-    position: fixed;
-    width: 100%;
-    height: 100%;
-    background-image: 
-        radial-gradient(circle at 20% 50%, rgba(30, 64, 175, 0.05) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(30, 64, 175, 0.05) 0%, transparent 50%),
-        radial-gradient(circle at 40% 20%, rgba(30, 64, 175, 0.05) 0%, transparent 50%);
-    z-index: -1;
 }
 
 .register-container {
     display: flex;
     width: 100%;
     max-width: 900px;
-    max-height: 90vh;
     background: var(--surface);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-xl);
+    box-shadow: var(--shadow-lg);
     overflow: hidden;
 }
 
-/* Left side - Image */
+/* Left side - Branding */
 .image-section {
     flex: 0 0 40%;
     background: linear-gradient(135deg, var(--primary), var(--primary-hover));
     position: relative;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: var(--spacing-lg);
-    min-height: 300px;
-}
-
-.image-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: url('https://picsum.photos/seed/startup/400/500.jpg');
-    background-size: cover;
-    background-position: center;
-    opacity: 0.3;
+    padding: var(--spacing-xl);
 }
 
 .image-overlay {
@@ -118,7 +83,7 @@ body::before {
     font-size: 2.5rem;
     font-weight: 800;
     color: white;
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
     letter-spacing: -1px;
 }
 
@@ -127,35 +92,29 @@ body::before {
     color: white;
     font-weight: 300;
     opacity: 0.9;
-    line-height: 1.4;
 }
 
 /* Right side - Form */
 .form-section {
     flex: 0 0 60%;
-    padding: var(--spacing-lg);
+    padding: var(--spacing-xl);
     display: flex;
     flex-direction: column;
     justify-content: center;
-    overflow-y: auto;
 }
 
 h2 {
     font-size: 1.75rem;
     font-weight: 700;
-    margin-bottom: var(--spacing-sm);
-    letter-spacing: -0.5px;
-    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
 }
 
 .subtitle {
     color: var(--text-secondary);
-    font-size: 1rem;
-    margin-bottom: var(--spacing-md);
-    line-height: 1.5;
+    margin-bottom: var(--spacing-lg);
 }
 
-/* Form */
+/* Form Elements */
 .form-group {
     margin-bottom: var(--spacing-md);
 }
@@ -165,12 +124,11 @@ label {
     font-size: 0.875rem;
     font-weight: 500;
     margin-bottom: var(--spacing-xs);
-    color: var(--text-primary);
 }
 
 input {
     width: 100%;
-    padding: var(--spacing-md);
+    padding: 14px var(--spacing-md);
     background: var(--surface-2);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
@@ -185,35 +143,25 @@ input:focus {
     box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
 }
 
-/* Password Input Container */
+/* Password Toggle */
 .password-input-container {
     position: relative;
-    display: flex;
-    align-items: center;
 }
 
 .password-input-container input {
-    padding-right: calc(var(--spacing-md) * 2);
+    padding-right: 50px;
 }
 
 .toggle-password {
     position: absolute;
-    right: var(--spacing-sm);
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
     background: none;
     border: none;
     cursor: pointer;
-    padding: var(--spacing-xs);
     color: var(--text-secondary);
-    transition: var(--transition);
     display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-}
-
-.toggle-password:hover {
-    color: var(--primary);
 }
 
 .toggle-password svg {
@@ -223,27 +171,25 @@ input:focus {
 
 /* Role Selector */
 .role-selector {
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
 }
 
 .role-label {
     font-size: 0.875rem;
     font-weight: 500;
     margin-bottom: var(--spacing-sm);
-    color: var(--text-primary);
 }
 
 .role-buttons {
     display: flex;
     gap: var(--spacing-sm);
-    justify-content: center;
-    flex-wrap: wrap;
 }
 
 .role-btn {
-    padding: var(--spacing-md) var(--spacing-lg);
+    flex: 1;
+    padding: var(--spacing-md);
     border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     background: var(--surface-2);
     color: var(--text-secondary);
     font-weight: 600;
@@ -252,14 +198,12 @@ input:focus {
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 100px;
-    min-height: 80px;
+    gap: var(--spacing-xs);
 }
 
 .role-btn:hover {
     border-color: var(--primary);
     transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
 }
 
 .role-btn.active {
@@ -271,12 +215,11 @@ input:focus {
 .role-icon {
     width: 24px;
     height: 24px;
-    margin-bottom: var(--spacing-xs);
 }
 
 .btn {
     width: 100%;
-    padding: var(--spacing-md);
+    padding: 14px;
     background: var(--primary);
     color: white;
     border: none;
@@ -285,7 +228,6 @@ input:focus {
     font-size: 1rem;
     cursor: pointer;
     transition: var(--transition);
-    margin-top: var(--spacing-md);
 }
 
 .btn:hover {
@@ -298,8 +240,7 @@ input:focus {
     text-align: center;
     font-size: 0.875rem;
     color: var(--text-secondary);
-    margin-top: var(--spacing-sm);
-    line-height: 1.5;
+    margin-top: var(--spacing-lg);
 }
 
 .footer-text a {
@@ -308,104 +249,35 @@ input:focus {
     font-weight: 600;
 }
 
-.footer-text a:hover {
-    text-decoration: underline;
-}
+/* ==========================================
+   RESPONSIVE - MOBILE
+   ========================================== */
 
-/* Google Login Button */
-.google-login-container {
-    margin-top: var(--spacing-md);
-    text-align: center;
-}
-
-.divider {
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-    margin-bottom: var(--spacing-sm);
-    position: relative;
-}
-
-.divider::before,
-.divider::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: 40%;
-    height: 1px;
-    background-color: var(--border);
-}
-
-.divider::before {
-    left: 0;
-}
-
-.divider::after {
-    right: 0;
-}
-
-.google-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--spacing-sm);
-    width: 100%;
-    padding: var(--spacing-md);
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    color: var(--text-primary);
-    font-weight: 500;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.google-btn:hover {
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
-}
-
-.google-icon {
-    width: 18px;
-    height: 18px;
-}
-
-/* Animation */
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Responsive */
 @media (max-width: 768px) {
     body {
-        padding: var(--spacing-sm);
+        padding: 0;
+        align-items: flex-start; /* Start from top */
     }
     
     .register-container {
         flex-direction: column;
         width: 100%;
-        max-height: none;
-        border-radius: var(--radius-lg);
+        border-radius: 0;
+        box-shadow: none;
+        min-height: 100vh;
     }
 
+    /* Compact Header on Mobile */
     .image-section {
-        flex: 0 0 200px;
-        background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-        min-height: 200px;
-    }
-
-    .image-section::before {
-        background-image: url('https://picsum.photos/seed/startup/400/200.jpg');
-    }
-
-    .image-overlay {
-        position: static;
-        transform: none;
-        padding: var(--spacing-md);
+        flex: 0 0 auto;
+        width: 100%;
+        padding: var(--spacing-lg);
+        min-height: auto;
     }
 
     .logo-large {
         font-size: 2rem;
+        margin-bottom: var(--spacing-xs);
     }
 
     .tagline {
@@ -414,8 +286,8 @@ input:focus {
 
     .form-section {
         flex: 1;
-        padding: var(--spacing-md);
-        max-height: none;
+        padding: var(--spacing-lg);
+        width: 100%;
     }
 
     h2 {
@@ -423,137 +295,41 @@ input:focus {
     }
 
     .subtitle {
-        font-size: 0.95rem;
         margin-bottom: var(--spacing-md);
     }
+}
 
-    .form-group {
-        margin-bottom: var(--spacing-sm);
+@media (max-width: 480px) {
+    .image-section {
+        padding: var(--spacing-md);
     }
 
-    input {
-        padding: calc(var(--spacing-md) - 4px);
-        font-size: 0.95rem;
+    .form-section {
+        padding: var(--spacing-md);
     }
 
-    .password-input-container input {
-        padding-right: calc(var(--spacing-md) * 1.5);
-    }
-
-    .toggle-password {
-        right: var(--spacing-xs);
-    }
-
-    .role-selector {
-        margin-bottom: var(--spacing-md);
-    }
-
-    .role-label {
-        font-size: 0.8rem;
-        margin-bottom: var(--spacing-xs);
-    }
-
+    /* Stack role buttons on very small screens if needed */
     .role-buttons {
-        gap: var(--spacing-xs);
+        flex-wrap: wrap;
     }
-
+    
     .role-btn {
-        width: 90px;
-        padding: var(--spacing-sm) var(--spacing-md);
-        min-height: 70px;
+        padding: var(--spacing-sm);
+        font-size: 0.9rem;
     }
 
     .role-icon {
         width: 20px;
         height: 20px;
-        margin-bottom: calc(var(--spacing-xs) / 2);
-    }
-
-    .btn {
-        padding: calc(var(--spacing-md) - 4px);
-        font-size: 0.95rem;
-        margin-top: var(--spacing-sm);
-    }
-
-    .google-login-container {
-        margin-top: var(--spacing-md);
-    }
-
-    .divider {
-        margin-bottom: calc(var(--spacing-xs) / 2);
-    }
-
-    .google-btn {
-        padding: calc(var(--spacing-md) - 4px);
-        font-size: 0.95rem;
-    }
-}
-
-/* Extra small devices */
-@media (max-width: 480px) {
-    body {
-        padding: var(--spacing-xs);
-    }
-    
-    .register-container {
-        border-radius: var(--radius-md);
-    }
-
-    .image-section {
-        flex: 0 0 150px;
-        min-height: 150px;
-        padding: var(--spacing-sm);
-    }
-
-    .logo-large {
-        font-size: 1.75rem;
-    }
-
-    .tagline {
-        font-size: 0.9rem;
-    }
-
-    .form-section {
-        padding: var(--spacing-sm);
-    }
-
-    h2 {
-        font-size: 1.25rem;
-    }
-
-    .subtitle {
-        font-size: 0.9rem;
-        margin-bottom: var(--spacing-sm);
     }
 
     input {
-        padding: calc(var(--spacing-md) - 6px);
-        font-size: 0.9rem;
+        /* Prevent zoom on iOS */
+        font-size: 16px; 
     }
-
-    .password-input-container input {
-        padding-right: calc(var(--spacing-md) * 1.2);
-    }
-
-    .role-btn {
-        width: 80px;
-        padding: var(--spacing-xs) var(--spacing-sm);
-        min-height: 60px;
-    }
-
-    .role-icon {
-        width: 18px;
-        height: 18px;
-        margin-bottom: calc(var(--spacing-xs) / 3);
-    }
-
-    .btn {
-        padding: calc(var(--spacing-md) - 6px);
-        font-size: 0.9rem;
-    }
-
-    .google-btn {
-        padding: calc(var(--spacing-md) - 6px);
-        font-size: 0.9rem;
+    
+    .footer-text {
+        margin-top: var(--spacing-md);
+        padding-bottom: var(--spacing-md);
     }
 }

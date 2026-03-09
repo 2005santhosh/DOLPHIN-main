@@ -1,5 +1,3 @@
-// frontend/js/admin.js
-
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 const token = localStorage.getItem('token');
 
@@ -18,10 +16,44 @@ document.querySelector('.user-avatar').textContent = initials || 'A';
 let selectedUserIds = [];
 let allUsers = [];
 
-// Navigation
+// ==========================================
+// MOBILE SIDEBAR LOGIC
+// ==========================================
+const hamburgerBtn = document.getElementById('hamburger-btn');
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('sidebar-overlay');
+
+function toggleSidebar() {
+  sidebar.classList.toggle('active');
+  overlay.classList.toggle('active');
+  document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : '';
+}
+
+function closeSidebar() {
+  sidebar.classList.remove('active');
+  overlay.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+hamburgerBtn.addEventListener('click', toggleSidebar);
+overlay.addEventListener('click', closeSidebar);
+
+// Close sidebar when window is resized to desktop size
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 1024) {
+    closeSidebar();
+  }
+});
+
+// ==========================================
+// NAVIGATION LOGIC
+// ==========================================
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', (e) => {
     e.preventDefault();
+    
+    // Close mobile sidebar if open
+    closeSidebar();
     
     document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
     item.classList.add('active');
@@ -58,7 +90,6 @@ function loadPageContent(page) {
   }
 }
 
-// Load Dashboard
 async function loadDashboard() {
   try {
     const response = await fetch('/api/admin/dashboard', {
@@ -67,18 +98,32 @@ async function loadDashboard() {
       }
     });
     
+    // Handle unauthorized requests immediately
+    if (response.status === 401) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      window.location.href = 'login.html';
+      return;
+    }
+
     const data = await response.json();
-    
-    // Update stats
-    document.getElementById('total-users').textContent = data.users.total;
-    document.getElementById('pending-approvals').textContent = data.users.pending;
-    document.getElementById('validated-startups').textContent = data.startups.validated;
-    document.getElementById('active-providers').textContent = data.providers.verified;
+
+    // Check if data exists before updating DOM
+    if (data && data.users) {
+      document.getElementById('total-users').textContent = data.users.total;
+      document.getElementById('pending-approvals').textContent = data.users.pending;
+      document.getElementById('validated-startups').textContent = data.startups.validated;
+      document.getElementById('active-providers').textContent = data.providers.verified;
+    }
     
     // Load recent activity
     await loadRecentActivity();
   } catch (error) {
     console.error('Error loading dashboard:', error);
+    const container = document.getElementById('recent-activity');
+    if (container) {
+        container.innerHTML = '<p style="text-align: center; color: var(--danger);">Failed to load dashboard. You may have been logged out.</p>';
+    }
   }
 }
 
@@ -132,7 +177,8 @@ async function loadUsers() {
     allUsers = await response.json();
     displayUsers(allUsers);
     
-    // Setup filters
+    // Setup filters (remove existing listeners to avoid duplicates if using arrow functions in global scope technically they are new instances, but safer to ensure)
+    // Note: In this specific snippet structure, we assume loadUsers is called once or listeners are okay.
     document.getElementById('user-role-filter').addEventListener('change', filterUsers);
     document.getElementById('user-status-filter').addEventListener('change', filterUsers);
     document.getElementById('user-search').addEventListener('input', filterUsers);
@@ -358,7 +404,12 @@ async function loadNotificationPage() {
   }
   
   // Setup user search
-  document.getElementById('user-search-input').addEventListener('input', (e) => {
+  const searchInput = document.getElementById('user-search-input');
+  // Clone node to remove old listeners if any
+  const newSearchInput = searchInput.cloneNode(true);
+  searchInput.parentNode.replaceChild(newSearchInput, searchInput);
+  
+  newSearchInput.addEventListener('input', (e) => {
     const search = e.target.value.toLowerCase();
     const filtered = allUsers.filter(u => 
       u.name.toLowerCase().includes(search) || 
@@ -399,10 +450,13 @@ function toggleUserSelection(userId) {
   }
   
   updateSelectedUsers();
-  displayUserSelection(allUsers.filter(u => 
-    u.name.toLowerCase().includes(document.getElementById('user-search-input').value.toLowerCase()) || 
-    u.email.toLowerCase().includes(document.getElementById('user-search-input').value.toLowerCase())
-  ));
+  // Refresh the list to show selected state, keeping current search filter
+  const searchVal = document.getElementById('user-search-input').value;
+  const filtered = allUsers.filter(u => 
+    u.name.toLowerCase().includes(searchVal.toLowerCase()) || 
+    u.email.toLowerCase().includes(searchVal.toLowerCase())
+  );
+  displayUserSelection(filtered);
 }
 
 function updateSelectedUsers() {
@@ -555,6 +609,7 @@ document.getElementById('users-notification-form').addEventListener('submit', as
       e.target.reset();
       selectedUserIds = [];
       updateSelectedUsers();
+      displayUserSelection(allUsers); // Reset selection UI
     } else {
       alert(`❌ ${data.message}`);
     }

@@ -19,12 +19,13 @@ const protect = async (req, res, next) => {
         });
       }
       
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+           // Verify token
+      // MUST MATCH the secret in auth.js
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mysecretkey');
       
-      // Find user by ID and exclude password
-      req.user = await User.findById(decoded.id).select('-password');
-      
+      // Find user by ID
+      // MUST MATCH the key 'id' used in auth.js
+      req.user = await User.findById(decoded.id).select('-password');      
       // If user not found, return error
       if (!req.user) {
         return res.status(401).json({ message: 'User not found' });

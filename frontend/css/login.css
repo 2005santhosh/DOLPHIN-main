@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+
 :root {
     /* Colors */
     --primary: #1e40af;
@@ -9,9 +10,8 @@
     --surface-2: #f1f5f9;
     --border: #e2e8f0;
     --text-primary: #1e293b;
-    --text-secondary: #647569;
+    --text-secondary: #64748b; /* Fixed typo from #647569 */
     --success: #10b981;
-    --warning: #f59e0b;
     --error: #ef4444;
     
     /* Spacing */
@@ -24,13 +24,12 @@
     /* Border Radius */
     --radius-sm: 6px;
     --radius-md: 8px;
-    --radius-lg: 12px;
+    --radius-lg: 16px;
     
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     
     /* Transitions */
     --transition: all 0.2s ease;
@@ -51,34 +50,22 @@ body {
     align-items: center;
     min-height: 100vh;
     margin: 0;
-    overflow: hidden;
-    position: relative;
     padding: var(--spacing-md);
-}
-
-/* Background pattern */
-body::before {
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 100%;
+    /* Background pattern */
     background-image: 
         radial-gradient(circle at 20% 50%, rgba(30, 64, 175, 0.05) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(30, 64, 175, 0.05) 0%, transparent 50%),
-        radial-gradient(circle at 40% 20%, rgba(30, 64, 175, 0.05) 0%, transparent 50%);
-    z-index: -1;
+        radial-gradient(circle at 80% 80%, rgba(30, 64, 175, 0.05) 0%, transparent 50%);
 }
 
 .login-container {
     display: flex;
     width: 100%;
     max-width: 900px;
-    height: auto;
-    min-height: 500px;
     background: var(--surface);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-xl);
+    box-shadow: var(--shadow-lg);
     overflow: hidden;
+    min-height: 500px;
 }
 
 /* Left side - Branding */
@@ -94,7 +81,6 @@ body::before {
     text-align: center;
     position: relative;
     overflow: hidden;
-    min-height: 400px;
 }
 
 .branding::before {
@@ -114,17 +100,15 @@ body::before {
     margin-bottom: var(--spacing-md);
     position: relative;
     z-index: 1;
-    letter-spacing: -1px;
 }
 
 .tagline {
     font-size: 1.1rem;
     font-weight: 300;
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
     position: relative;
     z-index: 1;
     opacity: 0.9;
-    line-height: 1.4;
 }
 
 .features {
@@ -150,9 +134,7 @@ body::before {
 
 .feature-text {
     font-size: 0.9rem;
-    font-weight: 400;
     opacity: 0.9;
-    line-height: 1.3;
 }
 
 /* Right side - Login Form */
@@ -168,15 +150,11 @@ h2 {
     font-size: 1.75rem;
     font-weight: 700;
     margin-bottom: var(--spacing-sm);
-    letter-spacing: -0.5px;
-    color: var(--text-primary);
 }
 
 .subtitle {
     color: var(--text-secondary);
-    font-size: 1rem;
     margin-bottom: var(--spacing-lg);
-    line-height: 1.5;
 }
 
 .form-group {
@@ -188,12 +166,11 @@ label {
     font-size: 0.875rem;
     font-weight: 500;
     margin-bottom: var(--spacing-xs);
-    color: var(--text-primary);
 }
 
 input {
     width: 100%;
-    padding: var(--spacing-md);
+    padding: 14px var(--spacing-md);
     background: var(--surface-2);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
@@ -216,23 +193,25 @@ input:focus {
 }
 
 .password-input-container input {
-    padding-right: calc(var(--spacing-md) * 2);
+    padding-right: 50px; /* Space for icon */
 }
 
 .toggle-password {
     position: absolute;
-    right: var(--spacing-sm);
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
     background: none;
     border: none;
     cursor: pointer;
-    padding: var(--spacing-xs);
+    padding: 0;
     color: var(--text-secondary);
     transition: var(--transition);
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
     height: 24px;
+    width: 24px;
 }
 
 .toggle-password:hover {
@@ -246,7 +225,7 @@ input:focus {
 
 .btn {
     width: 100%;
-    padding: var(--spacing-md);
+    padding: 14px;
     background: var(--primary);
     color: white;
     border: none;
@@ -264,58 +243,11 @@ input:focus {
     box-shadow: var(--shadow-md);
 }
 
-.divider {
-    display: flex;
-    align-items: center;
-    margin: var(--spacing-xl) 0;
-}
-
-.divider::before {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-}
-
-.divider span {
-    padding: 0 var(--spacing-md);
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-}
-
-.social-login {
-    display: flex;
-    justify-content: center;
-    margin-bottom: var(--spacing-xl);
-}
-
-.social-btn {
-    padding: var(--spacing-md);
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    color: var(--text-primary);
-    font-weight: 500;
-    cursor: pointer;
-    transition: var(--transition);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--spacing-sm);
-    width: 100%;
-    max-width: 300px;
-}
-
-.social-btn:hover {
-    background: var(--background);
-    border-color: var(--primary);
-}
-
 .footer-text {
     text-align: center;
     font-size: 0.875rem;
     color: var(--text-secondary);
-    line-height: 1.5;
+    margin-top: var(--spacing-xl);
 }
 
 .footer-text a {
@@ -330,147 +262,82 @@ input:focus {
 
 /* Animation */
 @keyframes pulse {
-    0%, 100% { opacity: 0.1; }
-    50% { opacity: 0.2; }
+    0%, 100% { opacity: 0.1; transform: scale(1); }
+    50% { opacity: 0.2; transform: scale(1.05); }
 }
 
-/* Responsive */
+/* ==========================================
+   RESPONSIVE - MOBILE FIRST
+   ========================================== */
+
+/* Tablets and below */
 @media (max-width: 768px) {
-    body {
-        padding: var(--spacing-sm);
-    }
-    
     .login-container {
         flex-direction: column;
-        height: auto;
         min-height: auto;
-        border-radius: var(--radius-lg);
-        max-width: 100%;
+        margin: auto;
     }
 
+    /* Make branding a small header on mobile */
     .branding {
         padding: var(--spacing-lg);
-        min-height: 250px;
-        max-height: 300px;
+        min-height: auto; /* Auto height based on content */
+        width: 100%;
+        border-radius: 0; /* Remove inner radius if needed */
     }
-
-    .logo {
-        font-size: 2rem;
-        margin-bottom: var(--spacing-sm);
-    }
-
-    .tagline {
-        font-size: 1rem;
-        margin-bottom: var(--spacing-md);
-        padding: 0 var(--spacing-md);
-    }
-
+    
+    /* Hide features on mobile to save space */
     .features {
         display: none;
     }
 
+    .logo {
+        font-size: 1.75rem;
+        margin-bottom: var(--spacing-xs);
+    }
+
+    .tagline {
+        font-size: 0.95rem;
+        margin-bottom: 0;
+        opacity: 0.9;
+    }
+
     .login-form-container {
         padding: var(--spacing-lg);
+        width: 100%;
+        flex: 1;
     }
 
     h2 {
         font-size: 1.5rem;
-        margin-bottom: var(--spacing-sm);
-    }
-
-    .subtitle {
-        font-size: 0.95rem;
-        margin-bottom: var(--spacing-md);
-    }
-
-    .form-group {
-        margin-bottom: var(--spacing-sm);
-    }
-
-    input {
-        padding: calc(var(--spacing-md) - 4px);
-        font-size: 0.95rem;
-    }
-
-    .password-input-container input {
-        padding-right: calc(var(--spacing-md) * 1.5);
-    }
-
-    .toggle-password {
-        right: var(--spacing-xs);
-    }
-
-    .btn {
-        padding: calc(var(--spacing-md) - 4px);
-        font-size: 0.95rem;
-        margin-top: var(--spacing-sm);
-    }
-
-    .divider {
-        margin: var(--spacing-lg) 0;
-    }
-
-    .social-login {
-        margin-bottom: var(--spacing-lg);
-    }
-
-    .social-btn {
-        padding: calc(var(--spacing-md) - 4px);
-        font-size: 0.95rem;
-    }
-
-    .footer-text {
-        font-size: 0.8rem;
     }
 }
 
-/* Extra small devices */
+/* Extra small devices (Phones) */
 @media (max-width: 480px) {
     body {
-        padding: var(--spacing-xs);
+        padding: 0;
+        background: var(--surface); /* Solid background for immersion */
+        align-items: flex-start; /* Start from top */
     }
     
     .login-container {
-        border-radius: var(--radius-md);
+        border-radius: 0;
+        box-shadow: none;
+        min-height: 100vh; /* Full height */
     }
 
     .branding {
         padding: var(--spacing-md);
-        min-height: 200px;
-    }
-
-    .logo {
-        font-size: 1.75rem;
-    }
-
-    .tagline {
-        font-size: 0.9rem;
-        padding: 0 var(--spacing-sm);
     }
 
     .login-form-container {
-        padding: var(--spacing-md);
-    }
-
-    h2 {
-        font-size: 1.25rem;
-    }
-
-    .subtitle {
-        font-size: 0.9rem;
+        padding: var(--spacing-lg) var(--spacing-md);
+        justify-content: flex-start; /* Align to top */
+        padding-top: var(--spacing-xl);
     }
 
     input {
-        padding: calc(var(--spacing-md) - 6px);
-        font-size: 0.9rem;
-    }
-
-    .password-input-container input {
-        padding-right: calc(var(--spacing-md) * 1.2);
-    }
-
-    .btn {
-        padding: calc(var(--spacing-md) - 6px);
-        font-size: 0.9rem;
+        font-size: 16px; /* Prevents iOS zoom on focus */
     }
 }

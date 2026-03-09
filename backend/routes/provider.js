@@ -6,14 +6,17 @@ const checkStageAccess = require('../middleware/stageGating');
 const Startup = require('../models/Startup');
 const Provider = require('../models/Provider');
 const IntroRequest = require('../models/IntroRequest');
-
+const Notification = require('../models/Notification');
+const User = require('../models/User');
 // ==========================================
 // 1. Get or create provider profile
 // ==========================================
+// @route   GET /api/provider/profile
 router.get('/profile', protect, async (req, res) => {
   try {
+    // ✅ 1. Populate 'ratings' from the User model
     let provider = await Provider.findOne({ userId: req.user.id })
-      .populate('userId', 'name email state stage');
+      .populate('userId', 'name email state stage profilePicture ratings'); // Added ratings
     
     if (!provider) {
       return res.status(404).json({ 
@@ -22,8 +25,22 @@ router.get('/profile', protect, async (req, res) => {
       });
     }
 
-    res.json(provider);
+    // ✅ 2. Calculate Average Rating
+    const user = provider.userId || {};
+    const ratings = user.ratings || [];
+    const totalScore = ratings.reduce((sum, r) => sum + (r.score || 0), 0);
+    const avgRating = ratings.length > 0 ? (totalScore / ratings.length) : 0;
+
+    // ✅ 3. Return response with avgRating attached
+    res.json({
+      ...provider.toObject(),
+      avgRating: avgRating.toFixed(1), // Add calculated rating
+      // Ensure userId data is easily accessible if needed
+      name: user.name || provider.name,
+      profilePicture: user.profilePicture
+    });
   } catch (error) {
+    console.error('Error fetching provider profile:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -73,108 +90,51 @@ router.put('/profile', protect, async (req, res) => {
 // ==========================================
 // 3. Get eligible founders (STRICT 5-STAGE LOGIC + UNIVERSAL VISIBILITY)
 // ==========================================
+// backend/routes/provider.js
+
+// ... existing imports and routes ...
+
+// ==========================================
+// 3. Get eligible founders (STRICT 5-STAGE LOGIC)
+// ==========================================
+// @route   GET /api/provider/eligible-founders
+// @desc    Get list of validated startups for provider to view
 router.get('/eligible-founders', protect, async (req, res) => {
-  
-  console.log('!!! ROUTE HIT: /eligible-founders !!!');
-  console.log('User ID:', req.user.id);
-  
   try {
-    const provider = await Provider.findOne({ userId: req.user.id });
-    if (!provider) {
-      console.log('!! PROVIDER PROFILE NOT FOUND !!');
-      return res.status(404).json({ 
-        message: 'Provider profile not found',
-        nextSteps: 'Create a provider profile first'
-      });
-    }
+    const startups = await Startup.find({ validationScore: { $gte: 70 } })
+      // ✅ CRITICAL: 'state' must be here
+      .populate('founderId', 'name email profilePicture rewardPoints state') 
+      .select('name thesis industry validationScore currentStage founderId');
 
-    const allStartups = await Startup.find()
-      .populate('founderId', 'name email state stage'); 
-
-    console.log(`--- Total Startups in DB: ${allStartups.length} ---`);
-
-    const VALIDATION_STAGES = ['idea', 'problem', 'solution', 'market', 'business'];
-    
-    // FILTER 1: STRICT REQUIREMENT - ALL 5 STAGES MUST BE VALIDATED
-    const eligibleStartups = allStartups.filter(startup => {
-      const stages = startup.validationStages || {};
-      
-      let isEligible = true;
-      
-      for (const stageKey of VALIDATION_STAGES) {
-        const stage = stages[stageKey];
-        const isComplete = stage && (stage.completedAt || stage.isValidated);
-        
-        if (!isComplete) {
-          console.log(`❌ REJECTED "${startup.name}": Missing/Incomplete stage [${stageKey}] (Has data: ${!!stage}, IsValidated: ${!!stage?.isValidated})`);
-          isEligible = false;
-          break;
-        }
-      }
-
-      if (isEligible) {
-        console.log(`✅ PASSED "${startup.name}": All 5 stages validated.`);
-      }
-
-      return isEligible;
-    });
-
-    console.log(`--- Count after Strict Check: ${eligibleStartups.length} ---`);
-
-    // FILTER 2: PROVIDER PREFERENCES (Stage Categories)
-    const providerCategories = provider.stageCategories || [];
-    console.log(`🔍 Provider Stage Categories:`, providerCategories);
-
-    // Updated Logic: 
-    // 1. If a startup is at Stage 5 (Completed All), show them to ALL providers (Universal Match).
-    // 2. Otherwise, respect the Provider's specific category filter.
-    const filteredStartups = eligibleStartups.filter(s => {
-      
-      // SPECIAL RULE: Fully validated founders (Stage 5) are visible to everyone
-      if (s.currentStage === 5) {
-        console.log(`✅ SHOWN "${s.name}": Completed all stages (Stage 5) - Visible to all providers.`);
-        return true;
-      }
-
-      // NORMAL RULE: Respect category preferences for non-completed founders
-      if (providerCategories.length === 0) return true;
-      
-      const isMatch = providerCategories.includes(s.currentStage);
-      if (!isMatch) {
-        console.log(`⚠️  FILTERED OUT "${s.name}": Current Stage ${s.currentStage} not in Provider Categories ${providerCategories}`);
-      }
-      return isMatch;
-    });
-
-    console.log(`--- Final Result Count: ${filteredStartups.length} ---`);
-
-    // Map to response format that matches Frontend expectations
-    const response = filteredStartups.map(startup => {
-      const stages = startup.validationStages || {};
-      const validatedCount = VALIDATION_STAGES.filter(key => stages[key]?.isValidated).length;
+    const eligibleFounders = startups.map(startup => {
+      const user = startup.founderId;
+      if (!user) return null;
 
       return {
-        startupId: startup._id,
+        _id: startup._id,
         startupName: startup.name,
         thesis: startup.thesis,
         industry: startup.industry,
-        currentStage: startup.currentStage,
         validationScore: startup.validationScore,
-        stagesCompleted: 5,
-        stagesValidated: validatedCount,
-        founder: startup.founderId,
-        problemStatement: startup.problemStatement,
-        targetUsers: startup.targetUsers,
-        createdAt: startup.createdAt
+        currentStage: startup.currentStage,
+        founderId: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          profilePicture: user.profilePicture,
+          rewardPoints: user.rewardPoints || 0,
+          state: user.state // ✅ CRITICAL: This must be returned
+        }
       };
-    }).sort((a, b) => b.validationScore - a.validationScore);
+    }).filter(f => f !== null);
 
-    res.json(response);
+    res.json(eligibleFounders);
   } catch (error) {
     console.error('Error fetching eligible founders:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
+// ... existing routes ...
 
 // ==========================================
 // 4. Get verified providers
@@ -271,11 +231,24 @@ router.post('/request-intro', protect, checkStageAccess, async (req, res) => {
 // ==========================================
 // 6. Get provider's requests
 // ==========================================
+// backend/routes/provider.js
+
+// backend/routes/provider.js
+
+// @access  Private
 router.get('/my-requests', protect, async (req, res) => {
   try {
-    const requests = await IntroRequest.find({ providerId: req.user.id })
-      .populate('startupId', 'name thesis validationScore industry')
-      .populate('founderId', 'name email')
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    // ✅ FIX: Only show requests SENT TO ME (initiator == 'founder')
+    const requests = await IntroRequest.find({ 
+      providerId: req.user.id,
+      initiator: 'founder' 
+    })
+      .populate('founderId', 'name email profilePicture')
+      .populate('startupId', 'name industry')
       .sort({ createdAt: -1 });
 
     const requestStats = {
@@ -287,60 +260,39 @@ router.get('/my-requests', protect, async (req, res) => {
 
     res.json({ requests, stats: requestStats });
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error in /my-requests:', error);
+    res.status(500).json({ message: 'Server error fetching requests' });
   }
 });
-
 // ==========================================
 // 7. Update request status
 // ==========================================
+// backend/routes/provider.js
+
+// @route   PUT /api/provider/requests/:id
+// @desc    Update request status (Accept/Reject)
 router.put('/requests/:id', protect, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
     if (!['accepted', 'rejected'].includes(status)) {
-      return res.status(400).json({ 
-        message: 'Invalid status',
-        nextSteps: 'Status must be either "accepted" or "rejected"'
-      });
+      return res.status(400).json({ message: 'Invalid status' });
     }
 
     const request = await IntroRequest.findById(id);
-    if (!request) {
-      return res.status(404).json({ 
-        message: 'Request not found',
-        nextSteps: 'Check the request ID and try again'
-      });
-    }
+    if (!request) return res.status(404).json({ message: 'Request not found' });
 
+    // Security: Only the provider involved can update this
     if (request.providerId.toString() !== req.user.id) {
-      return res.status(403).json({ 
-        message: 'Access denied',
-        nextSteps: 'You can only manage your own requests'
-      });
+      return res.status(403).json({ message: 'Not authorized' });
     }
 
     request.status = status;
     await request.save();
 
-    const provider = await Provider.findOne({ userId: req.user.id });
-    if (provider) {
-      if (status === 'accepted') {
-        provider.engagementCount = (provider.engagementCount || 0) + 1;
-      }
-      provider.responseRate = 100;
-      await provider.save();
-    }
-
-    res.json({
-      message: `Request ${status} successfully`,
-      status: request.status,
-      nextSteps: status === 'accepted' 
-        ? 'Introduction has been approved. Contact information will be shared.' 
-        : 'Introduction request has been rejected.'
-    });
-  } catch (error) {
+    res.json({ success: true, message: `Request ${status}` });
+  } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -375,4 +327,99 @@ router.get('/search', protect, async (req, res) => {
   }
 });
 
+// ==========================================
+// NEW: Provider Sends Request to Founder
+// ==========================================
+router.post('/send-request', protect, async (req, res) => {
+  try {
+    const { startupId, message, servicesOffered } = req.body;
+
+    if (!startupId || !message) {
+      return res.status(400).json({ message: 'Startup ID and Message are required' });
+    }
+
+    // 1. Find the Provider Profile
+    const provider = await Provider.findOne({ userId: req.user.id });
+    if (!provider) return res.status(404).json({ message: 'Provider profile not found' });
+
+    // 2. Find the Startup and Founder
+    const startup = await Startup.findById(startupId).populate('founderId', 'name email');
+    if (!startup) return res.status(404).json({ message: 'Startup not found' });
+    
+    const founder = startup.founderId;
+    if (!founder) return res.status(404).json({ message: 'Founder not found' });
+
+    // 3. Check for existing pending request
+    const existingRequest = await IntroRequest.findOne({
+      providerId: req.user.id,
+      founderId: founder._id,
+      startupId: startup._id,
+      status: 'pending'
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({ message: 'You already have a pending request with this founder' });
+    }
+
+    // 4. Create the Request
+    const newRequest = await IntroRequest.create({
+      providerId: req.user.id,
+      founderId: founder._id,
+      startupId: startup._id,
+      status: 'pending',
+      message: message,
+      servicesOffered: servicesOffered,
+      initiator: 'provider' // ✅ FIX: Set initiator
+    });
+
+    // 5. REAL-TIME: Notify the Founder
+    const notification = await Notification.create({
+      userId: founder._id,
+      title: 'New Connection Request',
+      message: `${provider.name} wants to connect with you!`,
+      type: 'INTRO_REQUEST',
+      read: false
+    });
+
+    // Emit socket event to the specific founder
+    const io = req.app.get('socketio');
+    if (io) {
+      io.to(founder._id.toString()).emit('newNotification', notification);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Request sent successfully!',
+      request: newRequest
+    });
+
+  } catch (error) {
+    console.error('Send Request Error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+// TEMPORARY FIX ROUTE - DELETE AFTER USE
+router.get('/fix-broken-link', async (req, res) => {
+  try {
+    // 1. Find the broken provider
+    const brokenProvider = await Provider.findById('698eb280a54df7a451bf38df');
+    
+    if (!brokenProvider) return res.send('Provider not found');
+
+    // 2. Find the user associated with this provider (by email match if possible, or manual ID)
+    // Since we don't know the user email, you must REPLACE 'USER_ID_HERE' with the actual User ID string
+    const correctUserId = 'USER_ID_HERE'; // <--- PASTE THE CORRECT USER ID HERE
+
+    if (!correctUserId || correctUserId === 'USER_ID_HERE') {
+        return res.send('Please edit the code and paste the correct User ID.');
+    }
+
+    brokenProvider.userId = correctUserId;
+    await brokenProvider.save();
+    
+    res.send(`Fixed! Provider linked to User ${correctUserId}`);
+  } catch (err) {
+    res.send('Error: ' + err.message);
+  }
+});
 module.exports = router;

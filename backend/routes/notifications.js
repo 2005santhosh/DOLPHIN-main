@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
+const Notification = require('../models/Notification');
 const {
   getUserNotifications,
   markAsRead,
@@ -9,49 +10,53 @@ const {
   deleteNotification
 } = require('../services/notificationService');
 
-// Get user's notifications
+// @route   GET /api/notifications
+// @desc    Get all notifications for the current user
+// @access  Private
 router.get('/', protect, async (req, res) => {
   try {
-    const { limit = 50, skip = 0, unreadOnly = false } = req.query;
-    
-    const result = await getUserNotifications(req.user.id, {
-      limit: parseInt(limit),
-      skip: parseInt(skip),
-      unreadOnly: unreadOnly === 'true'
-    });
+    const notifications = await Notification.find({ userId: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(20);
 
-    res.json({
-      success: true,
-      ...result
+    res.json({ 
+      success: true, 
+      notifications 
     });
   } catch (error) {
     console.error('Error fetching notifications:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching notifications'
-    });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Get unread count
+// backend/routes/notifications.js
 router.get('/unread-count', protect, async (req, res) => {
   try {
-    const Notification = require('../models/Notification');
+    // This now matches the static method we added to the model
     const count = await Notification.getUnreadCount(req.user.id);
-
-    res.json({
-      success: true,
-      count
+    
+    res.json({ 
+      success: true, 
+      count 
     });
   } catch (error) {
     console.error('Error fetching unread count:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching unread count'
-    });
+    res.status(500).json({ message: 'Server error' });
   }
 });
+router.put('/read-all', protect, async (req, res) => {
+  try {
+    await Notification.updateMany(
+      { userId: req.user.id, read: false },
+      { $set: { read: true } }
+    );
 
+    res.json({ success: true, message: 'All notifications marked as read' });
+  } catch (error) {
+    console.error('Error marking all read:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 // Mark notification as read
 router.put('/:notificationId/read', protect, async (req, res) => {
   try {
@@ -87,7 +92,17 @@ router.put('/read-all', protect, async (req, res) => {
     });
   }
 });
+// @access  Private
+router.delete('/clear', protect, async (req, res) => {
+  try {
+    await Notification.deleteMany({ userId: req.user.id });
 
+    res.json({ success: true, message: 'All notifications cleared' });
+  } catch (error) {
+    console.error('Error clearing notifications:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 // Delete notification
 router.delete('/:notificationId', protect, async (req, res) => {
   try {
