@@ -1,7 +1,7 @@
 // frontend/js/stateManager.js
 // Production-grade state management for Phase 1-5 implementation
 // Handles state-driven UI rendering, stage gating validation, and visibility/transparency
-
+const API_URL = "http://dolphin-main-production.up.railway.app/api";
 class StateManager {
   constructor() {
     this.user = this.getUser();
@@ -33,7 +33,7 @@ class StateManager {
       const token = localStorage.getItem('token');
       if (!token) return false;
 
-      const response = await fetch('http://localhost:5000/api/auth/profile', {
+      const response = await fetch(`${API_URL}/auth/profile`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

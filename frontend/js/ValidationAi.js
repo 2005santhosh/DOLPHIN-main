@@ -1,5 +1,5 @@
 // Updated validation modal JavaScript - AI scoring only, no manual sliders
-
+const API_URL = "http://dolphin-main-production.up.railway.app/api";
 async function openStageValidationModal(stageKey) {
   const modal = document.getElementById('idea-validation-modal');
   const container = document.getElementById('validation-questions-container');
@@ -10,7 +10,7 @@ async function openStageValidationModal(stageKey) {
   titleEl.textContent = `Validate: ${VALIDATION_STAGES.find(s => s.key === stageKey)?.title || stageKey}`;
 
   try {
-    const response = await fetch(`/api/founder/validate-stage/${stageKey}/questions`, {
+    const response = await fetch(`${API_URL}/founder/validate-stage/${stageKey}/questions`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await response.json();
@@ -171,7 +171,7 @@ async function submitStageValidation(e) {
   submitBtn.style.opacity = '0.7';
 
   try {
-    const response = await fetch(`/api/founder/validate-stage/${stageKey}`, {
+    const response = await fetch(`${API_URL}/founder/validate-stage/${stageKey}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

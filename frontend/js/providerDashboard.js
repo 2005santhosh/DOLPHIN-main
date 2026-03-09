@@ -9,8 +9,9 @@ window.addEventListener('resize', () => {
     document.body.style.overflow = '';
   }
 });
-    const API_BASE = '/api/provider';
-    const AUTH_BASE = '/api/auth';
+    const API_URL = "http://dolphin-main-production.up.railway.app/api";
+    const API_BASE = `${API_URL}/api/provider`;
+    const AUTH_BASE = `${API_URL}/api/auth`;
 
     // Generic Helper to handle Auth headers and errors
     async function apiCall(endpoint, method = 'GET', body = null, base = API_BASE) {
@@ -291,7 +292,7 @@ window.addEventListener('resize', () => {
         try {
             const token = localStorage.getItem('token');
             // 1. Update Backend
-            const res = await fetch('/api/notifications/read-all', {
+            const res = await fetch(`${API_URL}/notifications/read-all`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -320,7 +321,7 @@ window.addEventListener('resize', () => {
             const token = localStorage.getItem('token');
             
             // ✅ FIX: Change URL from '/api/notifications' to '/api/notifications/clear'
-            const res = await fetch('/api/notifications/clear', {
+            const res = await fetch(`${API_URL}/notifications/clear`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -387,7 +388,7 @@ window.addEventListener('resize', () => {
       
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('/api/notifications', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch(`${API_URL}/notifications`, { headers: { 'Authorization': `Bearer ${token}` } });
         const data = await res.json();
         const notifications = data.notifications || [];
         
@@ -415,7 +416,7 @@ window.addEventListener('resize', () => {
     async function updateNotificationBadge() {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('/api/notifications', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch(`${API_URL}/notifications`, { headers: { 'Authorization': `Bearer ${token}` } });
         const data = await res.json();
         const unread = (data.notifications || []).filter(n => !n.read).length;
         const badge = document.getElementById('notif-badge-count');
@@ -1012,7 +1013,7 @@ window.addEventListener('resize', () => {
       if(roleInput) roleInput.value = 'Provider';
       
       // 3. Fetch fresh data
-      fetch('/api/auth/profile', { headers: { 'Authorization': `Bearer ${token}` } })
+      fetch(`${API_URL}/auth/profile`, { headers: { 'Authorization': `Bearer ${token}` } })
         .then(r => {
             if(r.status === 404) return api.getProfile(); // Fallback
             return r.json();
@@ -1076,7 +1077,7 @@ window.addEventListener('resize', () => {
       formData.append('profilePicture', fileInput.files[0]);
 
       try {
-        const res = await fetch('/api/auth/upload-profile-picture', {
+        const res = await fetch(`${API_URL}/auth/upload-profile-picture`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` },
           body: formData
@@ -1102,7 +1103,7 @@ window.addEventListener('resize', () => {
       
       try {
         // 1. Try Auth Route (Best for Name/Notifications)
-        let res = await fetch('/api/auth/profile', {
+        let res = await fetch(`${API_URL}/auth/profile`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ name, emailNotifications })
@@ -1127,7 +1128,7 @@ window.addEventListener('resize', () => {
     // Toggle Notifications
     document.getElementById('email-notifications')?.addEventListener('change', async (e) => {
        try {
-         await fetch('/api/auth/profile', {
+         await fetch(`${API_URL}/auth/profile`, {
            method: 'PUT',
            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
            body: JSON.stringify({ emailNotifications: e.target.checked })
@@ -1166,7 +1167,7 @@ window.addEventListener('resize', () => {
         if(newP.length < 8) return alert('Password must be 8+ characters');
 
         try {
-            const res = await fetch('/api/auth/password', {
+            const res = await fetch(`${API_URL}/auth/password`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ currentPassword: curr, newPassword: newP })
@@ -1258,7 +1259,7 @@ window.addEventListener('resize', () => {
       }
 
       // FIX: Correct URL path
-      const response = await fetch(`/api/chat${endpoint}`, config);
+      const response = await fetch(`${API_URL}/chat${endpoint}`, config);
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));

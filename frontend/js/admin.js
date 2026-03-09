@@ -1,6 +1,6 @@
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 const token = localStorage.getItem('token');
-
+const API_URL = "http://dolphin-main-production.up.railway.app/api";
 // Check authentication
 if (!token || (user.role !== 'admin' && user.role !== 'investor')) {
   window.location.href = 'login.html';
@@ -92,7 +92,7 @@ function loadPageContent(page) {
 
 async function loadDashboard() {
   try {
-    const response = await fetch('/api/admin/dashboard', {
+    const response = await fetch(`${API_URL}/admin/dashboard`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -133,7 +133,7 @@ async function loadRecentActivity() {
   
   try {
     // Get recent users
-    const usersRes = await fetch('/api/admin/pending-users', {
+    const usersRes = await fetch(`${API_URL}/admin/pending-users`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const users = await usersRes.json();
@@ -170,7 +170,7 @@ async function loadRecentActivity() {
 // Load Users
 async function loadUsers() {
   try {
-    const response = await fetch('/api/admin/users', {
+    const response = await fetch(`${API_URL}/admin/users`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     
@@ -284,7 +284,7 @@ function filterUsers() {
 // Load Startups
 async function loadStartups() {
   try {
-    const response = await fetch('/api/admin/startups', {
+    const response = await fetch(`${API_URL}/admin/startups`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     
@@ -334,7 +334,7 @@ async function loadStartups() {
 // Load Providers
 async function loadProviders() {
   try {
-    const response = await fetch('/api/admin/providers', {
+    const response = await fetch(`${API_URL}/admin/providers`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     
@@ -390,7 +390,7 @@ async function loadProviders() {
 async function loadNotificationPage() {
   // Load all users for selection
   try {
-    const response = await fetch('/api/admin/admin-notifications/users', {
+    const response = await fetch(`${API_URL}/admin/admin-notifications/users`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     
@@ -500,7 +500,7 @@ document.getElementById('role-notification-form').addEventListener('submit', asy
   const actionText = document.getElementById('role-action-text').value;
   
   try {
-    const response = await fetch('/api/admin/admin-notifications/send-by-role', {
+    const response = await fetch(`${API_URL}/admin/admin-notifications/send-by-role`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -545,7 +545,7 @@ document.getElementById('broadcast-notification-form').addEventListener('submit'
   }
   
   try {
-    const response = await fetch('/api/admin/admin-notifications/send-to-all', {
+    const response = await fetch(`${API_URL}/admin/admin-notifications/send-to-all`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -588,7 +588,7 @@ document.getElementById('users-notification-form').addEventListener('submit', as
   const priority = document.getElementById('users-priority').value;
   
   try {
-    const response = await fetch('/api/admin/admin-notifications/send-to-users', {
+    const response = await fetch(`${API_URL}/admin/admin-notifications/send-to-users`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -624,7 +624,7 @@ async function approveUser(userId) {
   if (!confirm('Approve this user?')) return;
   
   try {
-    const response = await fetch('/api/admin/approve-user', {
+    const response = await fetch(`${API_URL}/admin/approve-user`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -646,7 +646,7 @@ async function rejectUser(userId) {
   if (!confirm('Reject this user?')) return;
   
   try {
-    const response = await fetch('/api/admin/reject-user', {
+    const response = await fetch(`${API_URL}/admin/reject-user`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -668,7 +668,7 @@ async function blockUser(userId) {
   if (!confirm('Block this user?')) return;
   
   try {
-    const response = await fetch('/api/admin/block-user', {
+    const response = await fetch(`${API_URL}/admin/block-user`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -689,7 +689,7 @@ async function moveUserStage(userId) {
   if (!confirm('Move this user to the next stage?')) return;
   
   try {
-    const response = await fetch('/api/admin/move-stage', {
+    const response = await fetch(`${API_URL}/admin/move-stage`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -710,7 +710,7 @@ async function verifyProvider(providerId) {
   if (!confirm('Verify this provider?')) return;
   
   try {
-    const response = await fetch('/api/admin/verify-provider', {
+    const response = await fetch(`${API_URL}/admin/verify-provider`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -732,7 +732,7 @@ async function rejectProvider(providerId) {
   if (!confirm('Reject this provider?')) return;
   
   try {
-    const response = await fetch('/api/admin/reject-provider', {
+    const response = await fetch(`${API_URL}/admin/reject-provider`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

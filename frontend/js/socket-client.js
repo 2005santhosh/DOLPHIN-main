@@ -5,7 +5,7 @@ let socket = null;
 let isConnected = false;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
-
+const API_URL = "http://dolphin-main-production.up.railway.app/api";
 /**
  * Initialize Socket.io connection
  */
@@ -158,7 +158,7 @@ function getNotificationIcon(type) {
  */
 async function updateNotificationBadge() {
   try {
-    const response = await fetch('/api/notifications/unread-count', {
+    const response = await fetch(`${API_URL}/api/notifications/unread-count`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -222,7 +222,7 @@ function createNotificationElement(notification) {
  */
 async function markNotificationAsRead(notificationId) {
   try {
-    const response = await fetch(`/api/notifications/${notificationId}/read`, {
+    const response = await fetch(`${API_URL}/api/notifications/${notificationId}/read`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`

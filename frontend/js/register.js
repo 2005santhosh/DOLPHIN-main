@@ -1,4 +1,5 @@
         // Role selection functionality
+        const API_URL = "http://dolphin-main-production.up.railway.app/api";
         const roleButtons = document.querySelectorAll('.role-btn');
         const selectedRoleInput = document.getElementById('selected-role');
         let selectedRole = 'founder';
@@ -59,7 +60,7 @@
             
             try {
                 // Using fetch directly for standalone compatibility
-                const response = await fetch('/api/auth/register', {
+                const response = await fetch(`${API_URL}/auth/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, email, password, role })

@@ -1,6 +1,6 @@
 // Main frontend application logic
 // Handles authentication, role-based redirects, dashboard initialization, and event handlers
-
+const API_URL = "http://dolphin-main-production.up.railway.app/api";
 function getUser() {
   try {
     const user = localStorage.getItem('user');
@@ -17,7 +17,7 @@ async function logout() {
     // Optional: notify server (good hygiene, future-proof for blacklisting)
     const token = localStorage.getItem('token');
     if (token) {
-      await fetch('http://localhost:5000/api/auth/logout', {
+      await fetch(`${API_URL}/auth/logout`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

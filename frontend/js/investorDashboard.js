@@ -4,7 +4,7 @@
     let user = JSON.parse(localStorage.getItem('user') || '{}');
     const token = localStorage.getItem('token');
     const userId = (user._id || user.id)?.toString();
-
+    const API_URL = "http://dolphin-main-production.up.railway.app/api";
     if (!token) window.location.href = 'login.html';
 
     // Data Cache
@@ -260,7 +260,7 @@
         if(!list) return;
         list.innerHTML = '<p style="padding:1rem; text-align:center;">Loading...</p>';
         try {
-            const res = await fetch('/api/notifications', { headers: { 'Authorization': `Bearer ${token}` }});
+            const res = await fetch(`${API_URL}/notifications`, { headers: { 'Authorization': `Bearer ${token}` }});
             const data = await res.json();
             const notifications = data.notifications || [];
             if (notifications.length === 0) return list.innerHTML = '<p style="padding:1rem; text-align:center; color:#666;">No notifications</p>';
@@ -276,13 +276,13 @@
     
     window.handleNotifClick = async (id) => { 
         closeNotifDropdown(); 
-        await fetch(`/api/notifications/${id}/read`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); 
+        await fetch(`${API_URL}/notifications/${id}/read`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); 
         updateNotificationBadge(); 
     };
 
     async function updateNotificationBadge() {
         try {
-            const res = await fetch('/api/notifications', { headers: { 'Authorization': `Bearer ${token}` }});
+            const res = await fetch(`${API_URL}/notifications`, { headers: { 'Authorization': `Bearer ${token}` }});
             const data = await res.json();
             const unread = (data.notifications || []).filter(n => !n.read).length;
             const badge = document.getElementById('notif-badge-count');
@@ -296,7 +296,7 @@
 
     window.markAllRead = async () => {
         try {
-            await fetch('/api/notifications/read-all', { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` }});
+            await fetch(`${API_URL}/notifications/read-all`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` }});
             document.querySelectorAll('.notif-item.unread').forEach(i => i.classList.remove('unread'));
             const badge = document.getElementById('notif-badge-count');
             if(badge) { badge.style.display = 'none'; badge.textContent = '0'; }
@@ -306,7 +306,7 @@
     window.clearNotifications = async () => {
         if(!confirm('Clear all?')) return;
         try {
-            await fetch('/api/notifications/clear', { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }});
+            await fetch(`${API_URL}/notifications/clear`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }});
             document.getElementById('notif-list').innerHTML = '<p style="padding:1rem; text-align:center;">No notifications</p>';
             const badge = document.getElementById('notif-badge-count');
             if(badge) { badge.style.display = 'none'; badge.textContent = '0'; }
@@ -318,18 +318,18 @@
     // ==========================================
     async function loadDashboard() {
       try {
-        const startupRes = await fetch('/api/investor/validated-startups', { headers: { 'Authorization': `Bearer ${token}` }});
+        const startupRes = await fetch(`${API_URL}/investor/validated-startups`, { headers: { 'Authorization': `Bearer ${token}` }});
         if (!startupRes.ok) throw new Error("Failed to load startups");
         const startupData = await startupRes.json();
         const startups = startupData.startups || [];
         
-        const reqRes = await fetch('/api/investor/my-requests', { headers: { 'Authorization': `Bearer ${token}` }});
+        const reqRes = await fetch(`${API_URL}/investor/my-requests`, { headers: { 'Authorization': `Bearer ${token}` }});
         if(reqRes.ok) {
             const reqData = await reqRes.json();
             myRequests = reqData.requests || [];
         }
 
-        const watchlistRes = await fetch('/api/investor/watchlist', { headers: { 'Authorization': `Bearer ${token}` }});
+        const watchlistRes = await fetch(`${API_URL}/investor/watchlist`, { headers: { 'Authorization': `Bearer ${token}` }});
         if(watchlistRes.ok) {
             const watchlistData = await watchlistRes.json();
             watchlist = watchlistData.map(s => s._id);
@@ -363,7 +363,7 @@
         const container = document.getElementById('all-startups');
         container.innerHTML = '<p style="text-align:center;">Loading...</p>';
         try {
-            const startupRes = await fetch('/api/investor/validated-startups', { headers: { 'Authorization': `Bearer ${token}` }});
+            const startupRes = await fetch(`${API_URL}/investor/validated-startups`, { headers: { 'Authorization': `Bearer ${token}` }});
             const startupData = await startupRes.json();
             const startups = startupData.startups || [];
 
@@ -384,7 +384,7 @@
         const container = document.getElementById('watchlist-startups');
         container.innerHTML = '<p style="text-align:center;">Loading...</p>';
         try {
-            const res = await fetch('/api/investor/watchlist', { headers: { 'Authorization': `Bearer ${token}` }});
+            const res = await fetch(`${API_URL}/investor/watchlist`, { headers: { 'Authorization': `Bearer ${token}` }});
             const list = await res.json();
             container.innerHTML = '';
             if(list.length === 0) return container.innerHTML = '<p style="text-align:center;">Empty.</p>';
@@ -454,11 +454,11 @@
         try {
             const isWatchlisted = watchlist.includes(id);
             if (isWatchlisted) {
-                await fetch(`/api/investor/watchlist/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }});
+                await fetch(`${API_URL}/investor/watchlist/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }});
                 watchlist = watchlist.filter(i => i !== id);
                 alert('Removed');
             } else {
-                await fetch('/api/investor/watchlist', { method: 'POST', headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ startupId: id }) });
+                await fetch(`${API_URL}/investor/watchlist`, { method: 'POST', headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ startupId: id }) });
                 watchlist.push(id);
                 alert('Added');
             }
@@ -472,7 +472,7 @@
 
     window.expressInterest = async (startupId) => {
         try {
-            const res = await fetch('/api/investor/express-interest', {
+            const res = await fetch(`${API_URL}/investor/express-interest`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ startupId })
@@ -495,7 +495,7 @@
         sentList.innerHTML = '<p style="text-align:center;">Loading...</p>';
         
         try {
-            const res = await fetch('/api/investor/my-requests', { headers: { 'Authorization': `Bearer ${token}` }});
+            const res = await fetch(`${API_URL}/investor/my-requests`, { headers: { 'Authorization': `Bearer ${token}` }});
             const data = await res.json();
             const requests = data.requests || [];
             
@@ -632,7 +632,7 @@
         const fd = new FormData();
         fd.append('profilePicture', input.files[0]);
         try {
-            const res = await fetch('/api/auth/upload-profile-picture', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: fd });
+            const res = await fetch(`${API_URL}/auth/upload-profile-picture`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: fd });
             const d = await res.json();
             if (!res.ok) throw new Error(d.message);
             alert('Uploaded!');
@@ -645,7 +645,7 @@
     document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
         const name = document.getElementById('settings-full-name').value;
         try {
-            const res = await fetch('/api/auth/profile', { method: 'PUT', headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name }) });
+            const res = await fetch(`${API_URL}/auth/profile`, { method: 'PUT', headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name }) });
             const d = await res.json();
             if (!res.ok) throw new Error(d.message);
             alert('Saved');
@@ -675,7 +675,7 @@
         if(newP !== conf) return alert('Passwords do not match');
         if(newP.length < 8) return alert('Min 8 chars');
         try {
-            const res = await fetch('/api/auth/password', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ currentPassword: curr, newPassword: newP }) });
+            const res = await fetch(`${API_URL}/auth/password`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ currentPassword: curr, newPassword: newP }) });
             const d = await res.json();
             if (!res.ok) throw new Error(d.message);
             alert('Updated!');
@@ -696,7 +696,7 @@
     async function chatApiCall(endpoint, method = 'GET', body = null) {
       const config = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } };
       if (body) config.body = JSON.stringify(body);
-      const res = await fetch(`/api/chat${endpoint}`, config);
+      const res = await fetch(`${API_URL}/chat${endpoint}`, config);
       if (!res.ok) throw new Error('API Error');
       return res.json();
     }

@@ -1,6 +1,7 @@
  // ==========================================
         // 1. PASSWORD VISIBILITY TOGGLE (FIXED)
         // ==========================================
+        const API_URL = "http://dolphin-main-production.up.railway.app/api";
         const togglePassword = document.getElementById('toggle-password');
         const passwordInput = document.getElementById('password');
         const eyeIcon = togglePassword.querySelector('.eye-icon');
@@ -43,7 +44,7 @@
             submitButton.disabled = true;
 
             try {
-                const response = await fetch('/api/auth/login', {
+                const response = await fetch(`${API_URL}/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
