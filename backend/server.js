@@ -45,7 +45,7 @@ app.use(cors(corsOptions));
 app.post("/test-cors", (req, res) => {
   res.json({ message: "CORS working" });
 });
-app.options('*', cors(corsOptions));
+
 // Make io accessible to routes (CRITICAL)
 // 2. Apply Helmet with Cross-Origin Policy
 app.use(helmet({
