@@ -49,7 +49,6 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-app.options('/*', cors(corsOptions));
 // Make io accessible to routes (CRITICAL)
 // 2. Apply Helmet with Cross-Origin Policy
 app.use(helmet({
