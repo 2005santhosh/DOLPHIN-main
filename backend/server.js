@@ -19,18 +19,30 @@ const server = http.createServer(app);
 
 // Call the service function. It should return the 'io' instance.
 const io = initializeSocket(server); 
-app.use(cors({
-  origin: "https://dolphin-main.vercel.app",
+// --- UPDATED CORS CONFIGURATION ---
+const allowedOrigins = [
+  'https://dolphin-main.vercel.app',
+  // Add any other local dev URLs if needed (e.g., 'http://localhost:3000')
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    // OR allow any Vercel preview URL
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
-}));
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://dolphin-main.vercel.app");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  next();
-});
+};
+app.use(cors(corsOptions));
+
 app.options('*', cors());
 // Make io accessible to routes (CRITICAL)
 app.set('socketio', io); 
@@ -38,15 +50,15 @@ app.locals.tokenBlacklist = new Set();
 // Security middleware
 app.use(express.json()); 
 app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // <--- CRITICAL FIX
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      // ✅ ADDED "https://cdn.jsdelivr.net" BELOW
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.socket.io", "https://cdn.jsdelivr.net"],
       imgSrc: ["'self'", "data:", "https:"],
       fontSrc: ["'self'", "https:", "data:"],
-      connectSrc: ["*"],
+      connectSrc: ["*"], // Allow connections from anywhere (for your API)
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
