@@ -19,22 +19,28 @@ const server = http.createServer(app);
 
 // Call the service function. It should return the 'io' instance.
 const io = initializeSocket(server); 
-// --- UPDATED CORS CONFIGURATION ---
-const allowedOrigins = [
-  'https://dolphin-main.vercel.app',
-  // Add any other local dev URLs if needed (e.g., 'http://localhost:3000')
-];
-
+// --- REFINED CORS CONFIGURATION ---
+// We will log the origin to debug in Railway logs
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    // OR allow any Vercel preview URL
+    // Log the origin to see what Railway sees
+    console.log('Request Origin:', origin);
+
+    // Allow requests with no origin (like mobile apps, curl, or server-to-server)
     if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+
+    // Check against your list OR any Vercel preview URL
+    const allowedOrigins = ['https://dolphin-main.vercel.app'];
+    const isVercelPreview = origin.endsWith('.vercel.app');
+    const isAllowed = allowedOrigins.indexOf(origin) !== -1 || isVercelPreview;
+
+    if (isAllowed) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      // Log why it failed but DON'T throw an error (throwing crashes the request)
+      console.warn(`CORS blocked origin: ${origin}`);
+      // Sending false allows the request to continue but strips CORS headers safely
+      callback(null, false); 
     }
   },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -45,12 +51,9 @@ app.use(cors(corsOptions));
 
 app.options('*', cors());
 // Make io accessible to routes (CRITICAL)
-app.set('socketio', io); 
-app.locals.tokenBlacklist = new Set();
-// Security middleware
-app.use(express.json()); 
+// 2. Apply Helmet with Cross-Origin Policy
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }, // <--- CRITICAL FIX
+  crossOriginResourcePolicy: { policy: "cross-origin" },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -58,7 +61,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.socket.io", "https://cdn.jsdelivr.net"],
       imgSrc: ["'self'", "data:", "https:"],
       fontSrc: ["'self'", "https:", "data:"],
-      connectSrc: ["*"], // Allow connections from anywhere (for your API)
+      connectSrc: ["*"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
@@ -72,6 +75,11 @@ app.use(helmet({
     },
   },
 }));
+app.set('socketio', io); 
+app.locals.tokenBlacklist = new Set();
+// Security middleware
+app.use(express.json()); 
+
 // app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
