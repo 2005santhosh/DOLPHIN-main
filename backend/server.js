@@ -12,15 +12,12 @@ const chatRoutes = require('./routes/chat');
 const investorRoutes = require('./routes/investor'); 
 const supportRoutes = require('./routes/support');
 
-// Load env vars immediately
 dotenv.config();
 
 // --- MAIN STARTUP FUNCTION ---
-// We wrap everything in an async function to catch startup errors
 const startServer = async () => {
   try {
-    // 1. Connect to Database FIRST
-    // If this fails, the app will crash immediately with a clear log
+    // 1. Connect to Database
     console.log("Attempting to connect to Database...");
     await connectDB();
     console.log("Database connection established.");
@@ -41,7 +38,7 @@ const startServer = async () => {
           scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.socket.io", "https://cdn.jsdelivr.net"],
           imgSrc: ["'self'", "data:", "https:"],
           fontSrc: ["'self'", "https:", "data:"],
-          connectSrc: ["*"], 
+          connectSrc: ["*"], // Allow all connections for API
           objectSrc: ["'none'"],
           baseUri: ["'self'"],
           formAction: ["'self'"],
@@ -82,7 +79,14 @@ const startServer = async () => {
     });
     app.use('/api/', limiter);
 
+    // --- CRITICAL: HEALTH CHECK ENDPOINT ---
+    // This must be defined BEFORE express.static to ensure it replies instantly
+    app.get('/api/health', (req, res) => {
+      res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+    });
+
     // Static files
+    // Note: Ensure your build process copies the 'frontend' folder correctly
     app.use(express.static(path.join(__dirname, '../frontend')));
 
     // --- ROUTES ---
@@ -101,8 +105,13 @@ const startServer = async () => {
     app.use('/api/notifications', require('./routes/notifications'));
     app.use('/api/admin/admin-notifications', require('./routes/admin-notifications'));
 
-    // HTML Page Routes
-    app.get('/', (req, res) => { res.sendFile(path.join(__dirname, '../frontend/index.html')); });
+    // HTML Page Routes (Fallback for SPA or specific pages)
+    app.get('/', (req, res) => {
+      // Simple 200 response for health checks if hitting root
+      res.send("Backend is Running");
+    });
+    
+    // Keep your specific HTML routes if needed
     app.get('/login.html', (req, res) => { res.sendFile(path.join(__dirname, '../frontend/login.html')); });
     app.get('/register.html', (req, res) => { res.sendFile(path.join(__dirname, '../frontend/register.html')); });
     app.get('/dashboard.html', securePage(['founder']), (req, res) => { res.sendFile(path.join(__dirname, '../frontend/dashboard.html')); });
@@ -111,34 +120,18 @@ const startServer = async () => {
     app.get('/provider-dashboard.html', securePage(['provider']), (req, res) => { res.sendFile(path.join(__dirname, '../frontend/provider-dashboard.html')); });
     app.get('/marketplace.html', securePage(['founder', 'investor', 'provider']), (req, res) => { res.sendFile(path.join(__dirname, '../frontend/marketplace.html')); });
 
-    // Health check
-    app.get('/api/health', (req, res) => {
-      res.json({ status: 'ok', timestamp: new Date().toISOString() });
-    });
-
     // Error handling
     app.use((err, req, res, next) => {
       console.error(err.stack);
       res.status(500).json({ message: 'Server error' });
     });
 
-    // Notification Cleanup (Optional: comment out if not needed immediately)
-    const Notification = require('./models/Notification');
-    setInterval(async () => {
-      try {
-        const result = await Notification.deleteOldNotifications(30);
-        if (result.deletedCount > 0) console.log(`Cleaned up ${result.deletedCount} notifications`);
-      } catch (e) { console.error("Cleanup error", e); }
-    }, 24 * 60 * 60 * 1000);
-
     // --- START SERVER ---
     const PORT = process.env.PORT || 5000;
-    // MUST listen on 0.0.0.0
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`✓ Server running on port ${PORT}`);
     });
 
-    // Graceful shutdown
     process.on('SIGTERM', () => {
       console.log('SIGTERM received, shutting down...');
       server.close(() => {
@@ -151,12 +144,10 @@ const startServer = async () => {
     });
 
   } catch (err) {
-    // If anything goes wrong during startup, log it and exit
     console.error("!!!!!!!!!! FATAL STARTUP ERROR !!!!!!!!!!");
     console.error(err);
     process.exit(1);
   }
 };
 
-// Run the server
 startServer();
