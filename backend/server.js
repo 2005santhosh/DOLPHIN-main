@@ -58,6 +58,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/investor', investorRoutes);
 app.use(cors({
   origin: process.env.FRONTEND_URL || '*',
+  methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
 app.use('/api/support', supportRoutes);
