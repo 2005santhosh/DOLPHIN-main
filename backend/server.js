@@ -35,18 +35,7 @@ const server = http.createServer(app);
 const io = initializeSocket(server); 
 
 // --- REFINED CORS CONFIGURATION ---
-// We will log the origin to debug in Railway logs
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://dolphin-main.vercel.app");
-  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
-
-  next();
-});
+// --- CORS SETUP ---
 // --- CORS SETUP ---
 const corsOptions = {
   origin: function (origin, callback) {
@@ -54,21 +43,16 @@ const corsOptions = {
     if (!origin) return callback(null, true);
     
     // Allow any Vercel preview or production URL
-    if (origin.endsWith('vercel.app')) {
+    if (origin.includes('.vercel.app')) {
       return callback(null, true);
     }
     
-    // Explicitly allow your main domain
-    if (origin === 'https://dolphin-main.vercel.app') {
-      return callback(null, true);
-    }
-
-    // Allow localhost for development
+    // Allow localhost for local development
     if (origin.startsWith('http://localhost')) {
        return callback(null, true);
     }
 
-    // Otherwise, reject
+    // Reject other origins
     const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
     return callback(new Error(msg), false);
   },
