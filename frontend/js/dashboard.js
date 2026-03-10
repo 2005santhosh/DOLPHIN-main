@@ -1338,8 +1338,50 @@ function renderStartupData(startup) {
     });
 
     // Init
+        // Init
     document.addEventListener('DOMContentLoaded', () => {
       loadDashboard();
       loadFounderRequests();
       updateNotificationBadge(); 
+      
+      // --- ADD DELETE ACCOUNT LISTENER ---
+      const deleteBtn = document.getElementById('delete-account-btn');
+      if (deleteBtn) {
+          deleteBtn.addEventListener('click', async () => {
+              // 1. Confirm with the user
+              if (!confirm('⚠️ Are you sure you want to delete your account? This action cannot be undone.')) {
+                  return;
+              }
+
+              // 2. Confirm again (Safety measure)
+              const confirmation = prompt("Please type 'DELETE' to confirm account deletion.");
+              if (confirmation !== 'DELETE') {
+                  alert('Deletion cancelled.');
+                  return;
+              }
+
+              try {
+                  // 3. Call the API
+                  const res = await fetch(`${API_URL}/auth/account`, {
+                      method: 'DELETE',
+                      headers: { 'Authorization': `Bearer ${token}` }
+                  });
+
+                  const data = await res.json();
+
+                  if (!res.ok) {
+                      throw new Error(data.message || 'Failed to delete account');
+                  }
+
+                  // 4. Clean up and Redirect
+                  alert('✅ Your account has been deleted successfully.');
+                  localStorage.clear();
+                  window.location.href = 'index.html'; // Redirect to landing page
+
+              } catch (err) {
+                  console.error('Delete Account Error:', err);
+                  alert(err.message);
+              }
+          });
+      }
     });
