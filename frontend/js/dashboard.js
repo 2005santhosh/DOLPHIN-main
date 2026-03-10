@@ -321,14 +321,42 @@
         }
        }
     }
-    // Helper function to show the form (example)
-  function showCreateStartupForm() {
-    const container = document.getElementById('startup-content');
-    // Logic to show your "Create Startup" HTML section
-    // For example:
-    document.getElementById('startup-form-container').style.display = 'block';
-    document.getElementById('startup-data-container').style.display = 'none';
-  }
+  // ==========================================
+// HELPER FUNCTIONS FOR DASHBOARD
+// ==========================================
+
+// 1. Function to show the "Create Startup" form
+function showCreateStartupForm() {
+    // Assuming you have a container for the form. 
+    // If you don't have one, you might need to redirect to a setup page.
+    const formContainer = document.getElementById('startup-form-container');
+    const dataContainer = document.getElementById('startup-data-container');
+    
+    if (formContainer) formContainer.style.display = 'block';
+    if (dataContainer) dataContainer.style.display = 'none';
+    
+    console.log("Showing startup creation form for new user.");
+}
+
+// 2. Function to show the existing startup data
+function renderStartupData(startup) {
+    const formContainer = document.getElementById('startup-form-container');
+    const dataContainer = document.getElementById('startup-data-container');
+    
+    if (formContainer) formContainer.style.display = 'none';
+    if (dataContainer) dataContainer.style.display = 'block';
+    
+    // Example: Populate your HTML elements
+    // Make sure these IDs exist in your dashboard.html
+    const nameEl = document.getElementById('startup-name-display');
+    if (nameEl) nameEl.textContent = startup.name || 'My Startup';
+    
+    const descEl = document.getElementById('startup-description-display');
+    if (descEl) descEl.textContent = startup.description || 'No description yet.';
+
+    // Add other fields you need to display (industry, stage, etc.)
+    console.log("Startup loaded:", startup.name);
+}
     function updateHeaderAvatar(imageUrl) {
       const avatarEl = document.querySelector('.user-avatar');
       if (avatarEl && imageUrl) {
