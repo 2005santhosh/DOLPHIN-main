@@ -267,8 +267,9 @@
     // DASHBOARD & PROFILE
     // ==========================================
     async function loadDashboard() {
+      let startup = null;
       try {
-        const startup = await api.getStartup();
+        startup = await api.getStartup();
         const userRes = await fetch(`${API_URL}/auth/profile`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (!userRes.ok) throw new Error("Could not fetch profile data");
         const userData = await userRes.json();
@@ -309,17 +310,27 @@
         }
         renderStartupData(startup);
       } catch (error) { 
-         // If we get a 404 or "No startup found", it means this is a new user
+        // 2. If API fails (like 404), handle it here
+        console.log("Startup fetch failed:", error.message);
+        
+        // If the error is "Not Found", we treat it as a new user
         if (error.message.includes('No startup found') || error.message.includes('404')) {
-            console.log("No startup profile found. Showing creation form.");
-            // Show the "Create Startup" form or Welcome message
-            showCreateStartupForm(); 
+            showCreateStartupForm();
         } else {
-            // Handle other real errors
-            console.error('Error loading dashboard:', error);
-            alert('Failed to load dashboard data.');
+            // If it's a server error, show a message
+            const container = document.getElementById('startup-data-container');
+            if(container) container.innerHTML = `<p style="color:red; text-align:center;">Error loading data. Please refresh.</p>`;
         }
+        // STOP the function here so it doesn't try to render null data
+        return; 
        }
+        // 3. If we reached here, startup exists! Render it.
+    if (startup) {
+        renderStartupData(startup);
+    } else {
+        // Fallback if startup is null but didn't error
+        showCreateStartupForm();
+    }
     }
   // ==========================================
 // HELPER FUNCTIONS FOR DASHBOARD
@@ -338,24 +349,29 @@ function showCreateStartupForm() {
     console.log("Showing startup creation form for new user.");
 }
 
-// 2. Function to show the existing startup data
 function renderStartupData(startup) {
+    // SAFETY CHECK: If startup is null, stop and show the form
+    if (!startup) {
+        console.error("Render called with no startup data!");
+        showCreateStartupForm();
+        return;
+    }
+
+    // Hide Form, Show Data
     const formContainer = document.getElementById('startup-form-container');
     const dataContainer = document.getElementById('startup-data-container');
     
     if (formContainer) formContainer.style.display = 'none';
     if (dataContainer) dataContainer.style.display = 'block';
-    
-    // Example: Populate your HTML elements
-    // Make sure these IDs exist in your dashboard.html
+
+    // Populate Data (Safe access using ?.)
     const nameEl = document.getElementById('startup-name-display');
     if (nameEl) nameEl.textContent = startup.name || 'My Startup';
     
     const descEl = document.getElementById('startup-description-display');
-    if (descEl) descEl.textContent = startup.description || 'No description yet.';
+    if (descEl) descEl.textContent = startup.description || 'No description provided.';
 
-    // Add other fields you need to display (industry, stage, etc.)
-    console.log("Startup loaded:", startup.name);
+    console.log("Displaying startup:", startup.name);
 }
     function updateHeaderAvatar(imageUrl) {
       const avatarEl = document.querySelector('.user-avatar');
