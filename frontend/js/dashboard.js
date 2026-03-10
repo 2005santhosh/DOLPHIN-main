@@ -308,7 +308,10 @@
           document.getElementById('progress-text').textContent = 'Create a startup to get started';
           populateStagesList(null);
         }
-        renderStartupData(startup);
+          // 2. If successful, render it
+        if (startup) {
+            renderStartupData(startup);
+        }
       } catch (error) { 
         // 2. If API fails (like 404), handle it here
         console.log("Startup fetch failed:", error.message);
