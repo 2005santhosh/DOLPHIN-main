@@ -11,11 +11,12 @@
     let watchlist = [];
     let myRequests = [];
 
-    // ==========================================
+        // ==========================================
     // UI UPDATE HELPER
     // ==========================================
     function updateNavbar(userData) {
-        document.getElementById('user-name').textContent = userData.name || 'Investor';
+        // REMOVED: document.getElementById('user-name').textContent = ...;
+        
         const avatarEl = document.querySelector('.user-avatar');
         if (userData.profilePicture) {
             const imgSrc = userData.profilePicture.startsWith('http') ? userData.profilePicture : `${window.location.origin}${userData.profilePicture}`;
@@ -627,20 +628,37 @@
         }
     });
 
-    document.getElementById('upload-picture-btn')?.addEventListener('click', async () => {
+        document.getElementById('upload-picture-btn')?.addEventListener('click', async () => {
         const input = document.getElementById('profile-picture-input');
+        const btn = document.getElementById('upload-picture-btn');
+        
         if (!input.files[0]) return alert('Select file');
+        
         const fd = new FormData();
         fd.append('profilePicture', input.files[0]);
+
+        // 1. Set Loading State
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite; vertical-align: middle; margin-right: 8px;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Uploading...`;
+        btn.disabled = true;
+
         try {
             const res = await fetch(`${API_URL}/auth/upload-profile-picture`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: fd });
             const d = await res.json();
             if (!res.ok) throw new Error(d.message);
+            
             alert('Uploaded!');
             user.profilePicture = d.profilePicture;
             localStorage.setItem('user', JSON.stringify(user));
             updateNavbar(user);
-        } catch(e) { alert(e.message); }
+        } catch(e) { 
+            alert(e.message); 
+        } finally {
+            // 2. Reset Button State
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            input.value = ''; // Reset file input
+        }
     });
     
     document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
@@ -809,4 +827,44 @@
     document.addEventListener('DOMContentLoaded', () => {
         loadDashboard();
         updateNotificationBadge();
+        // --- ADD DELETE ACCOUNT LISTENER ---
+      const deleteBtn = document.getElementById('delete-account-btn');
+      if (deleteBtn) {
+          deleteBtn.addEventListener('click', async () => {
+              // 1. Confirm with the user
+              if (!confirm('⚠️ Are you sure you want to delete your account? This action cannot be undone.')) {
+                  return;
+              }
+
+              // 2. Confirm again (Safety measure)
+              const confirmation = prompt("Please type 'DELETE' to confirm account deletion.");
+              if (confirmation !== 'DELETE') {
+                  alert('Deletion cancelled.');
+                  return;
+              }
+
+              try {
+                  // 3. Call the API
+                  const res = await fetch(`${API_URL}/auth/account`, {
+                      method: 'DELETE',
+                      headers: { 'Authorization': `Bearer ${token}` }
+                  });
+
+                  const data = await res.json();
+
+                  if (!res.ok) {
+                      throw new Error(data.message || 'Failed to delete account');
+                  }
+
+                  // 4. Clean up and Redirect
+                  alert('✅ Your account has been deleted successfully.');
+                  localStorage.clear();
+                  window.location.href = 'index.html'; // Redirect to landing page
+
+              } catch (err) {
+                  console.error('Delete Account Error:', err);
+                  alert(err.message);
+              }
+          });
+      }
     });
