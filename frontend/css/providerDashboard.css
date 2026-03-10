@@ -953,3 +953,12 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
    ========================================== */
 @media print { .sidebar, .header, .btn, .modal { display: none !important; } .main-content { margin: 0; padding: 0; } body { background: white; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
+/* Add to providerDashboard.css */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

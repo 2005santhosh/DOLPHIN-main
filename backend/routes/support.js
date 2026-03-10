@@ -32,7 +32,7 @@ router.post('/contact', async (req, res) => {
     if (!name || !email || !subject || !message) {
         return res.status(400).json({ success: false, message: 'Please fill all required fields' });
     }
-
+    res.status(200).json({ success: true, message: 'Message received! We will get back to you soon.' });
     try {
         const mailOptions = {
             from: `"Dolphin Support" <${process.env.SMTP_USER}>`,
@@ -67,7 +67,7 @@ Message:
         // Send Email
         await transporter.sendMail(mailOptions);
         res.status(200).json({ success: true, message: 'Email sent successfully' });
-
+        console.log(`[Support] New ticket from ${name} <${email}>: ${subject}`);
     } catch (error) {
         console.error('Email Send Error:', error);
         res.status(500).json({ success: false, message: 'Server error: Could not send email' });
