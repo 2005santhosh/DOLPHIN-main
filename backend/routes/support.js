@@ -40,28 +40,28 @@ router.post('/contact', async (req, res) => {
             replyTo: email,
             subject: `[Dolphin Support - ${category.toUpperCase()}] ${subject}`,
             text: `
-You have a new support request.
+                    You have a new support request.
 
-Category: ${category}
-Name: ${name}
-Email: ${email}
-Subject: ${subject}
+                    Category: ${category}
+                    Name: ${name}
+                    Email: ${email}
+                    Subject: ${subject}
 
-Message:
- ${message}
-            `,
-            html: `
-                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                    <h2 style="color: #0d9488;">New Support Request</h2>
-                    <p><strong>Category:</strong> ${category}</p>
-                    <p><strong>Name:</strong> ${name}</p>
-                    <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
-                    <p><strong>Subject:</strong> ${subject}</p>
-                    <hr>
-                    <p><strong>Message:</strong></p>
-                    <p>${message.replace(/\n/g, '<br>')}</p>
-                </div>
-            `
+                    Message:
+                        ${message}
+                       `,
+                        html: `
+                                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                                    <h2 style="color: #0d9488;">New Support Request</h2>
+                                    <p><strong>Category:</strong> ${category}</p>
+                                    <p><strong>Name:</strong> ${name}</p>
+                                    <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
+                                    <p><strong>Subject:</strong> ${subject}</p>
+                                    <hr>
+                                    <p><strong>Message:</strong></p>
+                                    <p>${message.replace(/\n/g, '<br>')}</p>
+                                </div>
+                            `
         };
 
         // Send Email
