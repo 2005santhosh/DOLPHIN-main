@@ -16,17 +16,23 @@ if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
 }
 
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST, // Should be smtp.zoho.in
-    port: parseInt(process.env.SMTP_PORT || "465"),
-    secure: process.env.SMTP_SECURE === 'true', // MUST be 'true' for port 465
+    host: process.env.SMTP_HOST,
+    port: 587,
+    secure: false,
+    requireTLS: true,
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
     },
-    debug: true, 
-    logger: true 
+    // Add these TLS options
+    tls: {
+        rejectUnauthorized: false, // Bypass certificate validation issues
+        minVersion: 'TLSv1.2'      // Force modern TLS version
+    },
+    logger: true,
+    debug: true,
+    connectionTimeout: 20000 // Increase timeout to 20s
 });
-
 // @route   POST /api/support/contact
 router.post('/contact', async (req, res) => {
     const { name, email, category, subject, message } = req.body;
