@@ -1,7 +1,7 @@
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 const token = localStorage.getItem('token');
 // const API_URL = "https://dolphin-main-production.up.railway.app/api";
-// Check authentication
+// Check authentication 
 if (!token || (user.role !== 'admin' && user.role !== 'investor')) {
   window.location.href = 'login.html';
 }

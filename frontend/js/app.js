@@ -1,4 +1,4 @@
-// Main frontend application logic
+// Main frontend application logic 
 // Handles authentication, role-based redirects, dashboard initialization, and event handlers
 const API_URL = "https://dolphin-main-production.up.railway.app/api";
 function getUser() {

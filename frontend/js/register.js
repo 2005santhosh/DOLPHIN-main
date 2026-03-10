@@ -1,4 +1,4 @@
-        // Role selection functionality
+        // Role selection functionality 
         const API_URL = "https://dolphin-main-production.up.railway.app/api";
         const roleButtons = document.querySelectorAll('.role-btn');
         const selectedRoleInput = document.getElementById('selected-role');

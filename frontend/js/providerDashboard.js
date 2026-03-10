@@ -432,9 +432,9 @@ window.addEventListener('resize', () => {
     
     let currentChatPartnerId = null;
     let socket = null;
-
+    const SOCKET_URL = "https://dolphin-main-production.up.railway.app";
     if (typeof io === 'function' && userId) {
-         socket = io({
+         socket = io(SOCKET_URL, {
             auth: { token: token } 
         });
 
