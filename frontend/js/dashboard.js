@@ -222,9 +222,9 @@
     // SOCKET.IO
     // ==========================================
     let socket;
-    
+    const SOCKET_URL = "https://dolphin-main-production.up.railway.app";
     if (typeof io === 'function' && userId) {
-        socket = io({ auth: { token: token } });
+        socket = io(SOCKET_URL,{ auth: { token: token } });
         socket.emit('join', userId);
         console.log('🔌 Founder Socket connected:', userId);
 
@@ -307,9 +307,28 @@
           document.getElementById('progress-text').textContent = 'Create a startup to get started';
           populateStagesList(null);
         }
-      } catch (error) { console.error('Error loading dashboard:', error); }
+        renderStartupData(startup);
+      } catch (error) { 
+         // If we get a 404 or "No startup found", it means this is a new user
+        if (error.message.includes('No startup found') || error.message.includes('404')) {
+            console.log("No startup profile found. Showing creation form.");
+            // Show the "Create Startup" form or Welcome message
+            showCreateStartupForm(); 
+        } else {
+            // Handle other real errors
+            console.error('Error loading dashboard:', error);
+            alert('Failed to load dashboard data.');
+        }
+       }
     }
-
+    // Helper function to show the form (example)
+  function showCreateStartupForm() {
+    const container = document.getElementById('startup-content');
+    // Logic to show your "Create Startup" HTML section
+    // For example:
+    document.getElementById('startup-form-container').style.display = 'block';
+    document.getElementById('startup-data-container').style.display = 'none';
+  }
     function updateHeaderAvatar(imageUrl) {
       const avatarEl = document.querySelector('.user-avatar');
       if (avatarEl && imageUrl) {
