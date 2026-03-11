@@ -54,7 +54,6 @@ async function chatApiCall(endpoint, method = 'GET', body = null) {
 const api = {
   getMyRequests: async () => {
     const data = await apiCall('/my-requests');
-    // FIX: Handle both raw array and wrapped object from backend
     if (Array.isArray(data)) return data;
     return data.requests || [];
   },
@@ -175,13 +174,14 @@ function loadSettings() {
   if(nameInput) nameInput.value = user.name || '';
   if(emailInput) emailInput.value = user.email || '';
   
-  // Load profile picture settings
-  api.getProfile().then(profile => {
-     const previewImg = document.getElementById('settings-profile-preview');
-     if(profile.profilePicture && previewImg) {
-        previewImg.src = profile.profilePicture.startsWith('http') ? profile.profilePicture : `${window.location.origin}${profile.profilePicture}`;
-     }
-  });
+  // Load profile picture
+  const previewImg = document.getElementById('settings-profile-preview');
+  if (user.profilePicture && previewImg) {
+      const imageUrl = user.profilePicture.startsWith('http') ? user.profilePicture : `${window.location.origin}${user.profilePicture}`;
+      previewImg.src = imageUrl;
+  } else if (previewImg) {
+      previewImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=e2e8f0&color=64748b&size=100`;
+  }
 }
 
 // ==========================================
@@ -217,11 +217,36 @@ async function loadFounders() {
       window.currentIncomingRequests = incomingRequestsMap;
       
       validFounders.forEach(founder => foundersList.appendChild(createFounderCard(founder, sentRequestsMap, incomingRequestsMap)));
+      
+      // Attach Filter Listeners
+      document.getElementById('stage-filter')?.addEventListener('change', () => filterFounders(validFounders, sentRequestsMap, incomingRequestsMap));
+      document.getElementById('industry-filter')?.addEventListener('change', () => filterFounders(validFounders, sentRequestsMap, incomingRequestsMap));
     }
   } catch (error) {
     console.error('Error loading founders:', error);
     foundersList.innerHTML = `<p style="text-align: center; color: var(--danger);">Error: ${error.message}</p>`;
   }
+}
+
+function filterFounders(allFounders, sentMap, incomingMap) {
+    const stageFilter = document.getElementById('stage-filter').value;
+    const industryFilter = document.getElementById('industry-filter').value;
+    const foundersList = document.getElementById('founders-list');
+    foundersList.innerHTML = '';
+
+    const filtered = allFounders.filter(founder => {
+      const stage = founder.founderId?.stage;
+      const matchesStage = stageFilter === 'all' || stage?.toString() === stageFilter; 
+      const matchesIndustry = industryFilter === 'all' || 
+        founder.industry?.toLowerCase().includes(industryFilter);
+      return matchesStage && matchesIndustry;
+    });
+
+    if (filtered.length === 0) {
+      foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No founders match.</p>';
+    } else {
+      filtered.forEach(founder => foundersList.appendChild(createFounderCard(founder, sentMap, incomingMap)));
+    }
 }
 
 function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = {}) {
@@ -231,7 +256,7 @@ function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = 
   const userRef = founder.founderId || {};
   const founderName = userRef.name || 'Unknown';
   const startupIdStr = founder._id?.toString();
-  card.id = `founder-card-${startupIdStr}`; // ID for targeted updates
+  card.id = `founder-card-${startupIdStr}`;
 
   const profileImg = userRef.profilePicture 
     ? userRef.profilePicture 
@@ -242,7 +267,6 @@ function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = 
   const founderUserId = (userRef._id || userRef)?.toString();
   
   let actionsHtml = '';
-  // Determine status buttons
   if (mySentRequest) {
       if (mySentRequest.status === 'accepted') actionsHtml = `<button class="btn btn-success" style="opacity: 0.8;">Connected</button><button class="btn btn-primary" onclick="window.openChat('${founderUserId}', '${founderName}', '${profileImg}')">Chat</button>`;
       else if (mySentRequest.status === 'pending') actionsHtml = `<button class="btn btn-secondary" disabled>Request Sent (Pending)</button><button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>`;
@@ -412,7 +436,6 @@ function setupChatSearch() {
   const searchInput = document.getElementById('chat-search-input');
   if (!searchInput) return;
 
-  // Clone to remove old listeners
   const newInput = searchInput.cloneNode(true);
   searchInput.parentNode.replaceChild(newInput, searchInput);
 
@@ -434,7 +457,6 @@ function setupChatSearch() {
   });
 }
 
-// Chat Window & Messaging
 window.openChat = async function(partnerId, partnerName, partnerPic) {
   if (!partnerId) return;
   document.getElementById('profile-modal')?.classList.remove('active');
@@ -470,6 +492,10 @@ window.openChat = async function(partnerId, partnerName, partnerPic) {
       container.scrollTop = container.scrollHeight;
     }
   } catch(e) { console.error(e); }
+};
+
+window.closeChatMobile = function() {
+    document.getElementById('chat-page').classList.remove('chat-active');
 };
 
 window.sendMessage = async function() {
@@ -524,6 +550,36 @@ window.openRequestModal = function(startupId) {
   document.getElementById('request-message').value = '';
   document.getElementById('services-offered').value = '';
   document.getElementById('request-modal').classList.add('active');
+};
+
+window.togglePassword = function(inputId) {
+    const input = document.getElementById(inputId);
+    const icon = document.querySelector(`#${inputId}-toggle-icon`);
+    if (input.type === 'password') {
+        input.type = 'text';
+        if(icon) icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+    } else {
+        input.type = 'password';
+        if(icon) icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+    }
+};
+
+// Legal Modals
+const legalDocs = {
+    privacy: { title: "Privacy Policy", content: "<p>Privacy Policy content goes here...</p>" },
+    terms: { title: "Terms of Service", content: "<p>Terms of Service content goes here...</p>" }
+};
+
+window.openLegalModal = function(type) {
+    const doc = legalDocs[type];
+    if (!doc) return;
+    document.getElementById('legal-modal-title').textContent = doc.title;
+    document.getElementById('legal-modal-body').innerHTML = doc.content;
+    document.getElementById('legal-modal').classList.add('active');
+};
+
+window.closeLegalModal = function() {
+    document.getElementById('legal-modal').classList.remove('active');
 };
 
 // ==========================================
@@ -586,11 +642,9 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Request sent!');
         document.getElementById('request-modal').classList.remove('active');
         
-        // OPTIMISTIC UI: Update card immediately
         const cardEl = document.getElementById(`founder-card-${currentStartupId}`);
         if (cardEl) cardEl.querySelector('.request-actions').innerHTML = `<button class="btn btn-secondary" disabled>Request Sent (Pending)</button>`;
         
-        // Update local state
         if (!window.currentSentRequests) window.currentSentRequests = {};
         window.currentSentRequests[currentStartupId] = { status: 'pending' };
         loadDashboard(); 
@@ -608,6 +662,104 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       document.getElementById(`${tabName}-tab`)?.classList.add('active');
     });
+  });
+  
+  // SETTINGS: Update Profile Button
+  document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
+      const nameEl = document.getElementById('settings-full-name');
+      const name = nameEl.value.trim();
+      if (!name) return alert('Name is required');
+      
+      try {
+        let res = await fetch(`${API_URL}/auth/profile`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ name })
+        });
+        if (res.status === 404) res = await api.updateProfile({ name });
+        
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Update failed');
+
+        alert('Profile updated!');
+        user.name = name;
+        localStorage.setItem('user', JSON.stringify(user));
+        document.getElementById('user-name').textContent = name;
+        document.querySelector('.user-avatar').textContent = name.split(' ').map(n => n.charAt(0)).join('');
+
+      } catch (err) { alert(err.message); }
+  });
+
+  // SETTINGS: Update Password Button
+  document.getElementById('update-password-btn')?.addEventListener('click', async () => {
+      const curr = document.getElementById('current-password').value;
+      const newP = document.getElementById('new-password').value;
+      const conf = document.getElementById('confirm-password').value;
+
+      if(!curr || !newP || !conf) return alert('Fill all password fields');
+      if(newP !== conf) return alert('Passwords do not match');
+      if(newP.length < 8) return alert('Password must be 8+ characters');
+
+      try {
+          const res = await fetch(`${API_URL}/auth/password`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ currentPassword: curr, newPassword: newP })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message || 'Failed to update');
+          alert('Password Updated!');
+          document.getElementById('current-password').value = '';
+          document.getElementById('new-password').value = '';
+          document.getElementById('confirm-password').value = '';
+      } catch(e) { alert(e.message); }
+  });
+
+  // SETTINGS: Upload Picture Button
+  document.getElementById('upload-picture-btn')?.addEventListener('click', async () => {
+      const fileInput = document.getElementById('profile-picture-input');
+      if (!fileInput?.files?.length) return alert('Select an image first');
+
+      const btn = document.getElementById('upload-picture-btn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = 'Uploading...';
+      btn.disabled = true;
+
+      const formData = new FormData();
+      formData.append('profilePicture', fileInput.files[0]);
+
+      try {
+        const res = await fetch(`${API_URL}/auth/upload-profile-picture`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        
+        alert('Picture updated!');
+        user.profilePicture = data.profilePicture;
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        updateProviderHeaderAvatar(data.profilePicture);
+        const previewImg = document.getElementById('settings-profile-preview');
+        if(previewImg) {
+             const fullUrl = data.profilePicture.startsWith('http') ? data.profilePicture : `${window.location.origin}${data.profilePicture}`;
+             previewImg.src = fullUrl;
+        }
+
+      } catch (err) { alert(err.message); }
+      finally { btn.innerHTML = originalText; btn.disabled = false; fileInput.value = ''; }
+  });
+
+  // SETTINGS: Delete Account Button
+  document.getElementById('delete-account-btn')?.addEventListener('click', async () => {
+      if (!confirm('Delete account permanently?')) return;
+      try {
+        await api.deleteAccount();
+        localStorage.clear();
+        window.location.href = 'login.html';
+      } catch(e) { alert(e.message); }
   });
   
   // Logout
@@ -645,71 +797,3 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
-// ==========================================
-// LEGAL MODAL LOGIC (MUST BE GLOBAL)
-// ==========================================
-
-const legalDocs = {
-    privacy: {
-        title: "Privacy Policy",
-        content: `
-            <p><strong>Last Updated:</strong> March 2026</p>
-            <p>At Dolphin, we are committed to protecting your privacy. This policy outlines how we collect, use, and safeguard your information when you use our platform to connect founders and service providers.</p>
-            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">1. Information We Collect</h4>
-            <p>We collect information you provide directly to us, such as your name, email address, profile picture, professional expertise, and startup details. We also collect usage data to improve our services.</p>
-            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">2. How We Use Information</h4>
-            <p>We use the information to facilitate connections between users, provide customer support, and communicate with you about updates and opportunities.</p>
-            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">3. Data Sharing</h4>
-            <p>We do not sell your personal data. We share necessary information (like your public profile) to enable networking and mentorship features on the platform.</p>
-            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">4. Security</h4>
-            <p>We implement standard security measures to protect your data, but no method of transmission over the Internet is 100% secure.</p>
-        `
-    },
-    terms: {
-        title: "Terms of Service",
-        content: `
-            <p><strong>Last Updated:</strong> March 2026</p>
-            <p>Welcome to Dolphin. By accessing or using our platform, you agree to be bound by these Terms of Service.</p>
-            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">1. User Accounts</h4>
-            <p>You are responsible for maintaining the confidentiality of your account. You agree to provide accurate information and update it as necessary.</p>
-            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">2. Acceptable Use</h4>
-            <p>You agree not to use the platform for any unlawful purpose or in any way that could damage, disable, or impair the service. Harassment, spam, or fraudulent activity is strictly prohibited.</p>
-            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">3. Connections & Engagement</h4>
-            <p>Connections made on Dolphin are between individuals. Dolphin is not liable for the outcome of any professional relationship formed through the platform.</p>
-            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">4. Termination</h4>
-            <p>We reserve the right to suspend or terminate accounts that violate these terms or for any reason at our discretion.</p>
-        `
-    }
-};
-
-window.openLegalModal = function(type) {
-    const doc = legalDocs[type];
-    if (!doc) return;
-
-    document.getElementById('legal-modal-title').textContent = doc.title;
-    document.getElementById('legal-modal-body').innerHTML = doc.content;
-    
-    const modal = document.getElementById('legal-modal');
-    modal.classList.add('active');
-};
-
-window.closeLegalModal = function() {
-    const modal = document.getElementById('legal-modal');
-    modal.classList.remove('active');
-};
-
-// ==========================================
-// PASSWORD TOGGLE (MUST BE GLOBAL)
-// ==========================================
-
-window.togglePassword = function(inputId) {
-    const input = document.getElementById(inputId);
-    const icon = document.querySelector(`#${inputId}-toggle-icon`);
-    if (input.type === 'password') {
-        input.type = 'text';
-        if(icon) icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
-    } else {
-        input.type = 'password';
-        if(icon) icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
-    }
-};
