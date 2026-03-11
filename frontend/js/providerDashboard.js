@@ -1995,7 +1995,9 @@ function renderConversations(conversations) {
   });
 }
 
-// ==========================================
+// 3. Setup Search Logic
+function setupChatSearch() {
+    // ==========================================
 // 1. CONFIGURATION & API SETUP
 // ==========================================
 const API_URL = "https://dolphin-main-production.up.railway.app/api";
