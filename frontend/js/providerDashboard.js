@@ -578,8 +578,10 @@ window.addEventListener('resize', () => {
             alert('Failed to send message'); 
         }
     };
-       // Founders Page (With Robust Data Handling)
-        // Founders Page (With Robust Data Handling) send request
+    // ==========================================
+    // FOUNDERS PAGE LOGIC (FIXED STATUS MAPPING)
+    // ==========================================
+
     async function loadFounders() {
       const foundersList = document.getElementById('founders-list');
       foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">Loading...</p>';
@@ -588,41 +590,48 @@ window.addEventListener('resize', () => {
         // 1. Fetch Founders
         const founders = await api.getEligibleFounders();
         
-        // 2. Fetch My Requests to check status
-        const myRequests = await api.getMyRequests();
+        // 2. Fetch My Requests
+        const requests = await api.getMyRequests();
         
-        // 3. Create a Map: startupId (String) -> request object
-        const requestStatusMap = {};
-        myRequests.forEach(req => {
-            // ✅ FIX: Convert ObjectId to String for reliable matching
+        // 3. ✅ FIX: Separate SENT requests from INCOMING requests
+        const sentRequestsMap = {};   // Requests I sent (Provider is initiator)
+        const incomingRequestsMap = {}; // Requests I received (Founder is initiator)
+
+        requests.forEach(req => {
             const startupId = (req.startupId?._id || req.startupId)?.toString();
-            if (startupId) {
-                // Store the whole request object so we can check 'initiator' later
-                requestStatusMap[startupId] = req;
+            if (!startupId) return;
+
+            if (req.initiator === 'provider') {
+                // This is a request I sent
+                sentRequestsMap[startupId] = req;
+            } else {
+                // This is a request I received (or default if initiator field is missing)
+                incomingRequestsMap[startupId] = req;
             }
         });
 
         foundersList.innerHTML = '';
 
-        // Filter valid founders
         const validFounders = (founders || []).filter(f => f.founderId && f.founderId.name);
 
         if (!validFounders || validFounders.length === 0) {
           foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No eligible founders found.</p>';
         } else {
           window.currentFoundersList = validFounders;
-          window.currentRequestStatusMap = requestStatusMap; 
+          // Store both maps for filtering later
+          window.currentSentRequests = sentRequestsMap;
+          window.currentIncomingRequests = incomingRequestsMap;
           
           validFounders.forEach(founder => {
-            // Pass the whole map, not just status
-            const founderCard = createFounderCard(founder, requestStatusMap);
+            // Pass both maps to the card creator
+            const founderCard = createFounderCard(founder, sentRequestsMap, incomingRequestsMap);
             foundersList.appendChild(founderCard);
           });
         }
 
         // Update filters
-        document.getElementById('stage-filter').addEventListener('change', () => filterFounders(validFounders, requestStatusMap));
-        document.getElementById('industry-filter').addEventListener('change', () => filterFounders(validFounders, requestStatusMap));
+        document.getElementById('stage-filter').addEventListener('change', () => filterFounders(validFounders, sentRequestsMap, incomingRequestsMap));
+        document.getElementById('industry-filter').addEventListener('change', () => filterFounders(validFounders, sentRequestsMap, incomingRequestsMap));
 
       } catch (error) {
         console.error('Error loading founders:', error);
@@ -630,7 +639,7 @@ window.addEventListener('resize', () => {
       }
     }
 
-    function createFounderCard(founder, requestStatusMap = {}) {
+    function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = {}) {
       const card = document.createElement('div');
       card.className = 'founder-card';
 
@@ -645,46 +654,65 @@ window.addEventListener('resize', () => {
 
       const verifiedBadgeHtml = getVerifiedBadgeHtml(userState);
 
-      // ✅ FIX: Strict String ID matching
+      // ✅ FIX: Use strict string ID
       const startupIdStr = founder._id?.toString();
-      const existingRequest = requestStatusMap[startupIdStr]; 
+      
+      // 1. Check if I sent a request to this founder
+      const mySentRequest = sentRequestsMap[startupIdStr];
+      // 2. Check if this founder sent me a request
+      const myIncomingRequest = incomingRequestsMap[startupIdStr];
       
       let actionsHtml = '';
+      const founderUserId = (userRef._id || userRef)?.toString();
       
-      if (existingRequest) {
-          const status = existingRequest.status;
-          const initiator = existingRequest.initiator; // 'provider' or 'founder'
-          const founderUserId = (userRef._id || userRef)?.toString();
+      // LOGIC PRIORITY:
+      // 1. If I sent a request -> Show its status (Pending/Accepted/Rejected)
+      // 2. Else If I received a request -> Show Incoming status
+      // 3. Else -> Show Connect button
 
+      if (mySentRequest) {
+          // --- I SENT THIS REQUEST ---
+          const status = mySentRequest.status;
+          
           if (status === 'accepted') {
-              // ✅ CHAT BUTTON: Opens chat and navigates
               actionsHtml = `
-                <button class="btn btn-success" style="cursor: default; opacity: 0.8;">Connected</button>
+                <button class="btn btn-success" style="opacity: 0.8;">Connected</button>
                 <button class="btn btn-primary" onclick="window.openChat('${founderUserId}', '${founderName}', '${profileImg}')">Chat</button>
               `;
           } else if (status === 'pending') {
-              // Check who sent the request
-              if (initiator === 'provider') {
-                 // Provider sent it -> Show Pending
-                 actionsHtml = `
-                   <button class="btn btn-secondary" disabled>Request Pending</button>
-                   <button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>
-                 `;
-              } else {
-                 // Founder sent it -> Show Accept options (or redirect to Requests)
-                 actionsHtml = `
-                   <button class="btn btn-secondary" disabled>Incoming Request</button>
-                   <a href="#" onclick="navigateToPage('requests')" class="btn btn-primary">View Requests</a>
-                 `;
-              }
+              actionsHtml = `
+                <button class="btn btn-secondary" disabled>Request Sent (Pending)</button>
+                <button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>
+              `;
           } else if (status === 'rejected') {
               actionsHtml = `
                 <button class="btn btn-danger" onclick="openRequestModal('${startupIdStr}')">Request Rejected (Retry)</button>
                 <button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>
               `;
           }
+      } else if (myIncomingRequest) {
+          // --- I RECEIVED A REQUEST FROM THEM ---
+          const status = myIncomingRequest.status;
+          
+          if (status === 'accepted') {
+              actionsHtml = `
+                <button class="btn btn-success" style="opacity: 0.8;">Connected</button>
+                <button class="btn btn-primary" onclick="window.openChat('${founderUserId}', '${founderName}', '${profileImg}')">Chat</button>
+              `;
+          } else if (status === 'pending') {
+              actionsHtml = `
+                <button class="btn btn-secondary" disabled>Incoming Request</button>
+                <a href="#" onclick="navigateToPage('requests')" class="btn btn-primary">Go to Requests</a>
+              `;
+          } else {
+             // Rejected incoming request - allow sending new
+             actionsHtml = `
+                <button class="btn btn-primary" onclick="openRequestModal('${startupIdStr}')">Send Connection Request</button>
+                <button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>
+              `;
+          }
       } else {
-          // No existing request
+          // --- NO EXISTING REQUEST ---
           actionsHtml = `
             <button class="btn btn-primary" onclick="openRequestModal('${startupIdStr}')">Send Connection Request</button>
             <button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>
@@ -725,7 +753,9 @@ window.addEventListener('resize', () => {
       `;
       return card;
     }
-    function filterFounders(allFounders, statusMap) {
+    
+    // Update filterFounders arguments to match
+    function filterFounders(allFounders, sentMap, incomingMap) {
       const stageFilter = document.getElementById('stage-filter').value;
       const industryFilter = document.getElementById('industry-filter').value;
       const foundersList = document.getElementById('founders-list');
@@ -736,24 +766,20 @@ window.addEventListener('resize', () => {
         const matchesStage = stageFilter === 'all' || stage?.toString() === stageFilter; 
         const matchesIndustry = industryFilter === 'all' || 
           founder.industry?.toLowerCase().includes(industryFilter);
-
         return matchesStage && matchesIndustry;
       });
-
-      window.currentFoundersList = filtered;
 
       if (filtered.length === 0) {
         foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No founders match.</p>';
       } else {
-        // Pass statusMap to keep button states correct after filtering
-        filtered.forEach(founder => foundersList.appendChild(createFounderCard(founder, statusMap)));
+        filtered.forEach(founder => foundersList.appendChild(createFounderCard(founder, sentMap, incomingMap)));
       }
     }
 
         // ==========================================
     // FIX: Missing viewFounderProfile Function
     // ==========================================
-       window.viewFounderProfile = function(startupId) {
+    window.viewFounderProfile = function(startupId) {
       const profileModal = document.getElementById('profile-modal');
       const target = window.currentFoundersList?.find(f => f._id === startupId);
 
@@ -985,7 +1011,7 @@ window.addEventListener('resize', () => {
       requestModal.classList.add('active');
     };
 
-        // Send Request Logic
+    // Send Request Logic
     document.getElementById('send-request').addEventListener('click', async () => {
       const message = document.getElementById('request-message').value.trim();
       const services = document.getElementById('services-offered').value.trim();
@@ -993,25 +1019,31 @@ window.addEventListener('resize', () => {
       if (!message) return alert('Please explain how you can help.');
       if (!services) return alert('Please list the services you offer.');
 
+      // Show loading state on button
+      const btn = document.getElementById('send-request');
+      const originalText = btn.textContent;
+      btn.textContent = 'Sending...';
+      btn.disabled = true;
+
       try {
-        // Calls the updated API function
         const result = await api.sendProviderRequest(currentStartupId, message, services);
         
         if (result.success) {
           alert('Connection request sent successfully!');
           requestModal.classList.remove('active');
           
-          // ✅ FIX: Reload Founders list to update button status immediately
-          loadFounders(); 
+          // ✅ CRITICAL: Reload Founders list to update button status
+          await loadFounders(); 
           
-          // Optional: Refresh dashboard stats
-          loadDashboard(); 
         } else {
           alert(result.message || 'Failed to send request');
         }
       } catch (error) {
         console.error(error);
         alert('Failed: ' + error.message);
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
       }
     });
     document.getElementById('cancel-request').addEventListener('click', () => requestModal.classList.remove('active'));
@@ -1325,7 +1357,7 @@ window.addEventListener('resize', () => {
       return response.json();
     }
 
-        function createRequestItem(request) {
+    function createRequestItem(request) {
       const item = document.createElement('div');
       item.className = 'list-item';
       const startupName = request.startupId?.name || 'Unnamed Startup';
@@ -1405,12 +1437,14 @@ window.addEventListener('resize', () => {
     window.openChat = async function(partnerId, partnerName, partnerPic) {
         if (!partnerId) return console.error("No Partner ID provided");
         
-        // 1. ✅ CLOSE ANY OPEN MODALS (Profile Modal, Request Modal)
+        // 1. ✅ CLOSE ALL MODALS/POPUPS
+        // Close Founder Profile Modal
         document.getElementById('profile-modal').classList.remove('active');
+        // Close Request Modal (if open)
         document.getElementById('request-modal').classList.remove('active');
         
         // 2. ✅ NAVIGATE TO CHAT PAGE
-        // This helper function switches the active view
+        // This switches the main view from Requests/Founders to Chat
         navigateToPage('chat');
 
         // Sanitize Name
