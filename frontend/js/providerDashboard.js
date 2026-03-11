@@ -1541,124 +1541,907 @@ async function loadRequests() {
             console.error("Error loading messages:", e);
         }
     }
-    // Global variable to store conversations
+   // ==========================================
+// 8. CHAT LOGIC (WITH SEARCH)
+// ==========================================
 window.allConversations = [];
 
-// 1. Load Conversations (Updated to store data)
 async function loadConversations() {
-    try {
-        const convs = await chatApiCall('/conversations');
-        window.allConversations = convs || []; // Save data globally
-        
-        // Initial render
-        renderConversations(window.allConversations); 
-
-        // Setup search listener (only once)
-        setupChatSearch();
-        
-    } catch(e) { 
-        console.error("Error loading conversations list:", e);
-        const list = document.getElementById('conversations-list');
-        if(list) list.innerHTML = '<div style="padding:2rem; text-align:center; color:red;">Error loading chats.</div>';
-    }
-}
-
-// 2. Helper: Render Conversations to DOM
-function renderConversations(conversations) {
-    // ✅ FIX: Target the inner wrapper, not the main list
+  try {
+    const convs = await chatApiCall('/conversations');
+    window.allConversations = convs || [];
+    renderConversations(window.allConversations);
+    setupChatSearch();
+  } catch(e) {
+    console.error("Error loading conversations:", e);
     const list = document.getElementById('conversations-items');
-    if (!list) return;
-    
-    list.innerHTML = ''; // Clear previous items
-
-    if (!conversations || conversations.length === 0) {
-        const searchInput = document.getElementById('chat-search-input');
-        const isSearching = searchInput && searchInput.value.trim() !== '';
-        
-        list.innerHTML = isSearching 
-            ? '<div style="padding:2rem; text-align:center; color:#999;">No results found.</div>'
-            : '<div style="padding:2rem; text-align:center; color:#999;">No conversations yet.</div>';
-        return;
-    }
-
-    conversations.forEach(c => {
-        let partner = null;
-
-        // ... (Keep your existing partner identification logic here) ...
-        if (c.name && c.lastMessage) { partner = c; }
-        else if (c.participants && Array.isArray(c.participants)) {
-            partner = c.participants.find(p => p._id.toString() !== userId);
-        } else if (c.founderId) {
-            partner = c.founderId;
-        } else if (c.providerId) {
-            partner = c.providerId;
-        }
-        
-        if (!partner) return;
-
-        const partnerId = partner._id;
-        const partnerName = partner.name || 'Unknown';
-        
-        // ... (Keep your existing HTML generation logic) ...
-        let partnerPic = partner.profilePicture;
-        let avatarUrl = partnerPic ? (partnerPic.startsWith('http') ? partnerPic : `${window.location.origin}${partnerPic}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(partnerName)}&background=random`;
-        const previewText = c.lastMessage?.content || c.lastMessage || 'Start chatting...';
-
-        const div = document.createElement('div');
-        div.className = 'conversation-item';
-        
-        div.innerHTML = `
-          <img src="${avatarUrl}" class="conversation-avatar">
-          <div class="conversation-info">
-            <div class="conversation-name">${partnerName}</div>
-            <div class="conversation-preview">${previewText}</div>
-          </div>
-        `;
-        
-        div.onclick = () => window.openChat(partnerId, partnerName, partnerPic);
-        
-        // ✅ Items are appended to the wrapper
-        list.appendChild(div);
-    });
+    if(list) list.innerHTML = '<div style="padding:2rem; text-align:center; color:red;">Error loading chats.</div>';
+  }
 }
 
-// 3. Setup Search Logic
-function setupChatSearch() {
+function renderConversations(conversations) {
+  const list = document.getElementById('conversations-items');
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (!conversations || conversations.length === 0) {
     const searchInput = document.getElementById('chat-search-input');
+    const isSearching = searchInput && searchInput.value.trim() !== '';
+    list.innerHTML = isSearching 
+      ? '<div style="padding:2rem; text-align:center; color:#999;">No results found.</div>'
+      : '<div style="padding:2rem; text-align:center; color:#999;">No conversations yet.</div>';
+    return;
+  }
+// ==========================================
+// 1. CONFIGURATION & API SETUP
+// ==========================================
+const API_URL = "https://dolphin-main-production.up.railway.app/api";
+const API_BASE = `${API_URL}/provider`;
+const AUTH_BASE = `${API_URL}/auth`;
+
+// Generic Helper to handle Auth headers and errors
+async function apiCall(endpoint, method = 'GET', body = null, base = API_BASE) {
+  const token = localStorage.getItem('token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const config = { method, headers };
+  if (body) config.body = JSON.stringify(body);
+
+  try {
+    const response = await fetch(`${base}${endpoint}`, config);
     
-    // Remove old listener if any to prevent duplicates
-    if (searchInput) {
-        // Clone and replace to remove old listeners
-        const newInput = searchInput.cloneNode(true);
-        searchInput.parentNode.replaceChild(newInput, searchInput);
-        
-        newInput.addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase().trim();
-            
-            if (!term) {
-                // If empty, show all
-                renderConversations(window.allConversations);
-                return;
-            }
-
-            // Filter by name
-            const filtered = window.allConversations.filter(c => {
-                let partnerName = '';
-                
-                // Extract name based on structure
-                if (c.name) partnerName = c.name; 
-                else if (c.participants) {
-                    const p = c.participants.find(p => p._id.toString() !== userId);
-                    partnerName = p?.name || '';
-                } else if (c.founderId) partnerName = c.founderId.name;
-                else if (c.providerId) partnerName = c.providerId.name;
-                
-                return partnerName.toLowerCase().includes(term);
-            });
-
-            renderConversations(filtered);
-        });
+    if (response.status === 401) {
+       localStorage.removeItem('token');
+       localStorage.removeItem('user');
+       window.location.href = 'login.html'; 
+       return;
     }
+    
+    if (!response.ok) {
+      let errorMsg = `API Error: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMsg = errorData.message || errorMsg;
+      } catch (e) { /* Ignore parse error */ }
+      throw new Error(errorMsg);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('API Call Failed:', error);
+    throw error;
+  }
+}
+
+const api = {
+  getMyRequests: async () => {
+    const data = await apiCall('/my-requests');
+    // ✅ FIX: Handle both array [req1, req2] and object { requests: [] }
+    if (Array.isArray(data)) return data;
+    return data.requests || [];
+  },
+  getEligibleFounders: async () => {
+    return await apiCall('/eligible-founders');
+  },
+  updateIntroRequest: async (id, status) => {
+    return await apiCall(`/requests/${id}`, 'PUT', { status });
+  },
+  sendProviderRequest: async (startupId, message, servicesOffered) => {
+    return await apiCall('/send-request', 'POST', { startupId, message, servicesOffered });
+  },
+  getProfile: async () => {
+    return await apiCall('/profile');
+  },
+  updateProfile: async (profileData) => {
+    return await apiCall('/profile', 'PUT', profileData);
+  },
+  deleteAccount: async () => {
+    return await apiCall('/account', 'DELETE', null, AUTH_BASE);
+  },
+};
+
+// ==========================================
+// 2. CHAT API HELPER
+// ==========================================
+async function chatApiCall(endpoint, method = 'GET', body = null) {
+  const token = localStorage.getItem('token');
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
+  const config = { method, headers };
+  if (body) config.body = JSON.stringify(body);
+
+  const response = await fetch(`${API_URL}/chat${endpoint}`, config);
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.message || 'Network Error');
+  }
+  return response.json();
+}
+
+// ==========================================
+// 3. GLOBAL STATE & USER
+// ==========================================
+const user = JSON.parse(localStorage.getItem('user') || '{}');
+const token = localStorage.getItem('token');
+const userId = (user._id || user.id)?.toString();
+
+if (!token) console.warn("No token found.");
+
+// ==========================================
+// 4. HELPER FUNCTIONS
+// ==========================================
+function getVerifiedBadgeHtml(state) {
+  const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
+  if (verifiedStates.includes(state)) {
+    return `<span class="verified-badge"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> VERIFIED</span>`;
+  }
+  return '';
+}
+
+function identifyRequestType(req, currentUserId) {
+  if (req.initiator === 'provider') return 'sent';
+  if (req.initiator === 'founder') return 'incoming';
+
+  const sender = (req.senderId?._id || req.senderId)?.toString();
+  if (sender) return sender === currentUserId ? 'sent' : 'incoming';
+
+  if (req.servicesOffered) return 'sent';
+  return 'incoming';
+}
+
+function updateProviderHeaderAvatar(imageUrl) {
+  const avatarEl = document.querySelector('.user-avatar');
+  if (avatarEl && imageUrl) {
+    const fullUrl = imageUrl.startsWith('http') ? imageUrl : `${window.location.origin}${imageUrl}`;
+    avatarEl.innerHTML = `<img src="${fullUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+  }
+}
+
+// ==========================================
+// 5. CORE PAGE LOADERS
+// ==========================================
+function loadPageContent(page) {
+  switch(page) {
+    case 'dashboard': loadDashboard(); break;
+    case 'profile': loadProfile(); break;
+    case 'founders': loadFounders(); break;
+    case 'requests': loadRequests(); break;
+    case 'settings': loadSettings(); break;
+    case 'chat': loadConversations(); break;
+  }
+}
+
+async function loadDashboard() {
+  try {
+    const profile = await api.getProfile();
+    
+    if (profile.profilePicture) updateProviderHeaderAvatar(profile.profilePicture);
+    else if (profile.userId && profile.userId.profilePicture) updateProviderHeaderAvatar(profile.userId.profilePicture);
+    else document.querySelector('.user-avatar').textContent = (profile.name || 'User').split(' ').map(n => n.charAt(0)).join('');
+
+    document.getElementById('avg-rating').textContent = profile.avgRating || '0.0';
+
+    const requests = await api.getMyRequests();
+    const activeEngagements = requests.filter(r => r.status === 'accepted').length;
+    document.getElementById('active-engagements').textContent = activeEngagements;
+
+    const acceptedRequests = requests.filter(r => r.status === 'accepted').length;
+    const rejectedRequests = requests.filter(r => r.status === 'rejected').length;
+    const totalClosed = acceptedRequests + rejectedRequests;
+    document.getElementById('response-rate').textContent = totalClosed > 0 ? Math.round((acceptedRequests / totalClosed) * 100) + '%' : '0%';
+
+    const eligible = await api.getEligibleFounders();
+    document.getElementById('eligible-founders').textContent = String(eligible?.length || 0);
+
+    const recentActivity = document.getElementById('recent-activity');
+    recentActivity.innerHTML = '';
+    if (requests.length === 0) {
+      recentActivity.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No recent activity.</p>';
+    } else {
+      requests.slice(0, 3).forEach(request => {
+        const statusClass = request.status === 'accepted' ? 'status-accepted' : request.status === 'rejected' ? 'status-rejected' : 'status-pending';
+        const startupName = request.startupId?.name || 'Unnamed Startup';
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        item.innerHTML = `
+          <div class="list-item-content"><div class="list-item-title">${startupName}</div><div class="list-item-subtitle">${new Date(request.createdAt).toLocaleDateString()}</div></div>
+          <span class="list-item-status ${statusClass}">${request.status.toUpperCase()}</span>`;
+        recentActivity.appendChild(item);
+      });
+    }
+  } catch (error) {
+    console.error('Error loading dashboard:', error);
+  }
+}
+
+async function loadProfile() {
+  try {
+    const profile = await api.getProfile();
+    if (profile) {
+      document.getElementById('provider-name').value = profile.name || user.name || '';
+      document.getElementById('service-category').value = profile.category || 'mentor';
+      document.getElementById('experience-level').value = profile.experienceLevel || 'mid';
+      document.getElementById('specialties').value = (profile.specialties || []).join(', ');
+      document.getElementById('bio').value = profile.description || profile.bio || '';
+      document.getElementById('availability').value = profile.availability || 'medium';
+      document.getElementById('contact-method').value = profile.contactMethod || 'email';
+    }
+  } catch (err) { console.error(err); }
+}
+
+// ==========================================
+// 6. FOUNDERS PAGE LOGIC
+// ==========================================
+async function loadFounders() {
+  const foundersList = document.getElementById('founders-list');
+  foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">Loading...</p>';
+
+  try {
+    const founders = await api.getEligibleFounders();
+    const requests = await api.getMyRequests();
+    
+    const sentRequestsMap = {};
+    const incomingRequestsMap = {};
+
+    requests.forEach(req => {
+      const startupId = (req.startupId?._id || req.startupId)?.toString();
+      if (!startupId) return;
+      const type = identifyRequestType(req, userId);
+      if (type === 'sent') sentRequestsMap[startupId] = req;
+      else incomingRequestsMap[startupId] = req;
+    });
+
+    foundersList.innerHTML = '';
+    const validFounders = (founders || []).filter(f => f.founderId && f.founderId.name);
+
+    if (!validFounders || validFounders.length === 0) {
+      foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No eligible founders found.</p>';
+    } else {
+      window.currentFoundersList = validFounders;
+      window.currentSentRequests = sentRequestsMap;
+      window.currentIncomingRequests = incomingRequestsMap;
+      
+      validFounders.forEach(founder => foundersList.appendChild(createFounderCard(founder, sentRequestsMap, incomingRequestsMap)));
+    }
+  } catch (error) {
+    console.error('Error loading founders:', error);
+    foundersList.innerHTML = `<p style="text-align: center; color: var(--danger); padding: 2rem;">Error: ${error.message}</p>`;
+  }
+}
+
+function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = {}) {
+  const card = document.createElement('div');
+  card.className = 'founder-card';
+  
+  const userRef = founder.founderId || {};
+  const founderName = userRef.name || 'Unknown';
+  const startupIdStr = founder._id?.toString();
+  card.id = `founder-card-${startupIdStr}`;
+
+  const profileImg = userRef.profilePicture 
+    ? userRef.profilePicture 
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(founderName)}&background=random&color=fff&size=128`;
+
+  const mySentRequest = sentRequestsMap[startupIdStr];
+  const myIncomingRequest = incomingRequestsMap[startupIdStr];
+  const founderUserId = (userRef._id || userRef)?.toString();
+  
+  let actionsHtml = '';
+  if (mySentRequest) {
+      if (mySentRequest.status === 'accepted') actionsHtml = `<button class="btn btn-success" style="opacity: 0.8;">Connected</button><button class="btn btn-primary" onclick="window.openChat('${founderUserId}', '${founderName}', '${profileImg}')">Chat</button>`;
+      else if (mySentRequest.status === 'pending') actionsHtml = `<button class="btn btn-secondary" disabled>Request Sent (Pending)</button><button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>`;
+      else actionsHtml = `<button class="btn btn-danger" onclick="openRequestModal('${startupIdStr}')">Rejected (Retry)</button><button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>`;
+  } else if (myIncomingRequest) {
+      if (myIncomingRequest.status === 'accepted') actionsHtml = `<button class="btn btn-success" style="opacity: 0.8;">Connected</button><button class="btn btn-primary" onclick="window.openChat('${founderUserId}', '${founderName}', '${profileImg}')">Chat</button>`;
+      else if (myIncomingRequest.status === 'pending') actionsHtml = `<button class="btn btn-secondary" disabled>Incoming Request</button><a href="#" onclick="navigateToPage('requests')" class="btn btn-primary">Go to Requests</a>`;
+      else actionsHtml = `<button class="btn btn-primary" onclick="openRequestModal('${startupIdStr}')">Send Connection Request</button><button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>`;
+  } else {
+      actionsHtml = `<button class="btn btn-primary" onclick="openRequestModal('${startupIdStr}')">Send Connection Request</button><button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>`;
+  }
+
+  card.innerHTML = `
+    <div class="founder-header">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <img src="${profileImg}" alt="${founderName}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
+        <div>
+          <div class="founder-name">${founder.startupName || 'Unnamed Startup'} ${getVerifiedBadgeHtml(userRef.state)}</div>
+          <div style="font-size: 0.85rem; color: #666;">Founder: ${founderName}</div>
+        </div>
+      </div>
+    </div>
+    <p style="margin: 1rem 0; color: #444;">${founder.thesis || 'No thesis provided.'}</p>
+    <div class="founder-details">
+      <div class="detail-item"><span class="detail-label">Industry</span><span class="detail-value">${founder.industry || 'N/A'}</span></div>
+      <div class="detail-item"><span class="detail-label">Score</span><span class="detail-value" style="font-weight: 700; color: var(--success);">${founder.validationScore ?? 0}%</span></div>
+    </div>
+    <div class="request-actions">${actionsHtml}</div>`;
+  return card;
+}
+
+// ==========================================
+// 7. REQUESTS PAGE LOGIC
+// ==========================================
+async function loadRequests() {
+  try {
+    const requests = await api.getMyRequests();
+    const incomingContainer = document.getElementById('incoming-requests-list');
+    const sentContainer = document.getElementById('sent-requests-list');
+    incomingContainer.innerHTML = '';
+    sentContainer.innerHTML = '';
+
+    const incomingReqs = [];
+    const sentReqs = [];
+
+    requests.forEach(r => {
+      const type = identifyRequestType(r, userId);
+      if (type === 'sent') sentReqs.push(r);
+      else incomingReqs.push(r);
+    });
+
+    document.querySelector('[data-tab="incoming"]').textContent = `Incoming (${incomingReqs.length})`;
+    document.querySelector('[data-tab="sent"]').textContent = `Sent (${sentReqs.length})`;
+
+    if (incomingReqs.length === 0) incomingContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No incoming requests.</p>';
+    else incomingReqs.forEach(r => incomingContainer.appendChild(createRequestItem(r, 'incoming')));
+
+    if (sentReqs.length === 0) sentContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No sent requests.</p>';
+    else sentReqs.forEach(r => sentContainer.appendChild(createRequestItem(r, 'sent')));
+
+  } catch (error) { console.error(error); }
+}
+
+function createRequestItem(request, type) {
+  const item = document.createElement('div');
+  item.className = 'list-item';
+  const startupName = request.startupId?.name || 'Startup';
+  const founder = request.founderId || {};
+  const founderId = founder._id || 'unknown';
+  const founderName = founder.name || 'Founder';
+  const founderPic = founder.profilePicture || '';
+  const displayTitle = request.servicesOffered || 'Connection Request';
+  const displayMessage = request.message || 'No message.';
+
+  let actionsHtml = '';
+  if (request.status === 'accepted') {
+    actionsHtml = `<span class="status-accepted">Accepted</span><button class="btn btn-primary btn-sm" onclick="window.openChat('${founderId}', '${founderName}', '${founderPic}')">Chat</button>`;
+  } else if (request.status === 'pending') {
+    if (type === 'incoming') actionsHtml = `<button class="btn btn-accept" onclick="updateRequest('${request._id}', 'accepted')">Accept</button><button class="btn btn-reject" onclick="updateRequest('${request._id}', 'rejected')">Reject</button>`;
+    else actionsHtml = '<span class="status-pending">Pending</span>';
+  } else {
+    actionsHtml = '<span class="status-rejected">Rejected</span>';
+  }
+
+  item.innerHTML = `
+    <div class="list-item-content">
+      <div class="list-item-title" style="font-weight: 700;">${type === 'sent' ? 'To: ' + startupName : startupName}</div>
+      <div class="list-item-subtitle">${type === 'sent' ? 'Founder: ' + founderName : 'From: ' + founderName}</div>
+      <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #444;"><strong>Subject:</strong> ${displayTitle}</div>
+      <div style="margin-top: 0.25rem; font-size: 0.85rem; color: #666; font-style: italic;">"${displayMessage}"</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:0.5rem; flex-shrink: 0;">${actionsHtml}</div>`;
+  return item;
+}
+
+window.updateRequest = async function(id, status) {
+  if(!confirm(`${status} this request?`)) return;
+  try {
+    await api.updateIntroRequest(id, status);
+    alert(`Request ${status}!`);
+    loadRequests();
+    loadDashboard();
+  } catch(e) { alert(e.message); }
+};
+
+// ==========================================
+// 8. CHAT LOGIC (WITH SEARCH)
+// ==========================================
+window.allConversations = [];
+
+async function loadConversations() {
+  try {
+    const convs = await chatApiCall('/conversations');
+    window.allConversations = convs || [];
+    renderConversations(window.allConversations);
+    setupChatSearch();
+  } catch(e) {
+    console.error("Error loading conversations:", e);
+    const list = document.getElementById('conversations-items');
+    if(list) list.innerHTML = '<div style="padding:2rem; text-align:center; color:red;">Error loading chats.</div>';
+  }
+}
+
+function renderConversations(conversations) {
+  const list = document.getElementById('conversations-items');
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (!conversations || conversations.length === 0) {
+    const searchInput = document.getElementById('chat-search-input');
+    const isSearching = searchInput && searchInput.value.trim() !== '';
+    list.innerHTML = isSearching 
+      ? '<div style="padding:2rem; text-align:center; color:#999;">No results found.</div>'
+      : '<div style="padding:2rem; text-align:center; color:#999;">No conversations yet.</div>';
+    return;
+  }
+
+  conversations.forEach(c => {
+    let partner = null;
+    if (c.name && c.lastMessage) partner = c;
+    else if (c.participants && Array.isArray(c.participants)) partner = c.participants.find(p => p._id.toString() !== userId);
+    else if (c.founderId) partner = c.founderId;
+    else if (c.providerId) partner = c.providerId;
+
+    if (!partner) return;
+
+    const partnerId = partner._id;
+    const partnerName = partner.name || 'Unknown';
+    let partnerPic = partner.profilePicture;
+    let avatarUrl = partnerPic ? (partnerPic.startsWith('http') ? partnerPic : `${window.location.origin}${partnerPic}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(partnerName)}&background=random`;
+    const previewText = c.lastMessage?.content || c.lastMessage || 'Start chatting...';
+
+    const div = document.createElement('div');
+    div.className = 'conversation-item';
+    div.innerHTML = `
+      <img src="${avatarUrl}" class="conversation-avatar">
+      <div class="conversation-info">
+        <div class="conversation-name">${partnerName}</div>
+        <div class="conversation-preview">${previewText}</div>
+      </div>`;
+    div.onclick = () => window.openChat(partnerId, partnerName, partnerPic);
+    list.appendChild(div);
+  });
+}
+
+// ==========================================
+// 1. CONFIGURATION & API SETUP
+// ==========================================
+const API_URL = "https://dolphin-main-production.up.railway.app/api";
+const API_BASE = `${API_URL}/provider`;
+const AUTH_BASE = `${API_URL}/auth`;
+
+// Generic Helper to handle Auth headers and errors
+async function apiCall(endpoint, method = 'GET', body = null, base = API_BASE) {
+  const token = localStorage.getItem('token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const config = { method, headers };
+  if (body) config.body = JSON.stringify(body);
+
+  try {
+    const response = await fetch(`${base}${endpoint}`, config);
+    
+    if (response.status === 401) {
+       localStorage.removeItem('token');
+       localStorage.removeItem('user');
+       window.location.href = 'login.html'; 
+       return;
+    }
+    
+    if (!response.ok) {
+      let errorMsg = `API Error: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMsg = errorData.message || errorMsg;
+      } catch (e) { /* Ignore parse error */ }
+      throw new Error(errorMsg);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('API Call Failed:', error);
+    throw error;
+  }
+}
+
+const api = {
+  getMyRequests: async () => {
+    const data = await apiCall('/my-requests');
+    // ✅ FIX: Handle both array [req1, req2] and object { requests: [] }
+    if (Array.isArray(data)) return data;
+    return data.requests || [];
+  },
+  getEligibleFounders: async () => {
+    return await apiCall('/eligible-founders');
+  },
+  updateIntroRequest: async (id, status) => {
+    return await apiCall(`/requests/${id}`, 'PUT', { status });
+  },
+  sendProviderRequest: async (startupId, message, servicesOffered) => {
+    return await apiCall('/send-request', 'POST', { startupId, message, servicesOffered });
+  },
+  getProfile: async () => {
+    return await apiCall('/profile');
+  },
+  updateProfile: async (profileData) => {
+    return await apiCall('/profile', 'PUT', profileData);
+  },
+  deleteAccount: async () => {
+    return await apiCall('/account', 'DELETE', null, AUTH_BASE);
+  },
+};
+
+// ==========================================
+// 2. CHAT API HELPER
+// ==========================================
+async function chatApiCall(endpoint, method = 'GET', body = null) {
+  const token = localStorage.getItem('token');
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
+  const config = { method, headers };
+  if (body) config.body = JSON.stringify(body);
+
+  const response = await fetch(`${API_URL}/chat${endpoint}`, config);
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.message || 'Network Error');
+  }
+  return response.json();
+}
+
+// ==========================================
+// 3. GLOBAL STATE & USER
+// ==========================================
+const user = JSON.parse(localStorage.getItem('user') || '{}');
+const token = localStorage.getItem('token');
+const userId = (user._id || user.id)?.toString();
+
+if (!token) console.warn("No token found.");
+
+// ==========================================
+// 4. HELPER FUNCTIONS
+// ==========================================
+function getVerifiedBadgeHtml(state) {
+  const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
+  if (verifiedStates.includes(state)) {
+    return `<span class="verified-badge"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> VERIFIED</span>`;
+  }
+  return '';
+}
+
+function identifyRequestType(req, currentUserId) {
+  if (req.initiator === 'provider') return 'sent';
+  if (req.initiator === 'founder') return 'incoming';
+
+  const sender = (req.senderId?._id || req.senderId)?.toString();
+  if (sender) return sender === currentUserId ? 'sent' : 'incoming';
+
+  if (req.servicesOffered) return 'sent';
+  return 'incoming';
+}
+
+function updateProviderHeaderAvatar(imageUrl) {
+  const avatarEl = document.querySelector('.user-avatar');
+  if (avatarEl && imageUrl) {
+    const fullUrl = imageUrl.startsWith('http') ? imageUrl : `${window.location.origin}${imageUrl}`;
+    avatarEl.innerHTML = `<img src="${fullUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+  }
+}
+
+// ==========================================
+// 5. CORE PAGE LOADERS
+// ==========================================
+function loadPageContent(page) {
+  switch(page) {
+    case 'dashboard': loadDashboard(); break;
+    case 'profile': loadProfile(); break;
+    case 'founders': loadFounders(); break;
+    case 'requests': loadRequests(); break;
+    case 'settings': loadSettings(); break;
+    case 'chat': loadConversations(); break;
+  }
+}
+
+async function loadDashboard() {
+  try {
+    const profile = await api.getProfile();
+    
+    if (profile.profilePicture) updateProviderHeaderAvatar(profile.profilePicture);
+    else if (profile.userId && profile.userId.profilePicture) updateProviderHeaderAvatar(profile.userId.profilePicture);
+    else document.querySelector('.user-avatar').textContent = (profile.name || 'User').split(' ').map(n => n.charAt(0)).join('');
+
+    document.getElementById('avg-rating').textContent = profile.avgRating || '0.0';
+
+    const requests = await api.getMyRequests();
+    const activeEngagements = requests.filter(r => r.status === 'accepted').length;
+    document.getElementById('active-engagements').textContent = activeEngagements;
+
+    const acceptedRequests = requests.filter(r => r.status === 'accepted').length;
+    const rejectedRequests = requests.filter(r => r.status === 'rejected').length;
+    const totalClosed = acceptedRequests + rejectedRequests;
+    document.getElementById('response-rate').textContent = totalClosed > 0 ? Math.round((acceptedRequests / totalClosed) * 100) + '%' : '0%';
+
+    const eligible = await api.getEligibleFounders();
+    document.getElementById('eligible-founders').textContent = String(eligible?.length || 0);
+
+    const recentActivity = document.getElementById('recent-activity');
+    recentActivity.innerHTML = '';
+    if (requests.length === 0) {
+      recentActivity.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No recent activity.</p>';
+    } else {
+      requests.slice(0, 3).forEach(request => {
+        const statusClass = request.status === 'accepted' ? 'status-accepted' : request.status === 'rejected' ? 'status-rejected' : 'status-pending';
+        const startupName = request.startupId?.name || 'Unnamed Startup';
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        item.innerHTML = `
+          <div class="list-item-content"><div class="list-item-title">${startupName}</div><div class="list-item-subtitle">${new Date(request.createdAt).toLocaleDateString()}</div></div>
+          <span class="list-item-status ${statusClass}">${request.status.toUpperCase()}</span>`;
+        recentActivity.appendChild(item);
+      });
+    }
+  } catch (error) {
+    console.error('Error loading dashboard:', error);
+  }
+}
+
+async function loadProfile() {
+  try {
+    const profile = await api.getProfile();
+    if (profile) {
+      document.getElementById('provider-name').value = profile.name || user.name || '';
+      document.getElementById('service-category').value = profile.category || 'mentor';
+      document.getElementById('experience-level').value = profile.experienceLevel || 'mid';
+      document.getElementById('specialties').value = (profile.specialties || []).join(', ');
+      document.getElementById('bio').value = profile.description || profile.bio || '';
+      document.getElementById('availability').value = profile.availability || 'medium';
+      document.getElementById('contact-method').value = profile.contactMethod || 'email';
+    }
+  } catch (err) { console.error(err); }
+}
+
+// ==========================================
+// 6. FOUNDERS PAGE LOGIC
+// ==========================================
+async function loadFounders() {
+  const foundersList = document.getElementById('founders-list');
+  foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">Loading...</p>';
+
+  try {
+    const founders = await api.getEligibleFounders();
+    const requests = await api.getMyRequests();
+    
+    const sentRequestsMap = {};
+    const incomingRequestsMap = {};
+
+    requests.forEach(req => {
+      const startupId = (req.startupId?._id || req.startupId)?.toString();
+      if (!startupId) return;
+      const type = identifyRequestType(req, userId);
+      if (type === 'sent') sentRequestsMap[startupId] = req;
+      else incomingRequestsMap[startupId] = req;
+    });
+
+    foundersList.innerHTML = '';
+    const validFounders = (founders || []).filter(f => f.founderId && f.founderId.name);
+
+    if (!validFounders || validFounders.length === 0) {
+      foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No eligible founders found.</p>';
+    } else {
+      window.currentFoundersList = validFounders;
+      window.currentSentRequests = sentRequestsMap;
+      window.currentIncomingRequests = incomingRequestsMap;
+      
+      validFounders.forEach(founder => foundersList.appendChild(createFounderCard(founder, sentRequestsMap, incomingRequestsMap)));
+    }
+  } catch (error) {
+    console.error('Error loading founders:', error);
+    foundersList.innerHTML = `<p style="text-align: center; color: var(--danger); padding: 2rem;">Error: ${error.message}</p>`;
+  }
+}
+
+function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = {}) {
+  const card = document.createElement('div');
+  card.className = 'founder-card';
+  
+  const userRef = founder.founderId || {};
+  const founderName = userRef.name || 'Unknown';
+  const startupIdStr = founder._id?.toString();
+  card.id = `founder-card-${startupIdStr}`;
+
+  const profileImg = userRef.profilePicture 
+    ? userRef.profilePicture 
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(founderName)}&background=random&color=fff&size=128`;
+
+  const mySentRequest = sentRequestsMap[startupIdStr];
+  const myIncomingRequest = incomingRequestsMap[startupIdStr];
+  const founderUserId = (userRef._id || userRef)?.toString();
+  
+  let actionsHtml = '';
+  if (mySentRequest) {
+      if (mySentRequest.status === 'accepted') actionsHtml = `<button class="btn btn-success" style="opacity: 0.8;">Connected</button><button class="btn btn-primary" onclick="window.openChat('${founderUserId}', '${founderName}', '${profileImg}')">Chat</button>`;
+      else if (mySentRequest.status === 'pending') actionsHtml = `<button class="btn btn-secondary" disabled>Request Sent (Pending)</button><button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>`;
+      else actionsHtml = `<button class="btn btn-danger" onclick="openRequestModal('${startupIdStr}')">Rejected (Retry)</button><button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>`;
+  } else if (myIncomingRequest) {
+      if (myIncomingRequest.status === 'accepted') actionsHtml = `<button class="btn btn-success" style="opacity: 0.8;">Connected</button><button class="btn btn-primary" onclick="window.openChat('${founderUserId}', '${founderName}', '${profileImg}')">Chat</button>`;
+      else if (myIncomingRequest.status === 'pending') actionsHtml = `<button class="btn btn-secondary" disabled>Incoming Request</button><a href="#" onclick="navigateToPage('requests')" class="btn btn-primary">Go to Requests</a>`;
+      else actionsHtml = `<button class="btn btn-primary" onclick="openRequestModal('${startupIdStr}')">Send Connection Request</button><button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>`;
+  } else {
+      actionsHtml = `<button class="btn btn-primary" onclick="openRequestModal('${startupIdStr}')">Send Connection Request</button><button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>`;
+  }
+
+  card.innerHTML = `
+    <div class="founder-header">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <img src="${profileImg}" alt="${founderName}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
+        <div>
+          <div class="founder-name">${founder.startupName || 'Unnamed Startup'} ${getVerifiedBadgeHtml(userRef.state)}</div>
+          <div style="font-size: 0.85rem; color: #666;">Founder: ${founderName}</div>
+        </div>
+      </div>
+    </div>
+    <p style="margin: 1rem 0; color: #444;">${founder.thesis || 'No thesis provided.'}</p>
+    <div class="founder-details">
+      <div class="detail-item"><span class="detail-label">Industry</span><span class="detail-value">${founder.industry || 'N/A'}</span></div>
+      <div class="detail-item"><span class="detail-label">Score</span><span class="detail-value" style="font-weight: 700; color: var(--success);">${founder.validationScore ?? 0}%</span></div>
+    </div>
+    <div class="request-actions">${actionsHtml}</div>`;
+  return card;
+}
+
+// ==========================================
+// 7. REQUESTS PAGE LOGIC
+// ==========================================
+async function loadRequests() {
+  try {
+    const requests = await api.getMyRequests();
+    const incomingContainer = document.getElementById('incoming-requests-list');
+    const sentContainer = document.getElementById('sent-requests-list');
+    incomingContainer.innerHTML = '';
+    sentContainer.innerHTML = '';
+
+    const incomingReqs = [];
+    const sentReqs = [];
+
+    requests.forEach(r => {
+      const type = identifyRequestType(r, userId);
+      if (type === 'sent') sentReqs.push(r);
+      else incomingReqs.push(r);
+    });
+
+    document.querySelector('[data-tab="incoming"]').textContent = `Incoming (${incomingReqs.length})`;
+    document.querySelector('[data-tab="sent"]').textContent = `Sent (${sentReqs.length})`;
+
+    if (incomingReqs.length === 0) incomingContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No incoming requests.</p>';
+    else incomingReqs.forEach(r => incomingContainer.appendChild(createRequestItem(r, 'incoming')));
+
+    if (sentReqs.length === 0) sentContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No sent requests.</p>';
+    else sentReqs.forEach(r => sentContainer.appendChild(createRequestItem(r, 'sent')));
+
+  } catch (error) { console.error(error); }
+}
+
+function createRequestItem(request, type) {
+  const item = document.createElement('div');
+  item.className = 'list-item';
+  const startupName = request.startupId?.name || 'Startup';
+  const founder = request.founderId || {};
+  const founderId = founder._id || 'unknown';
+  const founderName = founder.name || 'Founder';
+  const founderPic = founder.profilePicture || '';
+  const displayTitle = request.servicesOffered || 'Connection Request';
+  const displayMessage = request.message || 'No message.';
+
+  let actionsHtml = '';
+  if (request.status === 'accepted') {
+    actionsHtml = `<span class="status-accepted">Accepted</span><button class="btn btn-primary btn-sm" onclick="window.openChat('${founderId}', '${founderName}', '${founderPic}')">Chat</button>`;
+  } else if (request.status === 'pending') {
+    if (type === 'incoming') actionsHtml = `<button class="btn btn-accept" onclick="updateRequest('${request._id}', 'accepted')">Accept</button><button class="btn btn-reject" onclick="updateRequest('${request._id}', 'rejected')">Reject</button>`;
+    else actionsHtml = '<span class="status-pending">Pending</span>';
+  } else {
+    actionsHtml = '<span class="status-rejected">Rejected</span>';
+  }
+
+  item.innerHTML = `
+    <div class="list-item-content">
+      <div class="list-item-title" style="font-weight: 700;">${type === 'sent' ? 'To: ' + startupName : startupName}</div>
+      <div class="list-item-subtitle">${type === 'sent' ? 'Founder: ' + founderName : 'From: ' + founderName}</div>
+      <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #444;"><strong>Subject:</strong> ${displayTitle}</div>
+      <div style="margin-top: 0.25rem; font-size: 0.85rem; color: #666; font-style: italic;">"${displayMessage}"</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:0.5rem; flex-shrink: 0;">${actionsHtml}</div>`;
+  return item;
+}
+
+window.updateRequest = async function(id, status) {
+  if(!confirm(`${status} this request?`)) return;
+  try {
+    await api.updateIntroRequest(id, status);
+    alert(`Request ${status}!`);
+    loadRequests();
+    loadDashboard();
+  } catch(e) { alert(e.message); }
+};
+
+// ==========================================
+// 8. CHAT LOGIC (WITH SEARCH)
+// ==========================================
+window.allConversations = [];
+
+async function loadConversations() {
+  try {
+    const convs = await chatApiCall('/conversations');
+    window.allConversations = convs || [];
+    renderConversations(window.allConversations);
+    setupChatSearch();
+  } catch(e) {
+    console.error("Error loading conversations:", e);
+    const list = document.getElementById('conversations-items');
+    if(list) list.innerHTML = '<div style="padding:2rem; text-align:center; color:red;">Error loading chats.</div>';
+  }
+}
+
+function renderConversations(conversations) {
+  const list = document.getElementById('conversations-items');
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (!conversations || conversations.length === 0) {
+    const searchInput = document.getElementById('chat-search-input');
+    const isSearching = searchInput && searchInput.value.trim() !== '';
+    list.innerHTML = isSearching 
+      ? '<div style="padding:2rem; text-align:center; color:#999;">No results found.</div>'
+      : '<div style="padding:2rem; text-align:center; color:#999;">No conversations yet.</div>';
+    return;
+  }
+
+  conversations.forEach(c => {
+    let partner = null;
+    if (c.name && c.lastMessage) partner = c;
+    else if (c.participants && Array.isArray(c.participants)) partner = c.participants.find(p => p._id.toString() !== userId);
+    else if (c.founderId) partner = c.founderId;
+    else if (c.providerId) partner = c.providerId;
+
+    if (!partner) return;
+
+    const partnerId = partner._id;
+    const partnerName = partner.name || 'Unknown';
+    let partnerPic = partner.profilePicture;
+    let avatarUrl = partnerPic ? (partnerPic.startsWith('http') ? partnerPic : `${window.location.origin}${partnerPic}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(partnerName)}&background=random`;
+    const previewText = c.lastMessage?.content || c.lastMessage || 'Start chatting...';
+
+    const div = document.createElement('div');
+    div.className = 'conversation-item';
+    div.innerHTML = `
+      <img src="${avatarUrl}" class="conversation-avatar">
+      <div class="conversation-info">
+        <div class="conversation-name">${partnerName}</div>
+        <div class="conversation-preview">${previewText}</div>
+      </div>`;
+    div.onclick = () => window.openChat(partnerId, partnerName, partnerPic);
+    list.appendChild(div);
+  });
+}
+
+function setupChatSearch() {
+  const searchInput = document.getElementById('chat-search-input');
+  if (!searchInput) return;
+
+  // Clone to remove old listeners
+  const newInput = searchInput.cloneNode(true);
+  searchInput.parentNode.replaceChild(newInput, searchInput);
+
+  newInput.addEventListener('input', (e) => {
+    const term = e.target.value.toLowerCase().trim();
+    if (!term) return renderConversations(window.allConversations);
+
+    const filtered = window.allConversations.filter(c => {
+      let partnerName = '';
+      if (c.name) partnerName = c.name;
+      else if (c.participants) {
+        const p = c.participants.find(p => p._id.toString() !== userId);
+        partnerName = p?.name || '';
+      } else if (c.founderId) partnerName = c.founderId.name;
+      else if (c.providerId) partnerName = c.providerId.name;
+      return partnerName.toLowerCase().includes(term);
+    });
+    renderConversations(filtered);
+  });
 }
     window.closeChatMobile = function() {
         const chatPage = document.getElementById('chat-page');
