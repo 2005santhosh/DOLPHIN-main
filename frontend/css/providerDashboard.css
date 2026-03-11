@@ -610,6 +610,54 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
     display: block;
   }
 }
+/* ==========================================
+   CHAT SEARCH BAR
+   ========================================== */
+
+.chat-search-container {
+  position: relative;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  background: white;
+  flex-shrink: 0; /* Prevents shrinking */
+}
+
+.chat-search-input {
+  width: 100%;
+  padding: 10px 14px 10px 40px; /* Make room for icon */
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: var(--bg-subtle);
+  transition: all 0.2s ease;
+}
+
+.chat-search-input:focus {
+  outline: none;
+  background: white;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.chat-search-icon {
+  position: absolute;
+  left: 1.6rem; /* Align with padding */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+  .chat-search-container {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+}
 /* 10. FOUNDER CARDS */
 .founder-card {
   background: var(--bg-surface);

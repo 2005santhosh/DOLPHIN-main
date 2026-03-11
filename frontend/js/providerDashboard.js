@@ -1541,83 +1541,131 @@ async function loadRequests() {
             console.error("Error loading messages:", e);
         }
     }
-    async function loadConversations() {
-        try {
-            const convs = await chatApiCall('/conversations');
-            const list = document.getElementById('conversations-list');
-            list.innerHTML = '';
+    // Global variable to store conversations
+window.allConversations = [];
+
+// 1. Load Conversations (Updated to store data)
+async function loadConversations() {
+    try {
+        const convs = await chatApiCall('/conversations');
+        window.allConversations = convs || []; // Save data globally
+        
+        // Initial render
+        renderConversations(window.allConversations); 
+
+        // Setup search listener (only once)
+        setupChatSearch();
+        
+    } catch(e) { 
+        console.error("Error loading conversations list:", e);
+        const list = document.getElementById('conversations-list');
+        if(list) list.innerHTML = '<div style="padding:2rem; text-align:center; color:red;">Error loading chats.</div>';
+    }
+}
+
+// 2. Helper: Render Conversations to DOM
+function renderConversations(conversations) {
+    const list = document.getElementById('conversations-list');
+    if (!list) return;
+    
+    list.innerHTML = '';
+
+    if (!conversations || conversations.length === 0) {
+        // Check if we are searching or just empty
+        const searchInput = document.getElementById('chat-search-input');
+        const isSearching = searchInput && searchInput.value.trim() !== '';
+        
+        list.innerHTML = isSearching 
+            ? '<div style="padding:2rem; text-align:center; color:#999;">No results found.</div>'
+            : '<div style="padding:2rem; text-align:center; color:#999;">No conversations yet.</div>';
+        return;
+    }
+
+    conversations.forEach(c => {
+        let partner = null;
+
+        // LOGIC: Handle all 3 possible API formats
+        if (c.name && c.lastMessage) {
+            partner = c; // Flat structure
+        } else if (c.participants && Array.isArray(c.participants)) {
+            partner = c.participants.find(p => p._id.toString() !== userId);
+        } else if (c.founderId) {
+            partner = c.founderId;
+        } else if (c.providerId) {
+            partner = c.providerId;
+        }
+
+        if (!partner) return; // Skip invalid entries
+
+        const partnerId = partner._id;
+        const partnerName = partner.name || 'Unknown';
+        
+        // Safe Image Logic
+        let partnerPic = partner.profilePicture;
+        let avatarUrl = '';
+        if (partnerPic && partnerPic !== 'undefined') {
+             avatarUrl = partnerPic.startsWith('http') ? partnerPic : `${window.location.origin}${partnerPic}`;
+        } else {
+             avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(partnerName)}&background=random`;
+        }
+
+        const div = document.createElement('div');
+        div.className = 'conversation-item';
+        
+        // Get lastMessage
+        const previewText = c.lastMessage?.content || c.lastMessage || 'Start chatting...';
+
+        div.innerHTML = `
+          <img src="${avatarUrl}" class="conversation-avatar">
+          <div class="conversation-info">
+            <div class="conversation-name">${partnerName}</div>
+            <div class="conversation-preview">${previewText}</div>
+          </div>
+        `;
+        
+        div.onclick = () => window.openChat(partnerId, partnerName, partnerPic);
+        list.appendChild(div);
+    });
+}
+
+// 3. Setup Search Logic
+function setupChatSearch() {
+    const searchInput = document.getElementById('chat-search-input');
+    
+    // Remove old listener if any to prevent duplicates
+    if (searchInput) {
+        // Clone and replace to remove old listeners
+        const newInput = searchInput.cloneNode(true);
+        searchInput.parentNode.replaceChild(newInput, searchInput);
+        
+        newInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase().trim();
             
-            if (!convs || convs.length === 0) {
-                list.innerHTML = '<div style="padding:2rem; text-align:center; color:#999;">No conversations yet.</div>';
+            if (!term) {
+                // If empty, show all
+                renderConversations(window.allConversations);
                 return;
             }
 
-            convs.forEach(c => {
-                let partner = null;
+            // Filter by name
+            const filtered = window.allConversations.filter(c => {
+                let partnerName = '';
                 
-                // ====================================================
-                // LOGIC UPDATE: Handle all 3 possible API formats navigatetopage
-                // ====================================================
-
-                // 1. Flat Structure (YOUR CURRENT FORMAT):
-                // The object itself has 'name' and 'lastMessage' directly on it.
-                if (c.name && c.lastMessage) {
-                    partner = c; 
-                }
-                // 2. Standard Structure: 
-                // Object has a 'participants' array.
-                else if (c.participants && Array.isArray(c.participants)) {
-                    partner = c.participants.find(p => p._id.toString() !== userId);
-                } 
-                // 3. Nested Structure:
-                // Object has 'founderId' or 'providerId'.
-                else if (c.founderId) {
-                    partner = c.founderId;
-                } else if (c.providerId) {
-                    partner = c.providerId;
-                }
-
-                if (!partner) {
-                    console.warn("Could not identify partner in object:", c);
-                    return; 
-                }
-
-                const partnerId = partner._id;
-                const partnerName = partner.name || 'Unknown';
+                // Extract name based on structure
+                if (c.name) partnerName = c.name; 
+                else if (c.participants) {
+                    const p = c.participants.find(p => p._id.toString() !== userId);
+                    partnerName = p?.name || '';
+                } else if (c.founderId) partnerName = c.founderId.name;
+                else if (c.providerId) partnerName = c.providerId.name;
                 
-                // Safe Image Logic
-                let partnerPic = partner.profilePicture;
-                let avatarUrl = '';
-                if (partnerPic && partnerPic !== 'undefined') {
-                     avatarUrl = partnerPic.startsWith('http') ? partnerPic : `${window.location.origin}${partnerPic}`;
-                } else {
-                     avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(partnerName)}&background=random`;
-                }
-
-                const div = document.createElement('div');
-                div.className = 'conversation-item';
-                
-                // Get lastMessage. 
-                // If format 1 (flat), it's c.lastMessage.
-                // If format 2 (nested), it might be c.lastMessage or c.lastMessage?.content
-                const previewText = c.lastMessage?.content || c.lastMessage || 'Start chatting...';
-
-                div.innerHTML = `
-                  <img src="${avatarUrl}" class="conversation-avatar">
-                  <div class="conversation-info">
-                    <div class="conversation-name">${partnerName}</div>
-                    <div class="conversation-preview">${previewText}</div>
-                  </div>
-                `;
-                
-                div.onclick = () => window.openChat(partnerId, partnerName, partnerPic);
-                list.appendChild(div);
+                return partnerName.toLowerCase().includes(term);
             });
-        } catch(e) { 
-            console.error("Error loading conversations list:", e);
-            document.getElementById('conversations-list').innerHTML = '<div style="padding:2rem; text-align:center; color:red;">Error loading chats.</div>';
-        }
+
+            renderConversations(filtered);
+        });
     }
+}
     window.closeChatMobile = function() {
         const chatPage = document.getElementById('chat-page');
         chatPage.classList.remove('chat-active');
