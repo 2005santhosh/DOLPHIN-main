@@ -645,3 +645,71 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+// ==========================================
+// LEGAL MODAL LOGIC (MUST BE GLOBAL)
+// ==========================================
+
+const legalDocs = {
+    privacy: {
+        title: "Privacy Policy",
+        content: `
+            <p><strong>Last Updated:</strong> March 2026</p>
+            <p>At Dolphin, we are committed to protecting your privacy. This policy outlines how we collect, use, and safeguard your information when you use our platform to connect founders and service providers.</p>
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">1. Information We Collect</h4>
+            <p>We collect information you provide directly to us, such as your name, email address, profile picture, professional expertise, and startup details. We also collect usage data to improve our services.</p>
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">2. How We Use Information</h4>
+            <p>We use the information to facilitate connections between users, provide customer support, and communicate with you about updates and opportunities.</p>
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">3. Data Sharing</h4>
+            <p>We do not sell your personal data. We share necessary information (like your public profile) to enable networking and mentorship features on the platform.</p>
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">4. Security</h4>
+            <p>We implement standard security measures to protect your data, but no method of transmission over the Internet is 100% secure.</p>
+        `
+    },
+    terms: {
+        title: "Terms of Service",
+        content: `
+            <p><strong>Last Updated:</strong> March 2026</p>
+            <p>Welcome to Dolphin. By accessing or using our platform, you agree to be bound by these Terms of Service.</p>
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">1. User Accounts</h4>
+            <p>You are responsible for maintaining the confidentiality of your account. You agree to provide accurate information and update it as necessary.</p>
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">2. Acceptable Use</h4>
+            <p>You agree not to use the platform for any unlawful purpose or in any way that could damage, disable, or impair the service. Harassment, spam, or fraudulent activity is strictly prohibited.</p>
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">3. Connections & Engagement</h4>
+            <p>Connections made on Dolphin are between individuals. Dolphin is not liable for the outcome of any professional relationship formed through the platform.</p>
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">4. Termination</h4>
+            <p>We reserve the right to suspend or terminate accounts that violate these terms or for any reason at our discretion.</p>
+        `
+    }
+};
+
+window.openLegalModal = function(type) {
+    const doc = legalDocs[type];
+    if (!doc) return;
+
+    document.getElementById('legal-modal-title').textContent = doc.title;
+    document.getElementById('legal-modal-body').innerHTML = doc.content;
+    
+    const modal = document.getElementById('legal-modal');
+    modal.classList.add('active');
+};
+
+window.closeLegalModal = function() {
+    const modal = document.getElementById('legal-modal');
+    modal.classList.remove('active');
+};
+
+// ==========================================
+// PASSWORD TOGGLE (MUST BE GLOBAL)
+// ==========================================
+
+window.togglePassword = function(inputId) {
+    const input = document.getElementById(inputId);
+    const icon = document.querySelector(`#${inputId}-toggle-icon`);
+    if (input.type === 'password') {
+        input.type = 'text';
+        if(icon) icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+    } else {
+        input.type = 'password';
+        if(icon) icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+    }
+};
