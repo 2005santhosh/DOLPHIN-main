@@ -368,7 +368,7 @@
 </div>
 
 <!-- ========================================== -->
-<!-- SETTINGS PAGE (FIXED) -->
+<!-- SETTINGS PAGE (COMPLETE) -->
 <!-- ========================================== -->
 <div id="settings-page" class="page">
     <div class="page-header">
@@ -376,12 +376,11 @@
       <p class="page-subtitle">Manage your account and preferences</p>
     </div>
 
-    <!-- Account Settings Card -->
+    <!-- 1. Account Settings -->
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">Account Settings</h3>
       </div>
-      
       <div class="settings-group">
         
         <!-- Profile Picture Section -->
@@ -409,7 +408,7 @@
           <label class="form-label">Email Address</label>
           <input type="email" class="form-input" id="settings-email" readonly style="background-color: #f3f4f6; cursor: not-allowed;">
         </div>
-
+        
         <div class="form-group">
             <label class="form-label">Role</label>
             <input type="text" class="form-input" id="settings-role" value="Provider" readonly style="background-color: #f3f4f6; cursor: not-allowed;">
@@ -419,10 +418,10 @@
       </div>
     </div>
 
-    <!-- Security Card -->
+    <!-- 2. Security -->
     <div class="card">
       <div class="card-header">
-        <h3 class="card-title">Security</h3>
+        <h3 class="card-title">Change Password</h3>
       </div>
       <div class="settings-group">
             <div class="form-group">
@@ -456,19 +455,68 @@
       </div>
     </div>
 
-    <!-- Danger Zone Card -->
-    <div class="card danger-zone">
+    <!-- 3. Legal & Policies (RESTORED) -->
+    <div class="card legal-section">
       <div class="card-header">
-        <h3 class="card-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-            <line x1="12" y1="9" x2="12" y2="13"></line>
-            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-          </svg>
-          Danger Zone
-        </h3>
+        <h3 class="card-title">Legal & Policies</h3>
       </div>
-      <div class="settings-group">
+      <div class="legal-list">
+        <a href="javascript:void(0)" class="legal-link" onclick="openLegalModal('privacy')">
+          <div class="legal-link-content">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span class="legal-link-title">Privacy Policy</span>
+          </div>
+          <svg class="legal-link-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </a>
+        <a href="javascript:void(0)" class="legal-link" onclick="openLegalModal('terms')">
+          <div class="legal-link-content">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <span class="legal-link-title">Terms of Service</span>
+          </div>
+          <svg class="legal-link-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- 4. Support Center (RESTORED) -->
+    <div class="card">
+      <a href="support.html" style="text-decoration: none; color: inherit; display: block;">
+        <div class="card-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+          <h3 class="card-title">🛟 Support Center</h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </div>
+      </a>
+    </div>
+
+    <!-- 5. Danger Zone -->
+    <div class="card danger-zone">
+       <div class="card-header">
+         <h3 class="card-title">
+           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+             <line x1="12" y1="9" x2="12" y2="13"></line>
+             <line x1="12" y1="17" x2="12.01" y2="17"></line>
+           </svg>
+           Danger Zone
+         </h3>
+       </div>
+       <div class="settings-group">
+         
+          <!-- Logout Item -->
           <div class="danger-item" style="background: transparent; border: none; padding: 0;">
              <div class="danger-item-header" style="padding: 1rem; background: white; border: 1px solid #fee2e2; border-radius: 8px;">
                 <div class="danger-item-content">
@@ -478,7 +526,8 @@
                 <button class="btn btn-secondary" id="logout-btn">Logout</button>
              </div>
           </div>
-          
+
+          <!-- Delete Account Item -->
           <div class="danger-item">
             <div class="danger-item-header">
               <div class="danger-item-content">
@@ -490,7 +539,8 @@
               Delete My Account
             </button>
           </div>
-      </div>
+
+       </div>
     </div>
 </div>
     </main>
