@@ -214,7 +214,8 @@ router.post('/request-intro', protect, checkStageAccess, async (req, res) => {
       providerId: provider.userId,
       founderId: req.user.id,
       startupId: startup._id,
-      status: 'pending'
+      status: 'pending',
+      initiator: 'founder' // ✅ Add this for consistency
     });
 
     res.status(201).json({
@@ -235,6 +236,8 @@ router.post('/request-intro', protect, checkStageAccess, async (req, res) => {
 
 // backend/routes/provider.js
 
+// backend/routes/provider.js
+
 // @access  Private
 router.get('/my-requests', protect, async (req, res) => {
   try {
@@ -242,10 +245,10 @@ router.get('/my-requests', protect, async (req, res) => {
       return res.status(401).json({ message: 'User not authenticated' });
     }
 
-    // ✅ FIX: Only show requests SENT TO ME (initiator == 'founder')
+    // ✅ FIX: Remove 'initiator' filter. 
+    // We want ALL requests where 'providerId' is ME (both Sent and Incoming).
     const requests = await IntroRequest.find({ 
-      providerId: req.user.id,
-      initiator: 'founder' 
+      providerId: req.user.id
     })
       .populate('founderId', 'name email profilePicture')
       .populate('startupId', 'name industry')
