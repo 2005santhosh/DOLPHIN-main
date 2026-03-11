@@ -1013,3 +1013,34 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
     transform: rotate(360deg);
   }
 }
+/* ==========================================
+   FIX: CHAT DEFAULT STATES
+   ========================================== */
+
+/* Hide the active chat view by default (until a user is selected) */
+#chat-active-view {
+    display: none; 
+    height: 100%; 
+    flex-direction: column;
+}
+
+/* Ensure the empty state is visible by default */
+#chat-empty {
+    flex: 1; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    background: var(--bg-base);
+}
+
+/* Fix Settings layout */
+#settings-page .card {
+    margin-bottom: 1.5rem;
+}
+
+.settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}

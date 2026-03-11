@@ -298,122 +298,134 @@
           </div>
         </div>
       </div>
-            <!-- Chat Page -->
-      <div id="chat-page" class="page">
-        <div class="page-header">
-          <h1 class="page-title">Messages</h1>
-          <p class="page-subtitle">Chat with connected founders</p>
-        </div>
-        <div class="card">
-    <!-- ✅ NEW: Search Container -->
-    <div class="chat-search-container">
-      <svg class="chat-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"></circle>
-        <path d="m21 21-4.35-4.35"></path>
-      </svg>
-      <input type="text" id="chat-search-input" placeholder="Search messages..." class="chat-search-input">
+      <!-- ========================================== -->
+<!-- CHAT PAGE (FIXED) -->
+<!-- ========================================== -->
+<div id="chat-page" class="page">
+  <div class="page-header">
+    <h1 class="page-title">Messages</h1>
+    <p class="page-subtitle">Chat with connected founders</p>
+  </div>
+
+  <div class="card">
+    <!-- Left Side: Conversation List -->
+    <div id="conversations-list">
+      <!-- Search Bar -->
+      <div class="chat-search-container">
+        <svg class="chat-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <input type="text" id="chat-search-input" placeholder="Search messages..." class="chat-search-input">
+      </div>
+      
+      <!-- Scrollable List of People -->
+      <div id="conversations-items">
+          <!-- Populated by JS -->
+      </div>
     </div>
 
-        <div class="card">
-            <!-- Conversations List -->
-            <div id="conversations-list">
-                <!-- Populated by JS -->
-            </div>
-            
-            <!-- Chat Window -->
-            <div id="chat-window">
-                <!-- Empty State (Default) -->
-                <div id="chat-empty" class="chat-empty-state">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    <!-- Right Side: Chat Window -->
+    <div id="chat-window">
+        
+        <!-- Default Empty State -->
+        <div id="chat-empty" class="chat-empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <h3>Your Messages</h3>
+            <p>Select a conversation from the list to start chatting.</p>
+        </div>
+
+        <!-- Active Chat View (Hidden by default) -->
+        <div id="chat-active-view">
+            <div id="chat-header">
+                <button class="chat-back-btn" onclick="window.closeChatMobile()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
-                    <h3>Your Messages</h3>
-                    <p>Select a conversation from the list to start chatting.</p>
+                </button>
+                <img id="chat-partner-img" src="" alt="Avatar" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
+                <div>
+                    <div style="font-weight:600;" id="chat-partner-name">Name</div>
                 </div>
-
-                <!-- Active Chat Content (Hidden by default) -->
-                <div id="chat-active-view" style="display: none; height: 100%; flex-direction: column;">
-                    <div id="chat-header">
-                        <button class="chat-back-btn" onclick="closeChatMobile()">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M19 12H5M12 19l-7-7 7-7"/>
-                            </svg>
-                        </button>
-                        <img id="chat-partner-img" src="" alt="Avatar" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
-                        <div>
-                            <div style="font-weight:600;" id="chat-partner-name">Name</div>
-                        </div>
-                    </div>
-                    <div id="messages-container"></div>
-                    <div id="chat-input-area">
-                        <div style="display: flex; gap: 0.5rem;">
-                            <input type="text" id="message-input" class="form-input" placeholder="Type a message..." style="margin-bottom: 0; border-radius: 20px;">
-                            <button class="btn btn-primary" onclick="sendMessage()" style="border-radius: 50%; width: 40px; height: 40px; padding: 0;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 2px;"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                            </button>
-                        </div>
-                    </div>
+            </div>
+            
+            <div id="messages-container"></div>
+            
+            <div id="chat-input-area">
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="message-input" class="form-input" placeholder="Type a message..." style="margin-bottom: 0; border-radius: 20px;">
+                    <button class="btn btn-primary" onclick="window.sendMessage()" style="border-radius: 50%; width: 40px; height: 40px; padding: 0;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 2px;"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                    </button>
                 </div>
             </div>
         </div>
+        
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- SETTINGS PAGE (FIXED) -->
+<!-- ========================================== -->
+<div id="settings-page" class="page">
+    <div class="page-header">
+      <h1 class="page-title">Settings</h1>
+      <p class="page-subtitle">Manage your account and preferences</p>
+    </div>
+
+    <!-- Account Settings Card -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Account Settings</h3>
       </div>
-            <!-- Settings Page -->
-      <div id="settings-page" class="page">
-        <div class="page-header">
-          <h1 class="page-title">Settings</h1>
-          <p class="page-subtitle">Manage your account and preferences</p>
-        </div>
-
-        <!-- Account Settings -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Account Settings</h3>
+      
+      <div class="settings-group">
+        
+        <!-- Profile Picture Section -->
+        <div class="form-group" style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;">
+          <div style="position: relative;">
+            <img id="settings-profile-preview" src="https://ui-avatars.com/api/?name=User&background=e2e8f0&color=64748b&size=100" alt="Profile" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #e2e8f0;">
+            <label for="profile-picture-input" style="position: absolute; bottom: 0; right: 0; background: #3b82f6; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            </label>
+            <input type="file" id="profile-picture-input" accept="image/*" style="display: none;">
           </div>
-          <div class="settings-group">
-            
-            <!-- Profile Picture Section -->
-            <div class="form-group" style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;">
-              <div style="position: relative;">
-                <img id="settings-profile-preview" src="https://ui-avatars.com/api/?name=User&background=e2e8f0&color=64748b&size=100" alt="Profile" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #e2e8f0;">
-                <label for="profile-picture-input" style="position: absolute; bottom: 0; right: 0; background: #3b82f6; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                </label>
-                <input type="file" id="profile-picture-input" accept="image/*" style="display: none;">
-              </div>
-              <div style="flex: 1;">
-                <h4 style="margin: 0 0 0.25rem 0;">Profile Picture</h4>
-                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 0.5rem 0;">JPG or PNG. Max size 5MB.</p>
-                <button id="upload-picture-btn" class="btn btn-secondary btn-sm">Upload New Photo</button>
-              </div>
-            </div>
-            
-            <div id="verified-status-settings"></div>
-
-            <div class="form-group">
-              <label class="form-label">Full Name</label>
-              <input type="text" class="form-input" id="settings-full-name" required>
-            </div>
-            
-            <div class="form-group">
-              <label class="form-label">Email Address</label>
-              <input type="email" class="form-input" id="settings-email" readonly style="background-color: #f3f4f6; cursor: not-allowed;">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Role</label>
-              <input type="text" class="form-input" id="settings-role" value="Provider" readonly style="background-color: #f3f4f6; cursor: not-allowed;">
-            </div>
-            
-            <button class="btn btn-primary" id="update-profile-btn">Update Profile</button>
+          <div style="flex: 1;">
+            <h4 style="margin: 0 0 0.25rem 0;">Profile Picture</h4>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 0.5rem 0;">JPG or PNG. Max size 5MB.</p>
+            <button id="upload-picture-btn" class="btn btn-secondary btn-sm">Upload New Photo</button>
           </div>
         </div>
 
-        <!-- Password Settings -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Change Password</h3>
-          </div>
-          <div class="settings-group">
-                        <div class="form-group">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" class="form-input" id="settings-full-name" placeholder="Your full name">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-input" id="settings-email" readonly style="background-color: #f3f4f6; cursor: not-allowed;">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Role</label>
+            <input type="text" class="form-input" id="settings-role" value="Provider" readonly style="background-color: #f3f4f6; cursor: not-allowed;">
+        </div>
+
+        <button class="btn btn-primary" id="update-profile-btn">Update Profile</button>
+      </div>
+    </div>
+
+    <!-- Security Card -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Security</h3>
+      </div>
+      <div class="settings-group">
+            <div class="form-group">
                 <label class="form-label">Current Password</label>
                 <div class="password-wrapper">
                     <input type="password" class="form-input" id="current-password" placeholder="Enter current password">
@@ -441,96 +453,46 @@
                 </div>
             </div>
             <button class="btn btn-primary" id="update-password-btn">Update Password</button>
-          </div>
-        </div>
-        
-        <!-- Legal Section -->
-        <div class="card legal-section">
-          <div class="card-header">
-            <h3 class="card-title">Legal & Policies</h3>
-          </div>
-                    <div class="legal-list">
-            <a href="javascript:void(0)" class="legal-link" onclick="openLegalModal('privacy')">
-              <div class="legal-link-content">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                </svg>
-                <span class="legal-link-title">Privacy Policy</span>
-              </div>
-              <svg class="legal-link-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-            </a>
-            <a href="javascript:void(0)" class="legal-link" onclick="openLegalModal('terms')">
-              <div class="legal-link-content">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="16" y1="13" x2="8" y2="13"></line>
-                  <line x1="16" y1="17" x2="8" y2="17"></line>
-                  <polyline points="10 9 9 9 8 9"></polyline>
-                </svg>
-                <span class="legal-link-title">Terms of Service</span>
-              </div>
-              <svg class="legal-link-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-            </a>
-          </div>
-        </div>
+      </div>
+    </div>
 
-        <!-- Support Center Link -->
-        <div class="card">
-          <a href="support.html" style="text-decoration: none; color: inherit; display: block;">
-            <div class="card-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-              <h3 class="card-title">🛟 Support Center</h3>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-            </div>
-          </a>
-        </div>
-
-        <!-- Danger Zone -->
-        <div class="card danger-zone">
-           <div class="card-header">
-             <h3 class="card-title">
-               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                 <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                 <line x1="12" y1="9" x2="12" y2="13"></line>
-                 <line x1="12" y1="17" x2="12.01" y2="17"></line>
-               </svg>
-               Danger Zone
-             </h3>
-           </div>
-           <div class="settings-group">
-             
-              <!-- Delete Account Item -->
-              <div class="danger-item">
-                <div class="danger-item-header">
-                  <div class="danger-item-content">
-                    <h4>Delete Account</h4>
-                    <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
-                  </div>
+    <!-- Danger Zone Card -->
+    <div class="card danger-zone">
+      <div class="card-header">
+        <h3 class="card-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          Danger Zone
+        </h3>
+      </div>
+      <div class="settings-group">
+          <div class="danger-item" style="background: transparent; border: none; padding: 0;">
+             <div class="danger-item-header" style="padding: 1rem; background: white; border: 1px solid #fee2e2; border-radius: 8px;">
+                <div class="danger-item-content">
+                  <h4 style="color: var(--text-primary);">Logout</h4>
+                  <p style="color: var(--text-secondary);">Sign out of your current session.</p>
                 </div>
-                <button class="btn btn-danger" id="delete-account-btn" style="margin-top: 1rem;">
-                  Delete My Account
-                </button>
+                <button class="btn btn-secondary" id="logout-btn">Logout</button>
+             </div>
+          </div>
+          
+          <div class="danger-item">
+            <div class="danger-item-header">
+              <div class="danger-item-content">
+                <h4>Delete Account</h4>
+                <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
               </div>
-
-              <!-- Logout Item -->
-              <div class="danger-item" style="background: transparent; border: none; padding: 0;">
-                 <div class="danger-item-header" style="padding: 1rem; background: white; border: 1px solid #fee2e2; border-radius: 8px;">
-                    <div class="danger-item-content">
-                      <h4 style="color: var(--text-primary);">Logout</h4>
-                      <p style="color: var(--text-secondary);">Sign out of your current session.</p>
-                    </div>
-                    <button class="btn btn-secondary" id="logout-btn">Logout</button>
-                 </div>
-              </div>
-
-           </div>
-        </div>
+            </div>
+            <button class="btn btn-danger" id="delete-account-btn" style="margin-top: 1rem;">
+              Delete My Account
+            </button>
+          </div>
+      </div>
+    </div>
+</div>
     </main>
   </div>
 
