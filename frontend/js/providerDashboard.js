@@ -1565,13 +1565,13 @@ async function loadConversations() {
 
 // 2. Helper: Render Conversations to DOM
 function renderConversations(conversations) {
-    const list = document.getElementById('conversations-list');
+    // ✅ FIX: Target the inner wrapper, not the main list
+    const list = document.getElementById('conversations-items');
     if (!list) return;
     
-    list.innerHTML = '';
+    list.innerHTML = ''; // Clear previous items
 
     if (!conversations || conversations.length === 0) {
-        // Check if we are searching or just empty
         const searchInput = document.getElementById('chat-search-input');
         const isSearching = searchInput && searchInput.value.trim() !== '';
         
@@ -1584,37 +1584,29 @@ function renderConversations(conversations) {
     conversations.forEach(c => {
         let partner = null;
 
-        // LOGIC: Handle all 3 possible API formats
-        if (c.name && c.lastMessage) {
-            partner = c; // Flat structure
-        } else if (c.participants && Array.isArray(c.participants)) {
+        // ... (Keep your existing partner identification logic here) ...
+        if (c.name && c.lastMessage) { partner = c; }
+        else if (c.participants && Array.isArray(c.participants)) {
             partner = c.participants.find(p => p._id.toString() !== userId);
         } else if (c.founderId) {
             partner = c.founderId;
         } else if (c.providerId) {
             partner = c.providerId;
         }
-
-        if (!partner) return; // Skip invalid entries
+        
+        if (!partner) return;
 
         const partnerId = partner._id;
         const partnerName = partner.name || 'Unknown';
         
-        // Safe Image Logic
+        // ... (Keep your existing HTML generation logic) ...
         let partnerPic = partner.profilePicture;
-        let avatarUrl = '';
-        if (partnerPic && partnerPic !== 'undefined') {
-             avatarUrl = partnerPic.startsWith('http') ? partnerPic : `${window.location.origin}${partnerPic}`;
-        } else {
-             avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(partnerName)}&background=random`;
-        }
+        let avatarUrl = partnerPic ? (partnerPic.startsWith('http') ? partnerPic : `${window.location.origin}${partnerPic}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(partnerName)}&background=random`;
+        const previewText = c.lastMessage?.content || c.lastMessage || 'Start chatting...';
 
         const div = document.createElement('div');
         div.className = 'conversation-item';
         
-        // Get lastMessage
-        const previewText = c.lastMessage?.content || c.lastMessage || 'Start chatting...';
-
         div.innerHTML = `
           <img src="${avatarUrl}" class="conversation-avatar">
           <div class="conversation-info">
@@ -1624,6 +1616,8 @@ function renderConversations(conversations) {
         `;
         
         div.onclick = () => window.openChat(partnerId, partnerName, partnerPic);
+        
+        // ✅ Items are appended to the wrapper
         list.appendChild(div);
     });
 }
