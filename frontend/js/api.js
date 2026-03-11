@@ -134,13 +134,16 @@ const api = {
       method: 'DELETE'
     });
   },
- getMyRequests: async () => {
-  const data = await apiCall('/my-requests');
-  if (Array.isArray(data)) {
-    return data;
-  }
-  return data.requests || [];
-},
+   async sendProviderRequest(startupId, message, servicesOffered) {
+    return this.request('/provider/send-request', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        startupId, 
+        message, 
+        servicesOffered 
+      })
+    });
+  },
  async sendProviderRequest(startupId, message, servicesOffered) {
     return this.request('/provider/send-request', {
       method: 'POST',
