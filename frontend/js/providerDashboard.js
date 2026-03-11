@@ -579,6 +579,7 @@ window.addEventListener('resize', () => {
         }
     };
        // Founders Page (With Robust Data Handling)
+        // Founders Page (With Robust Data Handling) send request
     async function loadFounders() {
       const foundersList = document.getElementById('founders-list');
       foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">Loading...</p>';
@@ -587,20 +588,23 @@ window.addEventListener('resize', () => {
         // 1. Fetch Founders
         const founders = await api.getEligibleFounders();
         
-        // 2. ✅ Fetch My Requests to check status
+        // 2. Fetch My Requests to check status
         const myRequests = await api.getMyRequests();
         
-        // 3. Create a Map: startupId -> status
+        // 3. Create a Map: startupId (String) -> request object
         const requestStatusMap = {};
         myRequests.forEach(req => {
-            const startupId = req.startupId?._id || req.startupId;
+            // ✅ FIX: Convert ObjectId to String for reliable matching
+            const startupId = (req.startupId?._id || req.startupId)?.toString();
             if (startupId) {
-                requestStatusMap[startupId] = req.status;
+                // Store the whole request object so we can check 'initiator' later
+                requestStatusMap[startupId] = req;
             }
         });
 
         foundersList.innerHTML = '';
 
+        // Filter valid founders
         const validFounders = (founders || []).filter(f => f.founderId && f.founderId.name);
 
         if (!validFounders || validFounders.length === 0) {
@@ -610,6 +614,7 @@ window.addEventListener('resize', () => {
           window.currentRequestStatusMap = requestStatusMap; 
           
           validFounders.forEach(founder => {
+            // Pass the whole map, not just status
             const founderCard = createFounderCard(founder, requestStatusMap);
             foundersList.appendChild(founderCard);
           });
@@ -621,7 +626,6 @@ window.addEventListener('resize', () => {
 
       } catch (error) {
         console.error('Error loading founders:', error);
-        // ✅ Show specific error to user
         foundersList.innerHTML = `<p style="text-align: center; color: var(--danger); padding: 2rem;">Error: ${error.message}</p>`;
       }
     }
@@ -633,42 +637,57 @@ window.addEventListener('resize', () => {
       const userRef = founder.founderId || {};
       const founderName = userRef.name || 'Unknown Founder';
       const points = userRef.rewardPoints || 0;
-      
-      // ✅ Get state safely
       const userState = userRef.state || '';
       
       const profileImg = userRef.profilePicture 
         ? userRef.profilePicture 
         : `https://ui-avatars.com/api/?name=${encodeURIComponent(founderName)}&background=random&color=fff&size=128`;
 
-      // ✅ Call the helper
       const verifiedBadgeHtml = getVerifiedBadgeHtml(userState);
 
-      const founderId = founder._id; 
-      const requestStatus = requestStatusMap[founderId]; 
+      // ✅ FIX: Strict String ID matching
+      const startupIdStr = founder._id?.toString();
+      const existingRequest = requestStatusMap[startupIdStr]; 
       
       let actionsHtml = '';
       
-      if (requestStatus === 'accepted') {
-          const founderUserId = userRef._id || userRef;
-          actionsHtml = `
-            <button class="btn btn-success" style="cursor: default; opacity: 0.8;">Connected</button>
-            <button class="btn btn-primary" onclick="window.openChat('${founderUserId}', '${founderName}')">Chat</button>
-          `;
-      } else if (requestStatus === 'pending') {
-          actionsHtml = `
-            <button class="btn btn-secondary" disabled>Request Pending</button>
-            <button class="btn btn-secondary" onclick="viewFounderProfile('${founderId}')">View Profile</button>
-          `;
-      } else if (requestStatus === 'rejected') {
-          actionsHtml = `
-            <button class="btn btn-danger" onclick="openRequestModal('${founderId}')">Request Rejected (Retry)</button>
-            <button class="btn btn-secondary" onclick="viewFounderProfile('${founderId}')">View Profile</button>
-          `;
+      if (existingRequest) {
+          const status = existingRequest.status;
+          const initiator = existingRequest.initiator; // 'provider' or 'founder'
+          const founderUserId = (userRef._id || userRef)?.toString();
+
+          if (status === 'accepted') {
+              // ✅ CHAT BUTTON: Opens chat and navigates
+              actionsHtml = `
+                <button class="btn btn-success" style="cursor: default; opacity: 0.8;">Connected</button>
+                <button class="btn btn-primary" onclick="window.openChat('${founderUserId}', '${founderName}', '${profileImg}')">Chat</button>
+              `;
+          } else if (status === 'pending') {
+              // Check who sent the request
+              if (initiator === 'provider') {
+                 // Provider sent it -> Show Pending
+                 actionsHtml = `
+                   <button class="btn btn-secondary" disabled>Request Pending</button>
+                   <button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>
+                 `;
+              } else {
+                 // Founder sent it -> Show Accept options (or redirect to Requests)
+                 actionsHtml = `
+                   <button class="btn btn-secondary" disabled>Incoming Request</button>
+                   <a href="#" onclick="navigateToPage('requests')" class="btn btn-primary">View Requests</a>
+                 `;
+              }
+          } else if (status === 'rejected') {
+              actionsHtml = `
+                <button class="btn btn-danger" onclick="openRequestModal('${startupIdStr}')">Request Rejected (Retry)</button>
+                <button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>
+              `;
+          }
       } else {
+          // No existing request
           actionsHtml = `
-            <button class="btn btn-primary" onclick="openRequestModal('${founderId}')">Send Connection Request</button>
-            <button class="btn btn-secondary" onclick="viewFounderProfile('${founderId}')">View Profile</button>
+            <button class="btn btn-primary" onclick="openRequestModal('${startupIdStr}')">Send Connection Request</button>
+            <button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>
           `;
       }
 
@@ -981,6 +1000,10 @@ window.addEventListener('resize', () => {
         if (result.success) {
           alert('Connection request sent successfully!');
           requestModal.classList.remove('active');
+          
+          // ✅ FIX: Reload Founders list to update button status immediately
+          loadFounders(); 
+          
           // Optional: Refresh dashboard stats
           loadDashboard(); 
         } else {
@@ -1362,12 +1385,15 @@ window.addEventListener('resize', () => {
     // //     console.warn("Socket.IO not loaded.");
     // // }
 
-    // 4. Navigation Helper (Needed for button click)
     function navigateToPage(pageName) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(`${pageName}-page`).classList.add('active');
         document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-        document.querySelector(`[data-page="${pageName}"]`).classList.add('active');
+        
+        // Find the nav item and set active
+        const navItem = document.querySelector(`[data-page="${pageName}"]`);
+        if(navItem) navItem.classList.add('active');
+        
         loadPageContent(pageName);
     }
 
@@ -1376,12 +1402,17 @@ window.addEventListener('resize', () => {
     // ROBUST CHAT LOGIC
     // ==========================================
 
-       window.openChat = async function(partnerId, partnerName, partnerPic) {
-        // ✅ FIX: Navigate to Chat Page immediately (works from any page like Requests)
-        navigateToPage('chat');
-
+    window.openChat = async function(partnerId, partnerName, partnerPic) {
         if (!partnerId) return console.error("No Partner ID provided");
         
+        // 1. ✅ CLOSE ANY OPEN MODALS (Profile Modal, Request Modal)
+        document.getElementById('profile-modal').classList.remove('active');
+        document.getElementById('request-modal').classList.remove('active');
+        
+        // 2. ✅ NAVIGATE TO CHAT PAGE
+        // This helper function switches the active view
+        navigateToPage('chat');
+
         // Sanitize Name
         partnerName = partnerName || 'Unknown User';
 
@@ -1443,7 +1474,6 @@ window.addEventListener('resize', () => {
             console.error("Error loading messages:", e);
         }
     }
-
     async function loadConversations() {
         try {
             const convs = await chatApiCall('/conversations');
@@ -1459,7 +1489,7 @@ window.addEventListener('resize', () => {
                 let partner = null;
                 
                 // ====================================================
-                // LOGIC UPDATE: Handle all 3 possible API formats
+                // LOGIC UPDATE: Handle all 3 possible API formats navigatetopage
                 // ====================================================
 
                 // 1. Flat Structure (YOUR CURRENT FORMAT):
