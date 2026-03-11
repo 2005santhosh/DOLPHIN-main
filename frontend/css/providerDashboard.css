@@ -91,7 +91,7 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
   display: flex; 
   align-items: center; 
   gap: 0.5rem; 
-  position: relative; /* ✅ ADD THIS */
+  position: relative;
 }
 
 .header-action {
@@ -164,7 +164,6 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
 .hamburger-line::before, .hamburger-line::after {
   content: ''; position: absolute;
   width: 100%; height: 100%;
-  /* FIX: Do not use 'inherit'. Force the color to stay dark. */
   background: var(--text-primary); 
   border-radius: inherit;
   transition: transform 0.3s ease-in-out;
@@ -177,6 +176,7 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
 .mobile-menu-toggle.active .hamburger-line { background: transparent; }
 .mobile-menu-toggle.active .hamburger-line::before { transform: rotate(45deg) translate(5px, 5px); }
 .mobile-menu-toggle.active .hamburger-line::after { transform: rotate(-45deg) translate(5px, -5px); }
+
 /* 5. SIDEBAR (FIXED Z-INDEX & SOLID BACKGROUND) */
 .sidebar-overlay {
   display: none;
@@ -207,7 +207,7 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
 @media (min-width: 769px) {
   .sidebar {
     transform: translateX(0); /* Show on desktop */
-    box-shadow: none; /* Remove shadow on desktop if desired */
+    box-shadow: none;
   }
 }
 
@@ -363,10 +363,61 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
   width: 320px;
   min-width: 320px;
   border-right: 1px solid var(--border-color);
-  overflow-y: auto;
+  /* ✅ FIX: Remove overflow from parent so sticky works */
+  overflow: visible; 
   background: #fff;
   display: flex;
   flex-direction: column;
+  position: relative; /* Context for z-index */
+  height: 100%; /* Fill parent height */
+}
+
+/* ✅ NEW: Sticky Search Container */
+.chat-search-container {
+  position: sticky;
+  top: 0;
+  z-index: 10; /* Sits on top of items */
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  background: white; /* Solid background so items go UNDER */
+  flex-shrink: 0;
+}
+
+/* ✅ NEW: Input Styling */
+.chat-search-input {
+  width: 100%;
+  padding: 10px 14px 10px 40px; /* Room for icon */
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: var(--bg-subtle);
+  transition: all 0.2s ease;
+}
+
+.chat-search-input:focus {
+  outline: none;
+  background: white;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+/* ✅ NEW: Search Icon Positioning */
+.chat-search-icon {
+  position: absolute;
+  left: 1.6rem; 
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+/* ✅ NEW: Wrapper for the scrollable items */
+#conversations-items {
+  flex: 1;
+  overflow-y: auto; /* Scroll happens here */
+  min-height: 0; /* Crucial for flex */
 }
 
 .conversation-item {
@@ -522,84 +573,7 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
   margin-bottom: 1rem;
   stroke: var(--border-color);
 }
-/* ==========================================
-   CHAT LIST LAYOUT FIX
-   ========================================== */
 
-#conversations-list {
-  width: 320px;
-  min-width: 320px;
-  border-right: 1px solid var(--border-color);
-  background: #fff;
-  display: flex;
-  flex-direction: column;
-  position: relative; /* Context for z-index */
-  height: 100%; /* Fill parent height */
-}
-
-/* Wrapper for the scrollable items */
-#conversations-items {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0; /* Crucial for flex scrolling */
-}
-
-/* Search Container - Sticky Header */
-.chat-search-container {
-  position: sticky;
-  top: 0;
-  z-index: 10; /* ✅ Ensures it sits ON TOP of profiles */
-  padding: 1rem;
-  border-bottom: 1px solid var(--border-color);
-  background: white; /* ✅ Solid background so profiles go under */
-  flex-shrink: 0;
-}
-
-/* Input Styling */
-.chat-search-input {
-  width: 100%;
-  padding: 10px 14px 10px 40px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 0.9rem;
-  background: var(--bg-subtle);
-  transition: all 0.2s ease;
-}
-
-.chat-search-input:focus {
-  outline: none;
-  background: white;
-  border-color: var(--primary-light);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-}
-
-.chat-search-icon {
-  position: absolute;
-  left: 1.6rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
-  color: var(--text-tertiary);
-  pointer-events: none;
-}
-
-/* Conversation Item Styling */
-.conversation-item {
-  display: flex;
-  align-items: center;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--border-light);
-  cursor: pointer;
-  transition: background 0.2s;
-  /* Ensure items don't have weird positioning */
-  position: relative; 
-  z-index: 1;
-}
-
-.conversation-item:hover {
-  background: var(--bg-subtle);
-}
 /* Mobile Responsive Chat */
 @media (max-width: 768px) {
   /* 1. Fix the Chat Container */
@@ -641,7 +615,7 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
     background: var(--bg-base);
     transform: translateX(100%);
     transition: transform 0.3s ease;
-    display: flex; /* Ensure it acts as a flex container */
+    display: flex;
     flex-direction: column;
   }
 
@@ -657,19 +631,19 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
     width: 100%;
   }
 
-  /* 5. Messages Container - CRITICAL FIX */
+  /* 5. Messages Container */
   #messages-container {
     flex: 1;
-    min-height: 0; /* Allows it to shrink so input is visible */
-    overflow-y: auto; /* Scrolls internally */
+    min-height: 0; 
+    overflow-y: auto; 
     -webkit-overflow-scrolling: touch;
     padding-bottom: 1rem;
   }
 
   /* 6. Input Area - Prevent shrinking */
   #chat-input-area {
-    flex-shrink: 0; /* Prevents it from being pushed off */
-    position: relative; /* Stays on top */
+    flex-shrink: 0; 
+    position: relative; 
     z-index: 10;
     background: white;
     padding: 0.75rem;
@@ -688,15 +662,6 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
   }
 }
 
-
-/* Mobile Adjustments */
-@media (max-width: 768px) {
-  .chat-search-container {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-}
 /* 10. FOUNDER CARDS */
 .founder-card {
   background: var(--bg-surface);
@@ -736,7 +701,7 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
   display: none; flex-direction: column;
   opacity: 0; transform: translateY(-10px);
   transition: all 0.2s ease;
-  min-height: 200px; /* ✅ FIX: Ensures box stays open even if list is empty/loading */
+  min-height: 200px;
 }
 
 /* Active State */
@@ -761,7 +726,7 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
 .clear-btn { color: var(--text-tertiary); }
 .clear-btn:hover { color: var(--error); background: rgba(239, 68, 68, 0.05); }
 .notif-close-btn { 
-  display: block; /* ✅ CHANGE from 'none' to 'block' */
+  display: block;
   background: none; 
   border: none; 
   font-size: 1.5rem; 
@@ -773,7 +738,7 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
 .notif-list { 
   overflow-y: auto; 
   flex: 1; 
-  min-height: 0; /* Allows flexbox to shrink if needed */
+  min-height: 0;
   max-height: 400px; 
   padding: 8px 0; 
 }
@@ -806,12 +771,10 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
 .modal-content { 
   background: white; 
   width: 100%; 
-  max-height: 90vh; /* Limit total height to 90% of screen */
+  max-height: 90vh; 
   border-radius: 24px 24px 0 0; 
   overflow: hidden; 
   animation: slideUp 0.3s ease; 
-  
-  /* ✅ FIX: Flex layout ensures Footer is always visible */
   display: flex;
   flex-direction: column;
 }
@@ -823,7 +786,7 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
   border-bottom: 1px solid var(--border-color); 
   display: flex; justify-content: space-between; align-items: center; 
   position: relative; 
-  flex-shrink: 0; /* Prevent header from shrinking */
+  flex-shrink: 0;
 }
 
 .modal-header::before { 
@@ -832,23 +795,23 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
   background: var(--border-color); border-radius: 4px; 
 }
 
-/* ✅ FIX: Body takes remaining space and scrolls */
 .modal-body { 
   padding: 1.25rem; 
   overflow-y: auto; 
-  flex: 1; /* Fills space between header and footer */
-  min-height: 0; /* Crucial for flex scrolling */
+  flex: 1;
+  min-height: 0;
 }
 
 .modal-footer { 
   padding: 1.25rem; 
   border-top: 1px solid var(--border-color); 
   display: flex; gap: 0.5rem; 
-  flex-shrink: 0; /* Prevent footer from shrinking */
+  flex-shrink: 0; 
   background: white; 
 }
 
 .modal-footer .btn { flex: 1; }
+
 /* ==========================================
    15. SETTINGS ENHANCEMENTS (Legal & Danger)
    ========================================== */
@@ -910,7 +873,7 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
 
 /* Danger Zone Styling */
 .card.danger-zone {
-  background-color: #fff5f5; /* Light red background */
+  background-color: #fff5f5; 
   border: 1px solid #fecaca;
   border-radius: var(--radius-lg);
 }
@@ -920,7 +883,7 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
 }
 
 .card.danger-zone .card-title {
-  color: #dc2626; /* Strong red */
+  color: #dc2626; 
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -969,6 +932,7 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
     width: 100%;
   }
 }
+
 /* ==========================================
    RESPONSIVE BREAKPOINTS
    ========================================== */
@@ -981,7 +945,7 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
 /* Mobile (< 768px) */
 @media (max-width: 768px) {
   .header { padding: 0 1rem; }
-  #user-name { display: none; } /* Hide name, show only avatar */
+  #user-name { display: none; } 
   
   /* Show Toggle on Mobile */
   .mobile-menu-toggle { display: flex; }
@@ -1017,7 +981,7 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
     border-radius: 0; border: none; box-shadow: none;
     transform: translateY(0); 
   }
-  .notification-dropdown::before { display: none; } /* Hide arrow on mobile */
+  .notification-dropdown::before { display: none; } 
   .notif-close-btn { display: block; background: none; border: none; font-size: 1.5rem; color: var(--text-primary); cursor: pointer; padding: 0 4px; }
   
   /* Chat Full Screen Logic */
@@ -1040,7 +1004,7 @@ h1, h2, h3, h4 { color: var(--text-heading); font-weight: 700; letter-spacing: -
    ========================================== */
 @media print { .sidebar, .header, .btn, .modal { display: none !important; } .main-content { margin: 0; padding: 0; } body { background: white; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
-/* Add to providerDashboard.css */
+
 @keyframes spin {
   from {
     transform: rotate(0deg);
