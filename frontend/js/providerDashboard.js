@@ -578,6 +578,24 @@ window.addEventListener('resize', () => {
             alert('Failed to send message'); 
         }
     };
+    function identifyRequestType(req, currentUserId) {
+        // 1. Prefer explicit 'initiator' field
+        if (req.initiator === 'provider') return 'sent';
+        if (req.initiator === 'founder') return 'incoming';
+
+        // 2. Check Sender ID
+        const sender = (req.senderId?._id || req.senderId)?.toString();
+        if (sender) {
+            return sender === currentUserId ? 'sent' : 'incoming';
+        }
+
+        // 3. Heuristic: Providers offer services
+        if (req.servicesOffered && req.servicesOffered.length > 0) {
+            return 'sent';
+        }
+
+        return 'incoming';
+    }
     // ==========================================
     // FOUNDERS PAGE LOGIC (FIXED STATUS MAPPING)
     // ==========================================
@@ -1392,7 +1410,7 @@ window.addEventListener('resize', () => {
     // // 3. Chat Logic Variables
     // // let chatSocket;
 
-    // // Initialize Socket
+    // // Initialize Socket 
     // // if (typeof io !== 'undefined') {
     // //     chatSocket = io();
     // //     if (user && user.id) chatSocket.emit('join', user.id);

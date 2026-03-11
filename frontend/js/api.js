@@ -139,7 +139,16 @@ const api = {
     // Backend returns { requests, stats }
     return data?.requests || data;
   },
-
+ async sendProviderRequest(startupId, message, servicesOffered) {
+    return this.request('/provider/send-request', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        startupId, 
+        message, 
+        servicesOffered 
+      })
+    });
+  },
   async updateIntroRequest(requestId, newStatus) {
     return this.request(`/provider/requests/${requestId}`, {
       method: 'PUT',
