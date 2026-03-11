@@ -653,18 +653,23 @@ async function loadFounders() {
 function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = {}) {
   const card = document.createElement('div');
   card.className = 'founder-card';
-
+  
   const userRef = founder.founderId || {};
   const founderName = userRef.name || 'Unknown Founder';
   const points = userRef.rewardPoints || 0;
   const userState = userRef.state || '';
   
+  // ✅ FIX: Define startupIdStr first so we can use it for the Card ID
+  const startupIdStr = founder._id?.toString();
+  
+  // ✅ FIX: Add Unique ID to the card for targeted updates
+  card.id = `founder-card-${startupIdStr}`;
+
   const profileImg = userRef.profilePicture 
     ? userRef.profilePicture 
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(founderName)}&background=random&color=fff&size=128`;
 
   const verifiedBadgeHtml = getVerifiedBadgeHtml(userState);
-  const startupIdStr = founder._id?.toString();
   
   const mySentRequest = sentRequestsMap[startupIdStr];
   const myIncomingRequest = incomingRequestsMap[startupIdStr];
@@ -672,6 +677,7 @@ function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = 
   let actionsHtml = '';
   const founderUserId = (userRef._id || userRef)?.toString();
 
+  // Logic to determine which buttons to show
   if (mySentRequest) {
       const status = mySentRequest.status;
       if (status === 'accepted') {
@@ -846,7 +852,7 @@ async function loadRequests() {
 
     // ✅ USE HELPER FUNCTION TO SPLIT REQUESTS
     requests.forEach(r => {
-        const type = identifyRequestType(r, userId); // <--- FIX APPLIED
+        const type = identifyRequestType(r, userId); 
         if (type === 'sent') sentReqs.push(r);
         else incomingReqs.push(r);
     });
@@ -875,7 +881,6 @@ async function loadRequests() {
     document.getElementById('incoming-requests-list').innerHTML = `<p style="text-align:center; color:red;">Error: ${error.message}</p>`;
   }
 }
-
 
        // Helper: Create Incoming Request Item (From Founder)
     function createIncomingRequestItem(request) {
@@ -1008,7 +1013,7 @@ async function loadRequests() {
       requestModal.classList.add('active');
     };
 
-    // Send Request Logic
+        // Send Request Logic
     document.getElementById('send-request').addEventListener('click', async () => {
       const message = document.getElementById('request-message').value.trim();
       const services = document.getElementById('services-offered').value.trim();
@@ -1016,7 +1021,6 @@ async function loadRequests() {
       if (!message) return alert('Please explain how you can help.');
       if (!services) return alert('Please list the services you offer.');
 
-      // Show loading state on button
       const btn = document.getElementById('send-request');
       const originalText = btn.textContent;
       btn.textContent = 'Sending...';
@@ -1029,9 +1033,30 @@ async function loadRequests() {
           alert('Connection request sent successfully!');
           requestModal.classList.remove('active');
           
-          // ✅ CRITICAL: Reload Founders list to update button status
-          await loadFounders(); 
+          // ✅ OPTIMISTIC UI UPDATE: Instantly update the specific card
+          const cardEl = document.getElementById(`founder-card-${currentStartupId}`);
+          if (cardEl) {
+            const actionsDiv = cardEl.querySelector('.request-actions');
+            if(actionsDiv) {
+              actionsDiv.innerHTML = `
+                <button class="btn btn-secondary" disabled>Request Sent (Pending)</button>
+                <button class="btn btn-secondary" onclick="viewFounderProfile('${currentStartupId}')">View Profile</button>
+              `;
+            }
+          }
+
+          // ✅ UPDATE LOCAL STATE: So filters/navigation reflect the change
+          if (!window.currentSentRequests) window.currentSentRequests = {};
+          window.currentSentRequests[currentStartupId] = { 
+            status: 'pending', 
+            servicesOffered: services, 
+            message: message, 
+            startupId: currentStartupId 
+          };
           
+          // Optional: Reload dashboard stats to update "Active Engagements"
+          loadDashboard(); 
+
         } else {
           alert(result.message || 'Failed to send request');
         }
