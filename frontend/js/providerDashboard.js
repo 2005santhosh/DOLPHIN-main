@@ -578,24 +578,29 @@ window.addEventListener('resize', () => {
             alert('Failed to send message'); 
         }
     };
-    function identifyRequestType(req, currentUserId) {
-        // 1. Prefer explicit 'initiator' field
-        if (req.initiator === 'provider') return 'sent';
-        if (req.initiator === 'founder') return 'incoming';
+   function identifyRequestType(req, currentUserId) {
+    // 1. Prefer explicit 'initiator' field
+    if (req.initiator === 'provider') return 'sent';
+    if (req.initiator === 'founder') return 'incoming';
 
-        // 2. Check Sender ID
-        const sender = (req.senderId?._id || req.senderId)?.toString();
-        if (sender) {
-            return sender === currentUserId ? 'sent' : 'incoming';
-        }
-
-        // 3. Heuristic: Providers offer services
-        if (req.servicesOffered && req.servicesOffered.length > 0) {
-            return 'sent';
-        }
-
-        return 'incoming';
+    // 2. Check Sender ID (Handle both populated and raw IDs)
+    const sender = (req.senderId?._id || req.senderId)?.toString();
+    
+    // If sender exists, compare with current user
+    if (sender) {
+        return sender === currentUserId ? 'sent' : 'incoming';
     }
+
+    // 3. Heuristic: Providers offer services
+    // If the request has servicesOffered, it was definitely sent by a provider
+    if (req.servicesOffered) {
+        return 'sent';
+    }
+    
+    // 4. Fallback
+    // If we are the provider and there is no servicesOffered, it's likely incoming
+    return 'incoming';
+}
     // ==========================================
     // FOUNDERS PAGE LOGIC (FIXED STATUS MAPPING)
     // ==========================================
@@ -605,18 +610,20 @@ async function loadFounders() {
   foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">Loading...</p>';
 
   try {
+    // 1. Fetch Data
     const founders = await api.getEligibleFounders();
-    const requests = await api.getMyRequests();
+    const requests = await api.getMyRequests(); // Uses the fixed function above
     
     const sentRequestsMap = {};
     const incomingRequestsMap = {};
 
-    // ✅ USE HELPER FUNCTION TO MAP REQUESTS
+    // 2. Map Requests (Use the helper function)
     requests.forEach(req => {
+        // Safely get Startup ID
         const startupId = (req.startupId?._id || req.startupId)?.toString();
         if (!startupId) return;
 
-        const type = identifyRequestType(req, userId); // <--- FIX APPLIED
+        const type = identifyRequestType(req, userId);
 
         if (type === 'sent') {
             sentRequestsMap[startupId] = req;
@@ -625,12 +632,16 @@ async function loadFounders() {
         }
     });
 
+    // ✅ DEBUG: Check console to verify requests are being found
+    console.log('Sent Requests Map:', sentRequestsMap);
+
     foundersList.innerHTML = '';
     const validFounders = (founders || []).filter(f => f.founderId && f.founderId.name);
 
     if (!validFounders || validFounders.length === 0) {
       foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No eligible founders found.</p>';
     } else {
+      // Store globally for filtering
       window.currentFoundersList = validFounders;
       window.currentSentRequests = sentRequestsMap;
       window.currentIncomingRequests = incomingRequestsMap;
@@ -641,6 +652,7 @@ async function loadFounders() {
       });
     }
 
+    // Attach Filters
     document.getElementById('stage-filter').addEventListener('change', () => filterFounders(validFounders, sentRequestsMap, incomingRequestsMap));
     document.getElementById('industry-filter').addEventListener('change', () => filterFounders(validFounders, sentRequestsMap, incomingRequestsMap));
 
@@ -649,7 +661,6 @@ async function loadFounders() {
     foundersList.innerHTML = `<p style="text-align: center; color: var(--danger); padding: 2rem;">Error: ${error.message}</p>`;
   }
 }
-
 function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = {}) {
   const card = document.createElement('div');
   card.className = 'founder-card';
