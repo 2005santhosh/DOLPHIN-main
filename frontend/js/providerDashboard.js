@@ -15,7 +15,6 @@ if (!token) console.warn("No token found.");
 // 2. API & HELPER FUNCTIONS
 // ==========================================
 
-// Generic API Caller
 async function apiCall(endpoint, method = 'GET', body = null, base = API_BASE) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -40,7 +39,6 @@ async function apiCall(endpoint, method = 'GET', body = null, base = API_BASE) {
   }
 }
 
-// Chat Specific API Caller
 async function chatApiCall(endpoint, method = 'GET', body = null) {
   const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
   const config = { method, headers };
@@ -50,7 +48,6 @@ async function chatApiCall(endpoint, method = 'GET', body = null) {
   return response.json();
 }
 
-// API Object
 const api = {
   getMyRequests: async () => {
     const data = await apiCall('/my-requests');
@@ -65,7 +62,6 @@ const api = {
   deleteAccount: async () => apiCall('/account', 'DELETE', null, AUTH_BASE),
 };
 
-// Helpers
 function getVerifiedBadgeHtml(state) {
   const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
   if (verifiedStates.includes(state)) return `<span class="verified-badge"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> VERIFIED</span>`;
@@ -102,19 +98,17 @@ function navigateToPage(pageName) {
 // 3. UI HELPERS: TOAST & CONFIRM
 // ==========================================
 
-/**
- * Shows a styled toast notification.
- * @param {string} message - The message to display.
- * @param {'success' | 'error' | 'warning' | 'info'} type - The type of toast.
- */
 function showToast(message, type = 'info') {
   const container = document.getElementById('toast-container');
-  if (!container) return console.warn("Toast container not found");
+  if (!container) {
+    console.error("Toast container not found in HTML!");
+    alert(message); // Fallback
+    return;
+  }
 
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   
-  // Icons
   const icons = {
     success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>',
     error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>',
@@ -129,48 +123,42 @@ function showToast(message, type = 'info') {
 
   container.appendChild(toast);
 
-  // Auto remove after 4 seconds
   setTimeout(() => {
     toast.classList.add('fade-out');
     toast.addEventListener('animationend', () => toast.remove());
   }, 4000);
 }
 
-/**
- * Shows a custom confirmation modal instead of window.confirm.
- * @param {string} message - The confirmation message.
- * @param {function} onConfirm - Callback function to execute if confirmed.
- */
 function showConfirm(message, onConfirm) {
   const modal = document.getElementById('custom-confirm-modal');
   const msgEl = document.getElementById('confirm-message');
   const okBtn = document.getElementById('confirm-ok-btn');
   const cancelBtn = document.getElementById('confirm-cancel-btn');
 
-  if (!modal || !msgEl || !okBtn || !cancelBtn) return;
+  if (!modal || !msgEl || !okBtn || !cancelBtn) {
+    console.error("Confirm modal elements missing!");
+    if(confirm(message)) onConfirm(); // Fallback
+    return;
+  }
 
   msgEl.textContent = message;
   modal.classList.add('active');
 
-  // Remove old listeners to prevent duplicates
   const newOkBtn = okBtn.cloneNode(true);
   okBtn.parentNode.replaceChild(newOkBtn, okBtn);
   
   const newCancelBtn = cancelBtn.cloneNode(true);
   cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
 
-  // Handle Confirm
   newOkBtn.addEventListener('click', () => {
     modal.classList.remove('active');
     if (typeof onConfirm === 'function') onConfirm();
   });
 
-  // Handle Cancel
   newCancelBtn.addEventListener('click', () => {
     modal.classList.remove('active');
   });
 }
-
 
 // ==========================================
 // 4. CORE PAGE LOADERS
@@ -248,7 +236,6 @@ function loadSettings() {
   if(nameInput) nameInput.value = user.name || '';
   if(emailInput) emailInput.value = user.email || '';
   
-  // Load profile picture
   const previewImg = document.getElementById('settings-profile-preview');
   if (user.profilePicture && previewImg) {
       const imageUrl = user.profilePicture.startsWith('http') ? user.profilePicture : `${window.location.origin}${user.profilePicture}`;
@@ -292,7 +279,6 @@ async function loadFounders() {
       
       validFounders.forEach(founder => foundersList.appendChild(createFounderCard(founder, sentRequestsMap, incomingRequestsMap)));
       
-      // Attach Filter Listeners
       document.getElementById('stage-filter')?.addEventListener('change', () => filterFounders(validFounders, sentRequestsMap, incomingRequestsMap));
       document.getElementById('industry-filter')?.addEventListener('change', () => filterFounders(validFounders, sentRequestsMap, incomingRequestsMap));
     }
@@ -450,7 +436,7 @@ window.updateRequest = async function(id, status) {
 };
 
 // ==========================================
-// 7. CHAT LOGIC (WITH SEARCH)
+// 7. CHAT LOGIC
 // ==========================================
 window.allConversations = [];
 
@@ -643,25 +629,8 @@ window.togglePassword = function(inputId) {
 
 // Legal Modals
 const legalDocs = {
-    privacy: { title: "Privacy Policy", content: `<p><strong>Effective Date:</strong> March, 2026</p>
-                <p>This privacy policy describes how Dolphin collects, uses, and shares your personal information.</p>
-                <h4 style="margin-top:1rem;">Information We Collect</h4>
-                <p>We collect information you provide directly to us, such as when you create an account, make a purchase, or contact us for support. This may include your name, email address, phone number, and profile information.</p>
-                <h4 style="margin-top:1rem;">How We Use Information</h4>
-                <p>We use the information we collect to provide, maintain, and improve our services, to process transactions and send you related information, to respond to your comments and questions, and to provide customer service.</p>
-                <h4 style="margin-top:1rem;">Data Security</h4>
-                <p>We take reasonable measures to help protect your personal information from loss, theft, misuse, and unauthorized access, disclosure, alteration, and destruction.</p>
-            ` },
-    terms: { title: "Terms of Service", content: `
-                <p><strong>Effective Date:</strong> March, 2026</p>
-                <p>Welcome to Dolphin. These Terms of Service govern your use of our website located at dolphin.com and our services.</p>
-                <h4 style="margin-top:1rem;">Acceptance of Terms</h4>
-                <p>By accessing and using our services, you agree to be bound by these Terms of Service and all applicable laws and regulations.</p>
-                <h4 style="margin-top:1rem;">User Responsibilities</h4>
-                <p>You are responsible for maintaining the confidentiality of your account and password and for restricting access to your computer. You agree to accept responsibility for all activities that occur under your account or password.</p>
-                <h4 style="margin-top:1rem;">Limitation of Liability</h4>
-                <p>In no event shall Dolphin, its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses.</p>
-            ` }
+    privacy: { title: "Privacy Policy", content: `<p><strong>Effective Date:</strong> March, 2026</p><p>This privacy policy describes how Dolphin collects, uses, and shares your personal information.</p>` },
+    terms: { title: "Terms of Service", content: `<p><strong>Effective Date:</strong> March, 2026</p><p>Welcome to Dolphin. These Terms of Service govern your use of our website located at dolphin.com and our services.</p>` }
 };
 
 window.openLegalModal = function(type) {
@@ -758,6 +727,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
+  // Close Profile Modal (The Fix)
+  document.getElementById('close-profile')?.addEventListener('click', () => {
+    document.getElementById('profile-modal').classList.remove('active');
+  });
+
   // SETTINGS: Update Profile Button
   document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
       const nameEl = document.getElementById('settings-full-name');
