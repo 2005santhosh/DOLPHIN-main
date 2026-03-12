@@ -12,7 +12,7 @@ const userId = (user._id || user.id)?.toString();
 if (!token) console.warn("No token found.");
 
 // ==========================================
-// 2. API & HELPER FUNCTIONS
+// 2. API & HELPER FUNCTIONS privacy
 // ==========================================
 
 // Generic API Caller
@@ -566,8 +566,25 @@ window.togglePassword = function(inputId) {
 
 // Legal Modals
 const legalDocs = {
-    privacy: { title: "Privacy Policy", content: "<p>Privacy Policy content goes here...</p>" },
-    terms: { title: "Terms of Service", content: "<p>Terms of Service content goes here...</p>" }
+    privacy: { title: "Privacy Policy", content: `<p><strong>Effective Date:</strong> March, 2026</p>
+                <p>This privacy policy describes how Dolphin collects, uses, and shares your personal information.</p>
+                <h4 style="margin-top:1rem;">Information We Collect</h4>
+                <p>We collect information you provide directly to us, such as when you create an account, make a purchase, or contact us for support. This may include your name, email address, phone number, and profile information.</p>
+                <h4 style="margin-top:1rem;">How We Use Information</h4>
+                <p>We use the information we collect to provide, maintain, and improve our services, to process transactions and send you related information, to respond to your comments and questions, and to provide customer service.</p>
+                <h4 style="margin-top:1rem;">Data Security</h4>
+                <p>We take reasonable measures to help protect your personal information from loss, theft, misuse, and unauthorized access, disclosure, alteration, and destruction.</p>
+            ` },
+    terms: { title: "Terms of Service", content: `
+                <p><strong>Effective Date:</strong> March, 2026</p>
+                <p>Welcome to Dolphin. These Terms of Service govern your use of our website located at dolphin.com and our services.</p>
+                <h4 style="margin-top:1rem;">Acceptance of Terms</h4>
+                <p>By accessing and using our services, you agree to be bound by these Terms of Service and all applicable laws and regulations.</p>
+                <h4 style="margin-top:1rem;">User Responsibilities</h4>
+                <p>You are responsible for maintaining the confidentiality of your account and password and for restricting access to your computer. You agree to accept responsibility for all activities that occur under your account or password.</p>
+                <h4 style="margin-top:1rem;">Limitation of Liability</h4>
+                <p>In no event shall Dolphin, its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses.</p>
+            ` }
 };
 
 window.openLegalModal = function(type) {
