@@ -12,7 +12,7 @@ const userId = (user._id || user.id)?.toString();
 if (!token) console.warn("No token found.");
 
 // ==========================================
-// 2. API & HELPER FUNCTIONS privacy
+// 2. API & HELPER FUNCTIONS
 // ==========================================
 
 // Generic API Caller
@@ -99,7 +99,81 @@ function navigateToPage(pageName) {
 }
 
 // ==========================================
-// 3. CORE PAGE LOADERS
+// 3. UI HELPERS: TOAST & CONFIRM
+// ==========================================
+
+/**
+ * Shows a styled toast notification.
+ * @param {string} message - The message to display.
+ * @param {'success' | 'error' | 'warning' | 'info'} type - The type of toast.
+ */
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toast-container');
+  if (!container) return console.warn("Toast container not found");
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  
+  // Icons
+  const icons = {
+    success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>',
+    error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>',
+    warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
+    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>'
+  };
+
+  toast.innerHTML = `
+    <div class="toast-icon">${icons[type]}</div>
+    <div class="toast-message">${message}</div>
+  `;
+
+  container.appendChild(toast);
+
+  // Auto remove after 4 seconds
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    toast.addEventListener('animationend', () => toast.remove());
+  }, 4000);
+}
+
+/**
+ * Shows a custom confirmation modal instead of window.confirm.
+ * @param {string} message - The confirmation message.
+ * @param {function} onConfirm - Callback function to execute if confirmed.
+ */
+function showConfirm(message, onConfirm) {
+  const modal = document.getElementById('custom-confirm-modal');
+  const msgEl = document.getElementById('confirm-message');
+  const okBtn = document.getElementById('confirm-ok-btn');
+  const cancelBtn = document.getElementById('confirm-cancel-btn');
+
+  if (!modal || !msgEl || !okBtn || !cancelBtn) return;
+
+  msgEl.textContent = message;
+  modal.classList.add('active');
+
+  // Remove old listeners to prevent duplicates
+  const newOkBtn = okBtn.cloneNode(true);
+  okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+  
+  const newCancelBtn = cancelBtn.cloneNode(true);
+  cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+  // Handle Confirm
+  newOkBtn.addEventListener('click', () => {
+    modal.classList.remove('active');
+    if (typeof onConfirm === 'function') onConfirm();
+  });
+
+  // Handle Cancel
+  newCancelBtn.addEventListener('click', () => {
+    modal.classList.remove('active');
+  });
+}
+
+
+// ==========================================
+// 4. CORE PAGE LOADERS
 // ==========================================
 
 function loadPageContent(page) {
@@ -185,7 +259,7 @@ function loadSettings() {
 }
 
 // ==========================================
-// 4. FOUNDERS PAGE LOGIC
+// 5. FOUNDERS PAGE LOGIC
 // ==========================================
 async function loadFounders() {
   const foundersList = document.getElementById('founders-list');
@@ -299,7 +373,7 @@ function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = 
 }
 
 // ==========================================
-// 5. REQUESTS PAGE LOGIC
+// 6. REQUESTS PAGE LOGIC
 // ==========================================
 async function loadRequests() {
   try {
@@ -363,17 +437,20 @@ function createRequestItem(request, type) {
 }
 
 window.updateRequest = async function(id, status) {
-  if(!confirm(`${status} this request?`)) return;
-  try {
-    await api.updateIntroRequest(id, status);
-    alert(`Request ${status}!`);
-    loadRequests();
-    loadDashboard();
-  } catch(e) { alert(e.message); }
+  showConfirm(`${status} this request?`, async () => {
+    try {
+      await api.updateIntroRequest(id, status);
+      showToast(`Request ${status}!`, 'success');
+      loadRequests();
+      loadDashboard();
+    } catch(e) { 
+      showToast(e.message, 'error'); 
+    }
+  });
 };
 
 // ==========================================
-// 6. CHAT LOGIC (WITH SEARCH)
+// 7. CHAT LOGIC (WITH SEARCH)
 // ==========================================
 window.allConversations = [];
 
@@ -513,11 +590,11 @@ window.sendMessage = async function() {
   input.value = '';
 
   try { await chatApiCall('/send', 'POST', { receiverId: currentChatPartnerId, content }); }
-  catch(e) { alert('Failed to send message'); }
+  catch(e) { showToast('Failed to send message', 'error'); }
 };
 
 // ==========================================
-// 7. MODALS & GLOBAL FUNCTIONS
+// 8. MODALS & GLOBAL FUNCTIONS
 // ==========================================
 
 window.viewFounderProfile = function(startupId) {
@@ -600,7 +677,7 @@ window.closeLegalModal = function() {
 };
 
 // ==========================================
-// 8. EVENT LISTENERS & INITIALIZATION
+// 9. EVENT LISTENERS & INITIALIZATION
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   // Set Header Info
@@ -640,15 +717,15 @@ document.addEventListener('DOMContentLoaded', () => {
       availability: document.getElementById('availability').value,
       contactMethod: document.getElementById('contact-method').value
     };
-    try { await api.updateProfile(profileData); alert('Profile updated!'); } 
-    catch (e) { alert(e.message); }
+    try { await api.updateProfile(profileData); showToast('Profile updated!', 'success'); } 
+    catch (e) { showToast(e.message, 'error'); }
   });
 
   // Send Request Button
   document.getElementById('send-request')?.addEventListener('click', async () => {
     const message = document.getElementById('request-message').value.trim();
     const services = document.getElementById('services-offered').value.trim();
-    if (!message || !services) return alert('Please fill all fields.');
+    if (!message || !services) return showToast('Please fill all fields.', 'warning');
 
     const btn = document.getElementById('send-request');
     btn.disabled = true; btn.textContent = 'Sending...';
@@ -656,7 +733,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const result = await api.sendProviderRequest(currentStartupId, message, services);
       if (result.success) {
-        alert('Request sent!');
+        showToast('Request sent!', 'success');
         document.getElementById('request-modal').classList.remove('active');
         
         const cardEl = document.getElementById(`founder-card-${currentStartupId}`);
@@ -665,8 +742,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!window.currentSentRequests) window.currentSentRequests = {};
         window.currentSentRequests[currentStartupId] = { status: 'pending' };
         loadDashboard(); 
-      } else { alert(result.message || 'Failed'); }
-    } catch(e) { alert(e.message); }
+      } else { showToast(result.message || 'Failed', 'error'); }
+    } catch(e) { showToast(e.message, 'error'); }
     finally { btn.disabled = false; btn.textContent = 'Send Request'; }
   });
 
@@ -685,7 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
       const nameEl = document.getElementById('settings-full-name');
       const name = nameEl.value.trim();
-      if (!name) return alert('Name is required');
+      if (!name) return showToast('Name is required', 'warning');
       
       try {
         let res = await fetch(`${API_URL}/auth/profile`, {
@@ -698,13 +775,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Update failed');
 
-        alert('Profile updated!');
+        showToast('Profile updated!', 'success');
         user.name = name;
         localStorage.setItem('user', JSON.stringify(user));
         document.getElementById('user-name').textContent = name;
         document.querySelector('.user-avatar').textContent = name.split(' ').map(n => n.charAt(0)).join('');
 
-      } catch (err) { alert(err.message); }
+      } catch (err) { showToast(err.message, 'error'); }
   });
 
   // SETTINGS: Update Password Button
@@ -713,9 +790,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const newP = document.getElementById('new-password').value;
       const conf = document.getElementById('confirm-password').value;
 
-      if(!curr || !newP || !conf) return alert('Fill all password fields');
-      if(newP !== conf) return alert('Passwords do not match');
-      if(newP.length < 8) return alert('Password must be 8+ characters');
+      if(!curr || !newP || !conf) return showToast('Fill all password fields', 'warning');
+      if(newP !== conf) return showToast('Passwords do not match', 'error');
+      if(newP.length < 8) return showToast('Password must be 8+ characters', 'warning');
 
       try {
           const res = await fetch(`${API_URL}/auth/password`, {
@@ -725,17 +802,17 @@ document.addEventListener('DOMContentLoaded', () => {
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.message || 'Failed to update');
-          alert('Password Updated!');
+          showToast('Password Updated!', 'success');
           document.getElementById('current-password').value = '';
           document.getElementById('new-password').value = '';
           document.getElementById('confirm-password').value = '';
-      } catch(e) { alert(e.message); }
+      } catch(e) { showToast(e.message, 'error'); }
   });
 
   // SETTINGS: Upload Picture Button
   document.getElementById('upload-picture-btn')?.addEventListener('click', async () => {
       const fileInput = document.getElementById('profile-picture-input');
-      if (!fileInput?.files?.length) return alert('Select an image first');
+      if (!fileInput?.files?.length) return showToast('Select an image first', 'warning');
 
       const btn = document.getElementById('upload-picture-btn');
       const originalText = btn.innerHTML;
@@ -754,7 +831,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.message);
         
-        alert('Picture updated!');
+        showToast('Picture updated!', 'success');
         user.profilePicture = data.profilePicture;
         localStorage.setItem('user', JSON.stringify(user));
         
@@ -765,23 +842,27 @@ document.addEventListener('DOMContentLoaded', () => {
              previewImg.src = fullUrl;
         }
 
-      } catch (err) { alert(err.message); }
+      } catch (err) { showToast(err.message, 'error'); }
       finally { btn.innerHTML = originalText; btn.disabled = false; fileInput.value = ''; }
   });
 
   // SETTINGS: Delete Account Button
   document.getElementById('delete-account-btn')?.addEventListener('click', async () => {
-      if (!confirm('Delete account permanently?')) return;
-      try {
-        await api.deleteAccount();
-        localStorage.clear();
-        window.location.href = 'login.html';
-      } catch(e) { alert(e.message); }
+      showConfirm('Delete account permanently?', async () => {
+        try {
+          await api.deleteAccount();
+          localStorage.clear();
+          window.location.href = 'login.html';
+        } catch(e) { showToast(e.message, 'error'); }
+      });
   });
   
   // Logout
   document.getElementById('logout-btn')?.addEventListener('click', () => {
-    if(confirm('Logout?')) { localStorage.clear(); window.location.href = 'login.html'; }
+    showConfirm('Logout?', () => {
+      localStorage.clear(); 
+      window.location.href = 'login.html';
+    });
   });
   
   // Mobile Menu
