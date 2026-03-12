@@ -36,41 +36,31 @@ router.post('/send', protect, async (req, res) => {
   }
 });
 
-// @route   GET /api/chat/conversations
-// ✅ CRITICAL: This MUST be defined BEFORE /:userId
-// @route   GET /api/chat/conversations
-// @desc    Get all conversations for logged-in user
-router.get('/conversations', protect, async (req, res) => {
+// routes/chat.js
+
+router.get('/conversations', auth, async (req, res) => {
   try {
-    const messages = await Message.find({
-      $or: [ { senderId: req.user.id }, { receiverId: req.user.id } ]
-    })
-    .populate('senderId', 'name profilePicture') // ✅ Add profilePicture
-    .populate('receiverId', 'name profilePicture') // ✅ Add profilePicture
-    .sort({ createdAt: -1 });
+    const conversations = await Conversation.find({ participants: req.user._id })
+      .populate('participants', 'name profilePicture')
+      .sort({ updatedAt: -1 });
 
-    const conversationsMap = {};
-
-    messages.forEach(msg => {
-      const partner = msg.senderId._id.toString() === req.user.id.toString() 
-        ? msg.receiverId 
-        : msg.senderId;
-
-      if (!conversationsMap[partner._id]) {
-        conversationsMap[partner._id] = {
-          _id: partner._id,
-          name: partner.name,
-          profilePicture: partner.profilePicture || "", // ✅ Include Image
-          lastMessage: msg.content,
-          updatedAt: msg.createdAt
-        };
+    // 1. Convert Mongoose documents to plain objects so we can modify them
+    const sanitizedConversations = conversations.map(conv => {
+      const obj = conv.toObject();
+      
+      // 2. CRITICAL FIX: Filter out 'null' participants (deleted users)
+      // This prevents the frontend from crashing if a user was deleted.
+      if (obj.participants) {
+        obj.participants = obj.participants.filter(p => p !== null);
       }
+      
+      return obj;
     });
 
-    res.json(Object.values(conversationsMap));
+    res.json(sanitizedConversations);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server Error' });
+    console.error(err.message);
+    res.status(500).send('Server Error');
   }
 });
 

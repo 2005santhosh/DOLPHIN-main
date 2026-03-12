@@ -591,7 +591,39 @@
       <div class="modal-body" id="detail-modal-body"></div>
     </div>
   </div>
-  <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;"></div>
+    <!-- TOAST CONTAINER (Add before scripts) -->
+  <div id="toast-container"></div>
+
+  <!-- DELETE ACCOUNT MODAL (Add before scripts) -->
+  <div id="delete-confirm-modal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+      <div class="modal-header">
+        <h3 class="modal-title">⚠️ Delete Account</h3>
+        <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="text-align: center;">
+        <p style="margin-bottom: 1rem; color: var(--text-secondary);">This action is irreversible. All your data will be permanently removed.</p>
+        <p style="font-weight: 600; margin-bottom: 0.5rem;">Please type <span style="color: var(--error);">DELETE</span> to confirm:</p>
+        <input type="text" id="delete-confirm-input" class="form-input" placeholder="Type DELETE..." style="margin-bottom: 1rem; text-align: center;">
+        <div style="display: flex; gap: 1rem;">
+          <button class="btn btn-secondary" style="flex:1;" onclick="closeDeleteModal()">Cancel</button>
+          <button class="btn btn-danger" style="flex:1;" id="confirm-delete-action">Delete Forever</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT PAGE UPDATE: Ensure this ID exists in your Chat HTML -->
+  <!-- Inside #chat-page .card -> #conversations-list -->
+  <!-- Add this container for the search bar if not already present -->
+  <!--
+  <div id="conversations-list" style="display: flex; flex-direction: column;">
+      <div class="chat-search-container">
+          <input type="text" id="chat-search-input" class="chat-search-input" placeholder="Search or start new chat">
+      </div>
+      <div id="conversations-container"></div>
+  </div>
+  -->
   <script src="./js/api.js"></script>
   <script src="./js/dashboard.js"></script>
 </body>

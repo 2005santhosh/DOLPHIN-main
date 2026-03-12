@@ -784,3 +784,38 @@ body {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
+/* ============================================ */
+/* DELETE MODAL & ERROR HANDLING STYLES         */
+/* ============================================ */
+
+/* Delete Modal Specifics */
+#delete-confirm-modal .modal-body {
+    padding: 24px;
+}
+#delete-confirm-input {
+    border: 2px solid var(--border-color);
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+#delete-confirm-input:focus {
+    border-color: var(--error);
+    box-shadow: 0 0 0 3px var(--error-bg);
+}
+
+/* Chat Error State */
+.chat-error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-secondary);
+}
+.chat-error-state svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 1rem;
+    color: var(--error);
+}
