@@ -634,6 +634,21 @@
       </div>
     </div>
   </div>
+   <!-- ========================================== -->
+  <!-- CRITICAL: TOAST & CONFIRM CONTAINERS -->
+  <!-- ========================================== -->
+  <div id="toast-container"></div>
+
+  <div id="custom-confirm-modal" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+      <div class="modal-header"><h3 class="modal-title">Confirm Action</h3></div>
+      <div class="modal-body"><p id="confirm-message" style="text-align: center; color: var(--text-secondary); margin: 0;"></p></div>
+      <div class="modal-footer" style="justify-content: center;">
+        <button class="btn btn-secondary" id="confirm-cancel-btn">Cancel</button>
+        <button class="btn btn-danger" id="confirm-ok-btn">Confirm</button>
+      </div>
+    </div>
+  </div>
   <!-- REAL DATA API CLIENT -->
   <script src="./js/providerDashboard.js"></script>
 </body>
