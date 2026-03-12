@@ -1,7 +1,7 @@
 // ==========================================
 // CORE INIT & HELPERS
 // ==========================================
-// const API_URL = "https://dolphin-main-production.up.railway.app/api";
+const API_URL = "https://dolphin-main-production.up.railway.app/api";
 const user = JSON.parse(localStorage.getItem('user') || '{}');
 const token = localStorage.getItem('token');
 const userId = user._id || user.id;
@@ -31,7 +31,6 @@ function showToast(message, type = 'info') {
     toast.innerHTML = `${icon} <span>${message}</span>`;
     container.appendChild(toast);
     
-    // Remove after 3 seconds
     setTimeout(() => {
         toast.style.animation = "toastSlideIn 0.3s ease reverse forwards";
         setTimeout(() => toast.remove(), 300);
@@ -356,25 +355,16 @@ function showCreateStartupForm() {
     const dataContainer = document.getElementById('startup-data-container');
     if (formContainer) formContainer.style.display = 'block';
     if (dataContainer) dataContainer.style.display = 'none';
-    console.log("Showing startup creation form for new user.");
 }
 
 function renderStartupData(startup) {
-    if (!startup) {
-        console.error("Render called with no startup data!");
-        showCreateStartupForm();
-        return;
-    }
-
+    if (!startup) { showCreateStartupForm(); return; }
     const formContainer = document.getElementById('startup-form-container');
     const dataContainer = document.getElementById('startup-data-container');
     if (formContainer) formContainer.style.display = 'none';
     if (dataContainer) dataContainer.style.display = 'block';
-
     const nameEl = document.getElementById('startup-name-display');
     if (nameEl) nameEl.textContent = startup.name || 'My Startup';
-    const descEl = document.getElementById('startup-description-display');
-    if (descEl) descEl.textContent = startup.description || 'No description provided.';
 }
 
 function updateHeaderAvatar(imageUrl) {
@@ -835,10 +825,10 @@ document.getElementById('submit-founder-request')?.addEventListener('click', asy
 });
 
 // ==========================================
-// DETAIL MODAL & RATING (UPDATED)
+// DETAIL MODAL & RATING
 // ==========================================
 window.navigateToChat = function(partnerId, partnerName, partnerPic) {
-    closeDetailModal(); // FIX: Close modal immediately
+    closeDetailModal(); 
 
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('chat-page').classList.add('active');
@@ -961,7 +951,6 @@ async function submitRating(targetUserId) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.message);
     showToast('Rating submitted successfully!', 'success');
-    // FIX: Use specific ID to update safely
     const ratingEl = document.getElementById('rating-display-value');
     if(ratingEl) ratingEl.textContent = `⭐ ${data.averageRating || selectedRating}.0`;
   } catch (err) { showToast(err.message, 'error'); }
@@ -1080,7 +1069,7 @@ function updateRequestsBadge(requests) {
 // CHAT UI LOGIC (UPDATED)
 // ==========================================
 let currentChatPartnerId = null;
-let allConversations = []; // Global store for filtering
+let allConversations = []; 
 
 window.openChat = async function(partnerId, partnerName, partnerPic) {
     currentChatPartnerId = partnerId?.toString();
@@ -1091,11 +1080,9 @@ window.openChat = async function(partnerId, partnerName, partnerPic) {
     const chatHeader = document.getElementById('chat-header');
     const chatInputArea = document.getElementById('chat-input-area');
     
-    // 1. Set Header Content
     let headerAvatarHtml = partnerPic ? `<img src="${partnerPic}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : partnerName.charAt(0);
     chatHeader.innerHTML = `<div class="chat-avatar">${headerAvatarHtml}</div> <span style="color:white; font-weight:600;">${partnerName}</span>`;
     
-    // 2. Handle Mobile View (Back Button)
     if (window.innerWidth <= 768) {
         chatList.style.display = 'none';
         chatWindow.classList.add('active'); 
@@ -1118,10 +1105,8 @@ window.openChat = async function(partnerId, partnerName, partnerPic) {
         chatHeader.style.display = 'flex';
     }
 
-    // 3. CRITICAL: Show Input Area
     chatInputArea.style.display = 'flex';
 
-    // 4. Load Messages
     try {
         const msgs = await chatApiCall(`/${partnerId}`);
         const container = document.getElementById('messages-container');
@@ -1151,7 +1136,6 @@ async function loadConversations() {
     const listContainer = document.getElementById('conversations-container');
     const searchInput = document.getElementById('chat-search-input');
     
-    // Add search listener once
     if (searchInput && !searchInput.dataset.listenerAdded) {
         searchInput.addEventListener('input', (e) => {
             filterConversations(e.target.value);
@@ -1163,13 +1147,21 @@ async function loadConversations() {
     
     try {
         const convs = await chatApiCall('/conversations');
-        allConversations = convs || []; // Save to global
-        
+        allConversations = convs || []; 
         renderConversationList(allConversations);
 
     } catch(e) { 
         console.error(e);
-        listContainer.innerHTML = '<p style="color:red; text-align:center;">Failed to load chats.</p>'; 
+        listContainer.innerHTML = `
+          <div class="chat-error-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <p>Failed to load chats.</p>
+            <button class="btn btn-secondary btn-sm" onclick="loadConversations()">Retry</button>
+          </div>`;
     }
 }
 
@@ -1224,7 +1216,19 @@ async function chatApiCall(endpoint, method = 'GET', body = null) {
   const config = { method, headers };
   if (body) config.body = JSON.stringify(body);
   const response = await fetch(`${API_URL}/chat${endpoint}`, config);
-  if (!response.ok) throw new Error('API Error');
+  
+  // Try to parse error message from backend
+  if (!response.ok) {
+      let errorMsg = `Server Error: ${response.status}`;
+      try {
+          const errorData = await response.json();
+          errorMsg = errorData.message || errorMsg;
+      } catch(e) {
+          // Could not parse JSON
+      }
+      throw new Error(errorMsg);
+  }
+  
   return response.json();
 }
 
@@ -1253,7 +1257,7 @@ function loadSettings() {
     }).catch(err => console.error(err));
 }
 
-// Profile Update button listener is duplicated in the user's provided code, but necessary here for context
+// Profile Update button listener
 document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
   const name = document.getElementById('settings-full-name').value.trim();
   if (!name) return showToast('Name cannot be empty', 'error');
@@ -1343,6 +1347,50 @@ document.getElementById('logout-btn')?.addEventListener('click', () => {
   if (confirm('Logout?')) { localStorage.clear(); window.location.href = 'login.html'; }
 });
 
+// ==========================================
+// DELETE ACCOUNT MODAL LOGIC
+// ==========================================
+function openDeleteModal() {
+    const modal = document.getElementById('delete-confirm-modal');
+    if(modal) modal.classList.add('active');
+}
+
+function closeDeleteModal() {
+    const modal = document.getElementById('delete-confirm-modal');
+    if(modal) {
+        modal.classList.remove('active');
+        const input = document.getElementById('delete-confirm-input');
+        if(input) input.value = '';
+    }
+}
+window.closeDeleteModal = closeDeleteModal;
+
+document.getElementById('confirm-delete-action')?.addEventListener('click', async () => {
+    const inputVal = document.getElementById('delete-confirm-input').value;
+    if (inputVal !== 'DELETE') {
+        showToast("Please type 'DELETE' to confirm.", 'error');
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_URL}/auth/account`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.message || 'Failed to delete account');
+
+        showToast('✅ Your account has been deleted successfully.', 'success');
+        localStorage.clear();
+        window.location.href = 'index.html';
+
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+});
+
 // Init
 document.addEventListener('DOMContentLoaded', () => {
   loadDashboard();
@@ -1351,28 +1399,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const deleteBtn = document.getElementById('delete-account-btn');
   if (deleteBtn) {
-      deleteBtn.addEventListener('click', async () => {
-          if (!confirm('⚠️ Are you sure you want to delete your account? This action cannot be undone.')) return;
-          const confirmation = prompt("Please type 'DELETE' to confirm account deletion.");
-          if (confirmation !== 'DELETE') { showToast('Deletion cancelled.', 'info'); return; }
-
-          try {
-              const res = await fetch(`${API_URL}/auth/account`, {
-                  method: 'DELETE',
-                  headers: { 'Authorization': `Bearer ${token}` }
-              });
-
-              const data = await res.json();
-
-              if (!res.ok) throw new Error(data.message || 'Failed to delete account');
-
-              showToast('✅ Your account has been deleted successfully.', 'success');
-              localStorage.clear();
-              window.location.href = 'index.html';
-
-          } catch (err) {
-              showToast(err.message, 'error');
-          }
-      });
+      deleteBtn.addEventListener('click', openDeleteModal);
   }
 });
