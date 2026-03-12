@@ -1184,35 +1184,18 @@ function renderConversationList(convs) {
     }
 
     convs.forEach(c => {
-        // 1. Find the partner from the participants array
-        // The conversation has 'participants': [CurrentUser, Partner]
-        // We need to find the one that IS NOT the current user.
-        let partner = null;
-        if (c.participants && c.participants.length > 0) {
-            partner = c.participants.find(p => p._id.toString() !== userId);
-        }
-
-        // 2. Handle cases where partner might be missing (deleted user or error)
-        if (!partner) {
-            console.warn("Conversation with no valid partner found:", c._id);
-            return; // Skip rendering this conversation
-        }
-
         const div = document.createElement('div');
         div.className = 'chat-item';
+        const partnerName = c.name || 'Unknown User';
         
-        const partnerName = partner.name || 'Unknown User';
-        const partnerPic = partner.profilePicture || '';
-        
-        let avatarHtml = partnerPic 
-            ? `<img src="${partnerPic.startsWith('http') ? partnerPic : window.location.origin + partnerPic}" class="chat-avatar" alt="${partnerName}">` 
+        let avatarHtml = c.profilePicture 
+            ? `<img src="${c.profilePicture.startsWith('http') ? c.profilePicture : window.location.origin + c.profilePicture}" class="chat-avatar" alt="${partnerName}">` 
             : `<div class="chat-avatar">${partnerName.charAt(0)}</div>`;
         
-        // 3. Use the PARTNER's ID for the chat, not the conversation ID
         div.innerHTML = `${avatarHtml}<div class="chat-info"><div class="chat-name">${partnerName}</div><div class="chat-preview">${c.lastMessage || 'Start chatting...'}</div></div>`;
         
-        // Pass Partner ID, Name, and Pic to openChat
-        div.onclick = () => openChat(partner._id, partnerName, partnerPic);
+        // Pass Partner ID
+        div.onclick = () => openChat(c._id, partnerName, c.profilePicture);
         
         listContainer.appendChild(div);
     });

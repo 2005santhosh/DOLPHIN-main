@@ -36,31 +36,50 @@ router.post('/send', protect, async (req, res) => {
   }
 });
 
-// routes/chat.js
-
-router.get('/conversations', auth, async (req, res) => {
+// @route   GET /api/chat/conversations
+// @desc    Get all conversations for logged-in user
+router.get('/conversations', protect, async (req, res) => {
   try {
-    const conversations = await Conversation.find({ participants: req.user._id })
-      .populate('participants', 'name profilePicture')
-      .sort({ updatedAt: -1 });
+    const messages = await Message.find({
+      $or: [ { senderId: req.user.id }, { receiverId: req.user.id } ]
+    })
+    .populate('senderId', 'name profilePicture')
+    .populate('receiverId', 'name profilePicture')
+    .sort({ createdAt: -1 });
 
-    // 1. Convert Mongoose documents to plain objects so we can modify them
-    const sanitizedConversations = conversations.map(conv => {
-      const obj = conv.toObject();
-      
-      // 2. CRITICAL FIX: Filter out 'null' participants (deleted users)
-      // This prevents the frontend from crashing if a user was deleted.
-      if (obj.participants) {
-        obj.participants = obj.participants.filter(p => p !== null);
+    const conversationsMap = {};
+
+    messages.forEach(msg => {
+      // ==========================================
+      // FIX: Check if sender or receiver is NULL (Deleted User)
+      // ==========================================
+      if (!msg.senderId || !msg.receiverId) {
+        console.log(`Skipping message ${msg._id}: User data missing (deleted).`);
+        return; // Skip this message to prevent crash
       }
-      
-      return obj;
+
+      const partner = msg.senderId._id.toString() === req.user.id.toString() 
+        ? msg.receiverId 
+        : msg.senderId;
+
+      // Ensure partner is valid before adding to map
+      if (!partner) return;
+
+      if (!conversationsMap[partner._id]) {
+        conversationsMap[partner._id] = {
+          _id: partner._id,
+          name: partner.name,
+          profilePicture: partner.profilePicture || "",
+          lastMessage: msg.content,
+          updatedAt: msg.createdAt
+        };
+      }
     });
 
-    res.json(sanitizedConversations);
+    res.json(Object.values(conversationsMap));
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error(err);
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
