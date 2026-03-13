@@ -1,29 +1,13 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
-const bcrypt = require('bcryptjs');
-
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { 
-    type: String, 
-    required: true, 
-    unique: true,
-    lowercase: true, // Ensure emails are case-insensitive
-    trim: true
-  },
-  password: { 
-    type: String, 
-    required: true, 
-    select: false 
-  },
-  role: { 
-    type: String, 
-    enum: ['founder', 'investor', 'provider', 'admin'], 
-    required: true 
-  },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true, select: false },
+  role: { type: String, enum: ['founder', 'investor', 'provider','admin'], required: true },
 
-  // RECOMMENDATION 1: State consistency
-  // Removed numeric 'stage' field. We now derive the stage number virtually from the string state.
+  // Backend-controlled lifecycle state used by both API authorization and frontend visibility.
+  // NOTE: we model stages explicitly to support the 7-stage founder roadmap.
   state: {
     type: String,
     enum: [
@@ -41,88 +25,54 @@ const userSchema = new mongoose.Schema({
     default: 'PENDING_APPROVAL'
   },
 
+  // Numeric stage for convenience; 0 means “not in stages yet” (e.g. pending approval).
+  stage: { type: Number, default: 0 },
+
   emailVerified: { type: Boolean, default: false },
-  
   watchlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Startup' }],
-  
   interestAreas: [{ type: String }],
   stagePreference: [{ type: Number }],
-  
-  rewardPoints: { type: Number, default: 0 },
-  emailNotifications: { type: Boolean, default: true },
-  
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+  rewardPoints: {
+    type: Number,
+    default: 0
+  },
+  emailNotifications: {
+    type: Boolean,
+    default: true
+  },
   profilePicture: {
     type: String,
-    default: "default.jpg" 
+    default: "" // Will store the path to the image
   },
-
-  // RECOMMENDATION 2: Unbounded Arrays
-  // Removed embedded 'ratings' array.
-  // We now store rating aggregates here for performance, updated when ratings are added.
-  ratingAverage: { type: Number, default: 0, min: 0, max: 5 },
-  ratingCount: { type: Number, default: 0 },
-  
+  // Add this field to the schema
+  ratings: [{
+    fromUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    score: { type: Number, required: true, min: 1, max: 5 },
+    comment: { type: String },
+    createdAt: { type: Date, default: Date.now }
+  }],
   resetPasswordToken: String,
   resetPasswordExpire: Date
-
-}, {
-  timestamps: true, // Handles createdAt/updatedAt automatically
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
+  // Virtual or static method to calculate average could be added, but we will calculate on the fly for simplicity
 });
-
-// RECOMMENDATION 3: Indexing
-// Optimizes queries filtering by role and state (e.g., "Show me all approved founders")
-userSchema.index({ role: 1, state: 1 });
-// Optimizes text search on name (optional but useful for admin panels)
-userSchema.index({ name: 'text' });
-
-// --- VIRTUALS ---
-
-// RECOMMENDATION 1 IMPLEMENTATION:
-// Derive numeric stage from the state string automatically.
-userSchema.virtual('stage').get(function() {
-  if (!this.state) return 0;
-  if (this.state === 'PENDING_APPROVAL') return 0;
-  if (this.state === 'BLOCKED') return -1;
-  
-  // Extract number from string (e.g., "STAGE_5" -> 5)
-  const match = this.state.match(/STAGE_(\d+)/);
-  return match ? parseInt(match[1]) : 0;
-});
-
-// Reverse populate ratings if needed (usually done in controller, but useful to define)
-userSchema.virtual('ratings', {
-  ref: 'Rating',
-  localField: '_id',
-  foreignField: 'toUserId',
-  justOne: false
-});
-
-// --- MIDDLEWARE ---
-
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  const salt = await bcrypt.genSalt(12);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
-
-// --- METHODS ---
-
+// Add a method to the schema to generate a reset token
 userSchema.methods.getResetPasswordToken = function() {
+  // Generate a random token
   const resetToken = crypto.randomBytes(20).toString('hex');
+
+  // Hash the token and set to resetPasswordToken field
   this.resetPasswordToken = crypto
     .createHash('sha256')
     .update(resetToken)
     .digest('hex');
+
+  // Set token expire time (e.g., 10 minutes)
   this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
-  return resetToken;
+
+  return resetToken; // Return the unhashed token to send via email
 };
 
-userSchema.methods.matchPassword = async function(enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
-};
 
 module.exports = mongoose.model('User', userSchema);
