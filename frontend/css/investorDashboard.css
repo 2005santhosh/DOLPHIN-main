@@ -1346,3 +1346,33 @@
       .tabs { padding-left: 1rem; }
       .tab { padding: 0.8rem 1rem; font-size: 0.9rem; }
     }
+    /* Container for Avatar + Badge */
+.avatar-wrapper {
+  position: relative;
+  display: inline-block;
+  line-height: 0; /* Prevents extra space */
+}
+
+/* The Badge Styling */
+.verified-badge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 18px;
+  height: 18px;
+  background: #2563eb; /* Blue background */
+  color: white;
+  border-radius: 50%;
+  display: none; /* Hidden by default */
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  z-index: 10;
+}
+
+.verified-badge svg {
+  width: 10px;
+  height: 10px;
+  stroke-width: 3;
+}

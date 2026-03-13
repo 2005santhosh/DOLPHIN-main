@@ -304,7 +304,14 @@ async function loadDashboard() {
     document.getElementById('reward-points').textContent = currentPoints;
     
     if (profile.profilePicture) updateHeaderAvatar(profile.profilePicture);
-
+    const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
+    const isApproved = verifiedStates.includes(profile.status);
+    
+    const navBadge = document.getElementById('navbar-verified-badge');
+    const settingsBadge = document.getElementById('settings-verified-badge');
+    
+    if(navBadge) navBadge.style.display = isApproved ? 'flex' : 'none';
+    if(settingsBadge) settingsBadge.style.display = isApproved ? 'flex' : 'none';
     if (startup) {
       const validationStages = startup.validationStages || {};
       let validatedCount = 0;

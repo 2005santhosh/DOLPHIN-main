@@ -181,7 +181,20 @@ async function loadDashboard() {
     if (profile.profilePicture) updateProviderHeaderAvatar(profile.profilePicture);
     else if (profile.userId?.profilePicture) updateProviderHeaderAvatar(profile.userId.profilePicture);
     else document.querySelector('.user-avatar').textContent = (profile.name || 'User').split(' ').map(n => n.charAt(0)).join('');
+    // ==========================================
+    // ADD THIS: VERIFIED BADGE LOGIC
+    // ==========================================
+    const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
+    // Depending on your backend, the status might be on profile.status or profile.userId.status
+    // Usually for providers, it's directly on the profile object returned by getProfile
+    const userStatus = profile.status || profile.userId?.status; 
+    const isApproved = verifiedStates.includes(userStatus);
 
+    const navBadge = document.getElementById('navbar-verified-badge');
+    const settingsBadge = document.getElementById('settings-verified-badge');
+
+    if(navBadge) navBadge.style.display = isApproved ? 'flex' : 'none';
+    if(settingsBadge) settingsBadge.style.display = isApproved ? 'flex' : 'none';
     document.getElementById('avg-rating').textContent = profile.avgRating || '0.0';
 
     const requests = await api.getMyRequests();
@@ -243,6 +256,12 @@ function loadSettings() {
   } else if (previewImg) {
       previewImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=e2e8f0&color=64748b&size=100`;
   }
+  api.getProfile().then(profile => {
+      const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
+      const isApproved = verifiedStates.includes(profile.status || profile.userId?.status);
+      const settingsBadge = document.getElementById('settings-verified-badge');
+      if(settingsBadge) settingsBadge.style.display = isApproved ? 'flex' : 'none';
+  });
 }
 
 // ==========================================

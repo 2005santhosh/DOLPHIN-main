@@ -64,9 +64,16 @@
       </div>
       
       <div class="user-menu" id="user-menu">
+    <!-- WRAPPER ADDED -->
+    <div class="avatar-wrapper">
         <div class="user-avatar">JD</div>
-        <span class="user-name" id="user-name">John Doe</span>
-      </div>
+        <!-- BADGE ADDED -->
+        <span class="verified-badge" id="navbar-verified-badge">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </span>
+    </div>
+    <!-- <span class="user-name" id="user-name">John Doe</span> -->
+</div>
     </div>
   </header>
 
@@ -441,7 +448,7 @@
         <!-- Account Settings -->
         <div class="card">
           <div class="card-header"><h3 class="card-title">Account Settings</h3></div>
-                    <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;">
+              <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;">
               <img id="settings-profile-preview" src="https://ui-avatars.com/api/?name=User&background=e2e8f0&color=64748b&size=100" alt="Profile" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--border-color);">
               
               <!-- Hidden File Input -->
@@ -451,6 +458,13 @@
                 <h4 style="margin: 0 0 0.25rem 0;">Profile Picture</h4>
                 <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 0.5rem 0;">JPG or PNG. Max size 5MB.</p>
                 <button id="upload-picture-btn" class="btn btn-secondary btn-sm" type="button">Upload New Photo</button>
+              </div>
+              <div class="avatar-wrapper">
+                <img id="settings-profile-preview" src="https://ui-avatars.com/api/?name=User&background=e2e8f0&color=64748b&size=100" alt="Profile" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--border-color);">
+                    <!-- BADGE ADDED -->
+                  <span class="verified-badge" id="settings-verified-badge" style="width: 22px; height: 22px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  </span>
               </div>
           </div>
           <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="settings-full-name"></div>

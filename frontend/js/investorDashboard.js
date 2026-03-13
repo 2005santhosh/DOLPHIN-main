@@ -354,7 +354,7 @@
                 card.style.display = card.textContent.toLowerCase().includes(term) ? '' : 'none';
             });
         };
-
+        loadSettings(); 
       } catch(e) { 
         console.error("Dashboard Error:", e); 
         document.getElementById('validated-startups').innerHTML = `<p style="color:red; text-align:center;">${e.message}</p>`;
@@ -617,7 +617,23 @@
              preview.src = imgSrc;
         }
     }
-    
+     // ==========================================
+    // ADD THIS: Fetch fresh profile to check status
+    // ==========================================
+    fetch(`${API_URL}/auth/profile`, { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(data => {
+            const profile = data.profile || data;
+            const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
+            const isApproved = verifiedStates.includes(profile.status);
+
+            const navBadge = document.getElementById('navbar-verified-badge');
+            const settingsBadge = document.getElementById('settings-verified-badge');
+
+            if(navBadge) navBadge.style.display = isApproved ? 'flex' : 'none';
+            if(settingsBadge) settingsBadge.style.display = isApproved ? 'flex' : 'none';
+        })
+        .catch(err => console.error("Error fetching status", err));
     document.getElementById('profile-picture-input')?.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file) {
@@ -856,7 +872,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         loadDashboard();
         updateNotificationBadge();
-        // --- ADD DELETE ACCOUNT LISTENER ---
+        // --- ADD DELETE ACCOUNT LISTENER --- settings
       const deleteBtn = document.getElementById('delete-account-btn');
       if (deleteBtn) {
           deleteBtn.addEventListener('click', async () => {
