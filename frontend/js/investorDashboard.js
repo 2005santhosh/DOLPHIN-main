@@ -788,21 +788,25 @@
             await chatApiCall('/send', 'POST', { receiverId: currentChatPartnerId, content });
         } catch(e) { alert('Failed'); }
     };
-    
-    async function loadConversations() {
-        const list = document.getElementById('conversations-list');
-        // Clear previous content except mobile header if needed
-        list.innerHTML = '<div style="padding: 1rem; border-bottom: 1px solid #eee; font-weight: bold;">Messages</div>';
+        async function loadConversations() {
+        // Target the inner container, not the main list wrapper
+        const list = document.getElementById('conversations-container');
+        if(!list) return;
         
+        // Clear previous list items (but keep the search bar)
+        list.innerHTML = '';
+
         try {
             const convs = await chatApiCall('/conversations');
             if(convs.length === 0) {
-                list.innerHTML += '<p style="padding:1rem; text-align:center;">No chats.</p>';
+                list.innerHTML = '<p style="padding:1rem; text-align:center;">No chats found.</p>';
                 return;
             }
             
             convs.forEach(c => {
                 const div = document.createElement('div');
+                // Added 'conversation-item' class for easier selection later
+                div.className = 'conversation-item'; 
                 div.style.cssText = 'padding: 1rem; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; gap: 0.75rem;';
                 
                 const imgUrl = c.profilePicture 
@@ -812,7 +816,7 @@
                 div.innerHTML = `
                     <img src="${imgUrl}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
                     <div style="flex:1; overflow: hidden;">
-                        <div style="font-weight:600;">${c.name}</div>
+                        <div style="font-weight:600;" class="conv-name">${c.name}</div>
                         <small style="color:#666; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.lastMessage || ''}</small>
                     </div>
                 `;
@@ -820,9 +824,34 @@
                 div.onclick = () => openChat(c._id, c.name, c.profilePicture);
                 list.appendChild(div);
             });
-        } catch(e) { console.error(e); }
+        } catch(e) { 
+            console.error(e); 
+            list.innerHTML = '<p style="padding:1rem; text-align:center; color:red;">Error loading chats</p>';
+        }
     }
+        // Add this code near your other initialization logic (e.g., inside DOMContentLoaded)
 
+    const chatSearchInput = document.getElementById('chat-search-input');
+    if (chatSearchInput) {
+        chatSearchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const items = document.querySelectorAll('.conversation-item');
+
+            items.forEach(item => {
+                // We look for the name inside the item we generated earlier
+                const nameElement = item.querySelector('.conv-name');
+                if (nameElement) {
+                    const name = nameElement.textContent.toLowerCase();
+                    // Toggle display based on match
+                    if (name.includes(searchTerm)) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                }
+            });
+        });
+    }
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
         loadDashboard();

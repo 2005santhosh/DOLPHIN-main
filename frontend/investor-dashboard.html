@@ -161,9 +161,17 @@
           <p class="page-subtitle">Talk to founders</p>
         </div>
         <div class="card">
-            <div id="conversations-list">
-                <div style="padding: 1rem; border-bottom: 1px solid #eee; font-weight: bold; display: none;" class="mobile-list-header">Messages</div>
-            </div>
+            <!-- Inside <div id="chat-page" class="page"> ... -->
+
+<div id="conversations-list">
+    <!-- Search Header -->
+    <div style="padding: 1rem; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;">
+        <input type="text" id="chat-search-input" class="form-input" placeholder="Search conversations..." style="margin-bottom: 0; background: var(--background); font-size: 0.95rem;">
+    </div>
+    
+    <!-- New Container for List Items (Important for JS targeting) -->
+    <div id="conversations-container"></div>
+</div>
             <div id="chat-window">
                 <div id="chat-header">
                     <button class="back-btn" onclick="closeChatMobile()">
