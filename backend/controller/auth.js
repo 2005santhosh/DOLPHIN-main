@@ -21,9 +21,7 @@ exports.forgotPassword = async (req, res, next) => {
 
     // IMPORTANT: Use your PRODUCTION Backend URL here, not req.get('host') if frontend/backend are separate
     // If running locally, req.get('host') is fine.
-    const baseUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://dolphin-main-production.up.railway.app' // Your Railway URL
-        : `${req.protocol}://${req.get('host')}`;
+   const baseUrl = 'https://dolphin-main.vercel.app';
         
     const resetUrl = `${baseUrl}/reset-password.html?token=${resetToken}`;
 
