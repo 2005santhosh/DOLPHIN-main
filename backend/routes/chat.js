@@ -52,17 +52,18 @@ router.get('/conversations', protect, async (req, res) => {
     messages.forEach(msg => {
       // ==========================================
       // FIX: Check if sender or receiver is NULL (Deleted User)
+      // If a user was deleted, populate returns null. We must skip this.
       // ==========================================
       if (!msg.senderId || !msg.receiverId) {
         console.log(`Skipping message ${msg._id}: User data missing (deleted).`);
-        return; // Skip this message to prevent crash
+        return; // Skip this message
       }
 
       const partner = msg.senderId._id.toString() === req.user.id.toString() 
         ? msg.receiverId 
         : msg.senderId;
 
-      // Ensure partner is valid before adding to map
+      // Safety check
       if (!partner) return;
 
       if (!conversationsMap[partner._id]) {

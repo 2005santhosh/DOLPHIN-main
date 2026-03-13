@@ -124,53 +124,82 @@ router.delete('/watchlist/:startupId', protect, authorize('investor'), async (re
 // REQUESTS & INTERESTS
 // ==========================================
 
-router.post('/express-interest', protect, authorize('investor'), async (req, res) => {
+// @route   POST api/investor/express-interest
+// @desc    Investor expresses interest in a startup
+// @access  Private
+router.post('/express-interest', auth, async (req, res) => {
+  const { startupId } = req.body;
+
+  // 1. Basic Validation
+  if (!startupId) {
+    return res.status(400).json({ message: 'Startup ID is required' });
+  }
+
   try {
-    const { startupId, message } = req.body;
-    const startup = await Startup.findById(startupId).populate('founderId');
-    if (!startup) return res.status(404).json({ message: 'Startup not found' });
+    // 2. Find the Startup and populate the founder
+    const startup = await Startup.findById(startupId).populate('founderId', 'name _id');
 
-    const existing = await IntroRequest.findOne({
-      providerId: req.user.id,
-      startupId: startupId,
-      requestType: 'investor_interest'
-    });
-
-    if (existing) return res.status(400).json({ message: 'Request already sent' });
-
-    const request = await IntroRequest.create({
-      providerId: req.user.id,
-      founderId: startup.founderId._id,
-      startupId: startup._id,
-      status: 'pending',
-      requestType: 'investor_interest',
-      message: message || 'Investor is interested!'
-    });
-
-    // Notify Founder
-    await Notification.create({
-      userId: startup.founderId._id,
-      type: 'investor_interest',
-      title: 'New Investor Request!',
-      message: `An investor is interested in ${startup.name}.`,
-      relatedId: request._id
-    });
-
-    const io = req.app.get('socketio');
-    if (io) {
-      io.to(`user:${startup.founderId._id}`).emit('newNotification', {
-        title: 'New Investor Request!',
-        message: `Investor request for ${startup.name}`
-      });
+    // SAFETY CHECK: Ensure startup exists
+    if (!startup) {
+      return res.status(404).json({ message: 'Startup not found' });
     }
 
-    res.status(201).json({ success: true, message: 'Request sent' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    // SAFETY CHECK: Ensure the startup has a valid founder (prevent crash if founder was deleted)
+    if (!startup.founderId) {
+      return res.status(400).json({ message: 'This startup does not have a valid founder account.' });
+    }
+
+    // 3. Check for Duplicate Request
+    const existingRequest = await Request.findOne({
+      investorId: req.user.id,
+      startupId: startupId
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({ message: 'You have already sent a request for this startup.' });
+    }
+
+    // 4. Create the Request
+    const newRequest = new Request({
+      investorId: req.user.id,
+      founderId: startup.founderId._id, // Safe access
+      startupId: startup._id,
+      status: 'pending',
+      initiator: 'investor'
+    });
+
+    await newRequest.save();
+
+    // 5. Create Notification for the Founder
+    const notification = new Notification({
+      userId: startup.founderId._id,
+      title: 'New Investor Interest',
+      message: `An investor is interested in your startup: ${startup.name}`,
+      type: 'request'
+    });
+    await notification.save();
+
+    // 6. Real-time Socket Notification (Optional)
+    const io = req.app.get('io');
+    if (io) {
+        // Notify the founder specifically
+        io.to(startup.founderId._id.toString()).emit('newRequest', newRequest);
+        io.to(startup.founderId._id.toString()).emit('newNotification', notification);
+    }
+
+    res.json({ message: 'Request sent successfully!', request: newRequest });
+
+  } catch (err) {
+    console.error('Express Interest Error:', err.message);
+    
+    // Handle invalid ID format error
+    if (err.kind === 'ObjectId') {
+        return res.status(400).json({ message: 'Invalid Startup ID format' });
+    }
+    
+    res.status(500).send('Server Error');
   }
 });
-
 router.get('/my-requests', protect, authorize('investor'), async (req, res) => {
   try {
     const requests = await IntroRequest.find({ providerId: req.user.id })

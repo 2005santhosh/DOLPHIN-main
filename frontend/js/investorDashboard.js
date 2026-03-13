@@ -96,7 +96,7 @@
     });
 
     // ==========================================
-    // MOBILE MENU & OVERLAY LOGIC
+    // MOBILE MENU & OVERLAY LOGIC express
     // ==========================================
     const mobileToggle = document.getElementById('mobile-menu-toggle');
     const sidebar = document.getElementById('sidebar');
