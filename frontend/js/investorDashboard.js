@@ -147,7 +147,7 @@
     // SOCKET.IO
     // ==========================================
     let socket;
-    const SOCKET_URL = "https://dolphinorg.in";
+    const SOCKET_URL = "https://api.dolphinorg.in";
     if (typeof io === 'function' && userId) {
         socket = io(SOCKET_URL, { auth: { token: token } });
         socket.emit('join', userId);

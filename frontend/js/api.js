@@ -1,4 +1,4 @@
-const API_URL = 'https://dolphinorg.in/api';
+const API_URL = 'https://api.dolphinorg.in/api';
 
 const api = {
   // Helper to get auth header

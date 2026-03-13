@@ -18,7 +18,7 @@ function initializeSocket() {
   }
 
   // Connect to Socket.io server
-  const serverUrl = "https://dolphinorg.in";
+  const serverUrl = "https://api.dolphinorg.in";
   
   socket = io(serverUrl, {
     auth: {

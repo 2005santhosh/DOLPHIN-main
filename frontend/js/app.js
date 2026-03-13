@@ -1,6 +1,6 @@
 // Main frontend application logic 
 // Handles authentication, role-based redirects, dashboard initialization, and event handlers
-const API_URL = 'https://dolphinorg.in/api';
+const API_URL = 'https://api.dolphinorg.in/api';
 function getUser() {
   try {
     const user = localStorage.getItem('user');
