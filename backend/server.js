@@ -36,8 +36,6 @@ const server = http.createServer(app);
 // Call the service function. It should return the 'io' instance.
 const io = initializeSocket(server); 
 
-// --- REFINED CORS CONFIGURATION ---
-// --- CORS SETUP ---
 // --- CORS SETUP ---
 const corsOptions = {
   origin: function (origin, callback) {
@@ -51,6 +49,13 @@ const corsOptions = {
     
     // Allow localhost for local development
     if (origin.startsWith('http://localhost')) {
+       return callback(null, true);
+    }
+
+    // ==========================================
+    // FIX: Allow your new custom domain
+    // ==========================================
+    if (origin.includes('dolphinorg.in')) {
        return callback(null, true);
     }
 
