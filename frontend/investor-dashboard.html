@@ -6,16 +6,7 @@
   <title>Dolphin • Investor Dashboard</title>
   <link rel="stylesheet" href="./css/investorDashboard.css">
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-  <script>
-    // Auth Guard: Run immediately before DOM renders
-    (function() {
-        const token = localStorage.getItem('token');
-        // If no token found, kick user to index immediately
-        if (!token) {
-            window.location.replace('index.html');
-        }
-    })();
-</script>
+  
 </head>
 <body>
 
@@ -329,5 +320,15 @@
 
   <script src="./js/api.js"></script>
   <script src="./js/investorDashboard.js"></script>
+  <script>
+    // Auth Guard: Run immediately before DOM renders
+    (function() {
+        const token = localStorage.getItem('token');
+        // If no token found, kick user to index immediately
+        if (!token) {
+            window.location.replace('index.html');
+        }
+    })();
+  </script>
 </body>
 </html>

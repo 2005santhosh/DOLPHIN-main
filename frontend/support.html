@@ -4,16 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dolphin Support Center</title>
-  <script>
-    // Auth Guard: Run immediately before DOM renders
-    (function() {
-        const token = localStorage.getItem('token');
-        // If no token found, kick user to index immediately
-        if (!token) {
-            window.location.replace('index.html');
-        }
-    })();
-</script>
   <style>
     /* ==========================================
        DESIGN TOKENS
@@ -640,6 +630,16 @@
   </footer>
 
   <script>
+       
+    // Auth Guard: Run immediately before DOM renders
+    (function() {
+        const token = localStorage.getItem('token');
+        // If no token found, kick user to index immediately
+        if (!token) {
+            window.location.replace('index.html');
+        }
+    })();
+    
     const API_URL = "https://dolphin-main-production.up.railway.app/api";
     const faqData = [
       { q: "What is Dolphin?", a: "Dolphin is a networking platform that helps people connect, collaborate, and communicate with others through profiles and messaging." },
