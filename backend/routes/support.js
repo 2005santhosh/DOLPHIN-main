@@ -44,27 +44,32 @@ router.post('/contact', async (req, res) => {
 
     // Send email in background using API
     try {
-        const emailData = {
-            senderEmail: 'support@pacificdev.in', // Must be a verified sender in Brevo
-            senderName: 'Dolphin Support',
-            toEmail: 'support@pacificdev.in',    // Where you want to receive the ticket
-            replyTo: email,                      // User's email
-            subject: `[Dolphin Support - ${category?.toUpperCase() || 'N/A'}] ${subject}`,
-            htmlContent: `
-                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                    <h2 style="color: #0d9488;">New Support Request</h2>
-                    <p><strong>Category:</strong> ${category}</p>
-                    <p><strong>Name:</strong> ${name}</p>
-                    <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
-                    <p><strong>Subject:</strong> ${subject}</p>
-                    <hr>
-                    <p><strong>Message:</strong></p>
-                    <p>${message?.replace(/\n/g, '<br>')}</p>
-                </div>
-            `
-        };
+            // ... inside the try block ...
+    
+    const emailData = {
+        // CHANGE 1: Use a verified external email as the sender to avoid "Self-Sending" rejection.
+        // You can use the email you signed up to Brevo with, or verify a generic one like 'no-reply@brevo.com' (if allowed).
+        // Ideally, use a verified email like your personal email for testing:
+        senderEmail: 'damerasanthosh2005@gmail.com', // REPLACE with a verified sender in Brevo
+        senderName: `${name} (via Dolphin)`, // Shows the user's name clearly
+        
+        toEmail: 'support@pacificdev.in',    // Your support inbox
+        replyTo: email,                      // User's email (so when you click reply, it goes to them)
+        
+        subject: `[Dolphin Support - ${category?.toUpperCase() || 'N/A'}] ${subject}`,
+        htmlContent: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <p><strong>From:</strong> ${name} (${email})</p>
+                <p><strong>Category:</strong> ${category}</p>
+                <p><strong>Subject:</strong> ${subject}</p>
+                <hr>
+                <p><strong>Message:</strong></p>
+                <p>${message?.replace(/\n/g, '<br>')}</p>
+            </div>
+        `
+    };
 
-        await sendEmailWithBrevo(emailData);
+    await sendEmailWithBrevo(emailData);
         console.log(`✅ [Support] Email successfully sent via Brevo API from ${email}`);
 
     } catch (error) {
