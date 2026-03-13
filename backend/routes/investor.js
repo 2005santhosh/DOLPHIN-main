@@ -127,7 +127,7 @@ router.delete('/watchlist/:startupId', protect, authorize('investor'), async (re
 // @route   POST api/investor/express-interest
 // @desc    Investor expresses interest in a startup
 // @access  Private
-router.post('/express-interest', auth, async (req, res) => {
+router.post('/express-interest', protect, authorize('investor'), async (req, res) => {
   const { startupId } = req.body;
 
   if (!startupId) {
@@ -135,6 +135,7 @@ router.post('/express-interest', auth, async (req, res) => {
   }
 
   try {
+    // 1. Find the Startup
     const startup = await Startup.findById(startupId).populate('founderId', 'name _id');
 
     if (!startup) {
@@ -145,7 +146,8 @@ router.post('/express-interest', auth, async (req, res) => {
       return res.status(400).json({ message: 'Startup has no valid founder.' });
     }
 
-    const existingRequest = await Request.findOne({
+    // 2. Check for existing request using the correct model (IntroRequest)
+    const existingRequest = await IntroRequest.findOne({
       investorId: req.user.id,
       startupId: startup._id
     });
@@ -154,23 +156,19 @@ router.post('/express-interest', auth, async (req, res) => {
       return res.status(400).json({ message: 'Request already sent.' });
     }
 
-    // ==========================================
-    // FIX: Define the object explicitly
-    // ==========================================
+    // 3. Create the request data object
     const requestData = {
       investorId: req.user.id,
       founderId: startup.founderId._id,
       startupId: startup._id,
       status: 'pending',
-      initiator: 'investor' // <--- CRITICAL: This MUST be here
+      initiator: 'investor' // <--- This fixes the validation error
     };
 
-    // Debug log to prove the code is updated
-    console.log("Creating request with data:", requestData);
+    // 4. Create using the correct model (IntroRequest)
+    const newRequest = await IntroRequest.create(requestData);
 
-    const newRequest = await Request.create(requestData);
-
-    // Notify Founder
+    // 5. Notify Founder
     await Notification.create({
       userId: startup.founderId._id,
       title: 'New Connection Request',
@@ -178,6 +176,7 @@ router.post('/express-interest', auth, async (req, res) => {
       type: 'request'
     });
 
+    // Emit socket event if available
     const io = req.app.get('io');
     if (io) {
       io.to(startup.founderId._id.toString()).emit('newRequest', newRequest);
