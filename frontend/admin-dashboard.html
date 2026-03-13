@@ -6,6 +6,16 @@
   <title>Admin Dashboard - Dolphin</title>
   <link rel="stylesheet" href="./css/adminDashboard.css">
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script>
+    // Auth Guard: Run immediately before DOM renders
+    (function() {
+        const token = localStorage.getItem('token');
+        // If no token found, kick user to index immediately
+        if (!token) {
+            window.location.replace('index.html');
+        }
+    })();
+</script>
 </head>
 <body>
   <!-- Header -->

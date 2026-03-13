@@ -4,6 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <title>Marketplace - Dolphin</title>
+    <script>
+    // Auth Guard: Run immediately before DOM renders
+    (function() {
+        const token = localStorage.getItem('token');
+        // If no token found, kick user to index immediately
+        if (!token) {
+            window.location.replace('index.html');
+        }
+    })();
+</script>
     <style>
         /* Light theme: Inverted colors */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');

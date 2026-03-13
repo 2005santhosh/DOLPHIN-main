@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dolphin | Startup OS - Validate. Build. Scale.</title>
     <link rel="stylesheet" href="./css/index.css">
+    <script>
+    // Auth Guard: Run immediately before DOM renders
+    (function() {
+        const token = localStorage.getItem('token');
+        // If no token found, kick user to index immediately
+        if (!token) {
+            window.location.replace('index.html');
+        }
+    })();
+    </script>
 </head>
 <body>
     <!-- HEADER -->
@@ -86,7 +96,7 @@
         </div>
     </section>
 
-    <section class="stats-section">
+    <!-- <section class="stats-section">
         <div class="stats-container">
             <div class="stat-item">
                 <div class="stat-number">1,000+</div>
@@ -105,7 +115,7 @@
                 <div class="stat-label">Success Rate</div>
             </div>
         </div>
-    </section>
+    </section> -->
 
     <section class="section">
         <div class="section-header">

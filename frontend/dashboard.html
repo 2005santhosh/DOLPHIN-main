@@ -7,6 +7,16 @@
   <link rel="stylesheet" href="./css/founderDashboard.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script>
+    // Auth Guard: Run immediately before DOM renders
+    (function() {
+        const token = localStorage.getItem('token');
+        // If no token found, kick user to index immediately
+        if (!token) {
+            window.location.replace('index.html');
+        }
+    })();
+</script>
 </head>
 <body>
   
