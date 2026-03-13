@@ -146,9 +146,10 @@ router.post('/express-interest', protect, authorize('investor'), async (req, res
       return res.status(400).json({ message: 'Startup has no valid founder.' });
     }
 
-    // 2. Check for existing request using the correct model (IntroRequest)
+    // 2. Check for existing request
+    // FIX: Changed 'investorId' to 'providerId' to match your schema
     const existingRequest = await IntroRequest.findOne({
-      investorId: req.user.id,
+      providerId: req.user.id, 
       startupId: startup._id
     });
 
@@ -158,14 +159,14 @@ router.post('/express-interest', protect, authorize('investor'), async (req, res
 
     // 3. Create the request data object
     const requestData = {
-      investorId: req.user.id,
+      providerId: req.user.id,      // FIX: Maps Investor ID to 'providerId' (required by schema)
       founderId: startup.founderId._id,
       startupId: startup._id,
       status: 'pending',
-      initiator: 'investor' // <--- This fixes the validation error
+      initiator: 'investor'         // Matches enum in schema
     };
 
-    // 4. Create using the correct model (IntroRequest)
+    // 4. Create the request
     const newRequest = await IntroRequest.create(requestData);
 
     // 5. Notify Founder
@@ -176,7 +177,6 @@ router.post('/express-interest', protect, authorize('investor'), async (req, res
       type: 'request'
     });
 
-    // Emit socket event if available
     const io = req.app.get('io');
     if (io) {
       io.to(startup.founderId._id.toString()).emit('newRequest', newRequest);
