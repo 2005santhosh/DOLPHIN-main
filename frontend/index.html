@@ -227,15 +227,5 @@
     </footer>
 
     <script src="./js/index.js"></script>
-    <script>
-    // Auth Guard: Run immediately before DOM renders
-    (function() {
-        const token = localStorage.getItem('token');
-        // If no token found, kick user to index immediately
-        if (!token) {
-            window.location.replace('index.html');
-        }
-    })();
-    </script>
 </body>
 </html>

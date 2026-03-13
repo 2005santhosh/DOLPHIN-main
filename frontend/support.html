@@ -631,14 +631,7 @@
 
   <script>
        
-    // Auth Guard: Run immediately before DOM renders
-    (function() {
-        const token = localStorage.getItem('token');
-        // If no token found, kick user to index immediately
-        if (!token) {
-            window.location.replace('index.html');
-        }
-    })();
+    
     
     const API_URL = "https://dolphin-main-production.up.railway.app/api";
     const faqData = [
