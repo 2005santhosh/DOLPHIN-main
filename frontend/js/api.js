@@ -1,4 +1,4 @@
-const API_URL = 'https://dolphin-main-production.up.railway.app/api';
+const API_URL = 'https://dolphinorg.in/api';
 
 const api = {
   // Helper to get auth header

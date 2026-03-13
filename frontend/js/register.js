@@ -1,5 +1,5 @@
         // Role selection functionality 
-        const API_URL = "https://dolphin-main-production.up.railway.app/api";
+        const API_URL = 'https://dolphinorg.in/api';
         const roleButtons = document.querySelectorAll('.role-btn');
         const selectedRoleInput = document.getElementById('selected-role');
         let selectedRole = 'founder';
