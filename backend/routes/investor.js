@@ -130,52 +130,54 @@ router.delete('/watchlist/:startupId', protect, authorize('investor'), async (re
 router.post('/express-interest', auth, async (req, res) => {
   const { startupId } = req.body;
 
-  // 1. Validation
   if (!startupId) {
     return res.status(400).json({ message: 'Startup ID is required' });
   }
 
   try {
-    // 2. Find Startup and Founder
     const startup = await Startup.findById(startupId).populate('founderId', 'name _id');
 
     if (!startup) {
       return res.status(404).json({ message: 'Startup not found' });
     }
 
-    // Safety check: Ensure founder exists
     if (!startup.founderId) {
-      return res.status(400).json({ message: 'This startup does not have a valid founder.' });
+      return res.status(400).json({ message: 'Startup has no valid founder.' });
     }
 
-    // 3. Check for Duplicates
     const existingRequest = await Request.findOne({
       investorId: req.user.id,
       startupId: startup._id
     });
 
     if (existingRequest) {
-      return res.status(400).json({ message: 'Request already sent for this startup.' });
+      return res.status(400).json({ message: 'Request already sent.' });
     }
 
-    // 4. Create the Request (Using .create as per your logs)
-    const newRequest = await Request.create({
+    // ==========================================
+    // FIX: Define the object explicitly
+    // ==========================================
+    const requestData = {
       investorId: req.user.id,
       founderId: startup.founderId._id,
       startupId: startup._id,
       status: 'pending',
-      initiator: 'investor' // <--- THIS WAS MISSING IN YOUR CODE
-    });
+      initiator: 'investor' // <--- CRITICAL: This MUST be here
+    };
 
-    // 5. Send Notification to Founder
+    // Debug log to prove the code is updated
+    console.log("Creating request with data:", requestData);
+
+    const newRequest = await Request.create(requestData);
+
+    // Notify Founder
     await Notification.create({
       userId: startup.founderId._id,
       title: 'New Connection Request',
-      message: `An investor is interested in your startup: ${startup.name}`,
+      message: `An investor is interested in ${startup.name}`,
       type: 'request'
     });
 
-    // 6. Socket Emit (Optional)
     const io = req.app.get('io');
     if (io) {
       io.to(startup.founderId._id.toString()).emit('newRequest', newRequest);
@@ -185,9 +187,6 @@ router.post('/express-interest', auth, async (req, res) => {
 
   } catch (err) {
     console.error('Express Interest Error:', err.message);
-    if (err.kind === 'ObjectId') {
-        return res.status(400).json({ message: 'Invalid Startup ID format' });
-    }
     res.status(500).send('Server Error');
   }
 });
