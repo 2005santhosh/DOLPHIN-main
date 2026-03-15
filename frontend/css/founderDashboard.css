@@ -857,20 +857,20 @@ body {
 .avatar-wrapper {
   position: relative;
   display: inline-block;
-  line-height: 0; /* Prevents extra space */
+  line-height: 0;
 }
 
-/* The Badge Styling (Meta-style overlay) */
+/* The Badge Styling (Meta style) */
 .verified-badge {
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   background: #2563eb; /* Blue background */
   color: white;
   border-radius: 50%;
-  display: none; /* Hidden by default */
+  display: none; /* Hidden by default until JS enables it */
   align-items: center;
   justify-content: center;
   border: 2px solid white;
@@ -881,7 +881,9 @@ body {
 .verified-badge svg {
   width: 10px;
   height: 10px;
+  stroke: white;
   stroke-width: 3;
+  fill: none;
 }
 
 /* ============================================ */
