@@ -463,9 +463,12 @@ function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = 
   card.innerHTML = `
     <div class="founder-header">
       <div style="display: flex; align-items: center; gap: 1rem;">
-        <img src="${profileImg}" alt="${founderName}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
+        <div style="position: relative; width: 48px; height: 48px; flex-shrink: 0;">
+            <img src="${profileImg}" alt="${founderName}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+            ${verifiedBadge}
+        </div>
         <div>
-          <div class="founder-name">${founder.startupName || 'Unnamed Startup'} ${verifiedBadge}</div>
+          <div class="founder-name">${founder.startupName || 'Unnamed Startup'}</div>
           <div style="font-size: 0.85rem; color: #666;">Founder: ${founderName}</div>
         </div>
       </div>
