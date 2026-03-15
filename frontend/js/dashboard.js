@@ -37,10 +37,24 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-function getVerifiedBadge(state) {
+function getVerifiedBadge(userData) {
+  // Handle if userData is just a string (legacy support)
+  if (typeof userData === 'string') {
+    const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
+    if (verifiedStates.includes(userData)) {
+      return `<span class="verified-badge" style="display: flex;"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></span>`;
+    }
+    return '';
+  }
+
+  // Handle object data
+  const state = userData?.state || userData?.status;
+  const isVerified = userData?.isVerified;
+
   const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
-  if (verifiedStates.includes(state)) {
-    return `<span class="verified-badge"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></span>`;
+  
+  if (isVerified === true || verifiedStates.includes(state)) {
+    return `<span class="verified-badge" style="display: flex;"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></span>`;
   }
   return '';
 }
@@ -775,7 +789,7 @@ function renderInvestorList(investors) {
       const imgUrl = inv.profilePicture ? (inv.profilePicture.startsWith('http') ? inv.profilePicture : `${window.location.origin}${inv.profilePicture}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(inv.name || 'User')}&background=6366f1&color=fff&size=128`;
       return `<div class="profile-card" onclick="openDetailModal('investor', '${inv._id}')">
         <div class="profile-card-image"><img src="${imgUrl}" alt="${inv.name}"></div>
-        <div class="profile-card-body"><div><h4>${inv.name || 'Unknown'} ${getVerifiedBadge(inv.state)}</h4><p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">Investor</p></div></div>
+        <div class="profile-card-body"><div><h4>${inv.name || 'Unknown'} ${getVerifiedBadge(inv)}</h4><p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">Investor</p></div></div>
       </div>`;
   }).join('')}</div>`;
 }
@@ -794,7 +808,7 @@ function renderProviderList(providers) {
       
       return `<div class="profile-card" onclick="openDetailModal('provider', '${prov._id}')">
         <div class="profile-card-image"><img src="${imgUrl}" alt="${prov.name}"></div>
-        <div class="profile-card-body"><div><h4>${prov.name || 'Unknown'} ${getVerifiedBadge(prov.state)}</h4><p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">${prov.category || 'Provider'}</p></div>${actionBtn}</div>
+        <div class="profile-card-body"><div><h4>${prov.name || 'Unknown'} ${getVerifiedBadge(prov)}</h4><p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">${prov.category || 'Provider'}</p></div>${actionBtn}</div>
       </div>`;
   }).join('')}</div>`;
 }
@@ -1276,7 +1290,7 @@ function loadSettings() {
        }
 
        // ==========================================
-       // NEW: UPDATE VERIFIED BADGE VISIBILITY
+       // NEW: UPDATE VERIFIED BADGE VISIBILITY profile picture
        // ==========================================
        const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
        const isApproved = verifiedStates.includes(profile.status);
@@ -1306,11 +1320,10 @@ document.getElementById('update-profile-btn')?.addEventListener('click', async (
 // ==========================================
 // SETTINGS: PROFILE PICTURE UPLOAD
 // ==========================================
-const uploadPicBtn = document.getElementById('upload-picture-btn');
 const fileInput = document.getElementById('profile-picture-input');
 
-if (uploadPicBtn && fileInput) {
-    uploadPicBtn.addEventListener('click', () => fileInput.click());
+if (fileInput) {
+    // Listen for change directly on the input
     fileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -1322,9 +1335,10 @@ if (uploadPicBtn && fileInput) {
         const formData = new FormData();
         formData.append('profilePicture', file);
 
-        const originalText = uploadPicBtn.textContent;
-        uploadPicBtn.textContent = 'Uploading...';
-        uploadPicBtn.disabled = true;
+        // Show loading state on the image or container
+        const previewEl = document.getElementById('settings-profile-preview');
+        const originalSrc = previewEl.src;
+        previewEl.style.opacity = '0.5';
 
         try {
             const res = await fetch(`${API_URL}/auth/upload-profile-picture`, {
@@ -1338,13 +1352,14 @@ if (uploadPicBtn && fileInput) {
             if (!res.ok) throw new Error(data.message || 'Failed to upload image');
 
             const newImageUrl = data.profilePicture;
-            const fullUrl = newImageUrl.startsWith('http') ? newImageUrl : `${window.location.origin}${newImageUrl}`;
+            // Add timestamp to prevent caching
+            const fullUrl = newImageUrl.startsWith('http') ? newImageUrl : `${window.location.origin}${newImageUrl}?t=${Date.now()}`;
 
-            const previewEl = document.getElementById('settings-profile-preview');
+            // Update UI
             if (previewEl) previewEl.src = fullUrl;
-
             updateHeaderAvatar(fullUrl);
 
+            // Update local storage
             const updatedUser = { ...user, profilePicture: newImageUrl };
             localStorage.setItem('user', JSON.stringify(updatedUser));
 
@@ -1352,10 +1367,10 @@ if (uploadPicBtn && fileInput) {
 
         } catch (err) {
             showToast(err.message, 'error');
+            previewEl.src = originalSrc; // Revert on error
         } finally {
-            uploadPicBtn.textContent = originalText;
-            uploadPicBtn.disabled = false;
-            fileInput.value = '';
+            previewEl.style.opacity = '1';
+            fileInput.value = ''; // Reset input
         }
     });
 }
