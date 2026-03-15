@@ -62,11 +62,23 @@ const api = {
   deleteAccount: async () => apiCall('/account', 'DELETE', null, AUTH_BASE),
 };
 
+// ==========================================
+// HELPER: VERIFIED BADGE (WITH INLINE STYLES)
+// ==========================================
 function getVerifiedBadgeHtml(state) {
   const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
-  if (verifiedStates.includes(state)) return `<span class="verified-badge"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span>`;
-  return '';
+  
+  // If not verified, return empty string
+  if (!verifiedStates.includes(state)) return '';
+
+  // Return span with INLINE absolute positioning styles to ensure it shows on the image
+  return `<span class="verified-badge" style="position: absolute; bottom: 0; right: 0; background: #2563eb; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border: 2px solid white;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" style="width: 10px; height: 10px;">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+  </span>`;
 }
+
 
 function identifyRequestType(req, currentUserId) {
   if (req.initiator === 'provider') return 'sent';
@@ -427,6 +439,9 @@ function filterFounders(allFounders, sentMap, incomingMap) {
     }
 }
 
+// ==========================================
+// HELPER: CREATE FOUNDER CARD (FIXED)
+// ==========================================
 function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = {}) {
   const card = document.createElement('div');
   card.className = 'founder-card';
@@ -457,16 +472,18 @@ function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = 
       actionsHtml = `<button class="btn btn-primary" onclick="openRequestModal('${startupIdStr}')">Send Connection Request</button><button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>`;
   }
 
-  // Verified Badge Logic for Founder
-  const verifiedBadge = getVerifiedBadgeHtml(userRef.state);
+  // FIX: Wrap Image and Badge in a container with position: relative
+  const imageContainer = `
+    <div style="position: relative; width: 48px; height: 48px; flex-shrink: 0;">
+        <img src="${profileImg}" alt="${founderName}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+        ${getVerifiedBadgeHtml(userRef.state)}
+    </div>
+  `;
 
   card.innerHTML = `
     <div class="founder-header">
       <div style="display: flex; align-items: center; gap: 1rem;">
-        <div style="position: relative; width: 48px; height: 48px; flex-shrink: 0;">
-            <img src="${profileImg}" alt="${founderName}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
-            ${verifiedBadge}
-        </div>
+        ${imageContainer}
         <div>
           <div class="founder-name">${founder.startupName || 'Unnamed Startup'}</div>
           <div style="font-size: 0.85rem; color: #666;">Founder: ${founderName}</div>
@@ -481,6 +498,7 @@ function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = 
     <div class="request-actions">${actionsHtml}</div>`;
   return card;
 }
+
 
 // ==========================================
 // 6. REQUESTS PAGE LOGIC
