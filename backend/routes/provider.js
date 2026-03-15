@@ -14,36 +14,34 @@ const User = require('../models/User');
 // @route   GET /api/provider/profile
 router.get('/profile', protect, async (req, res) => {
   try {
-    // ✅ 1. Populate 'ratings' from the User model
+    // OPTIMIZATION: Use .lean() for pure JSON objects (faster)
     let provider = await Provider.findOne({ userId: req.user.id })
-      .populate('userId', 'name email state stage profilePicture ratings'); // Added ratings
+      .populate('userId', 'name email state stage profilePicture ratings')
+      .lean(); 
     
     if (!provider) {
-      return res.status(404).json({ 
-        message: 'Provider profile not found',
-        nextSteps: 'Create a provider profile by updating your settings'
-      });
+      return res.status(404).json({ message: 'Provider profile not found' });
     }
 
-    // ✅ 2. Calculate Average Rating
     const user = provider.userId || {};
     const ratings = user.ratings || [];
     const totalScore = ratings.reduce((sum, r) => sum + (r.score || 0), 0);
     const avgRating = ratings.length > 0 ? (totalScore / ratings.length) : 0;
 
-    // ✅ 3. Return response with avgRating attached
     res.json({
-      ...provider.toObject(),
-      avgRating: avgRating.toFixed(1), // Add calculated rating
-      // Ensure userId data is easily accessible if needed
+      ...provider,
+      avgRating: avgRating.toFixed(1),
       name: user.name || provider.name,
-      profilePicture: user.profilePicture
+      profilePicture: user.profilePicture,
+      // CRITICAL: Pass state explicitly for frontend badge logic
+      state: user.state 
     });
   } catch (error) {
     console.error('Error fetching provider profile:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 // ==========================================
 // 2. Update provider profile
@@ -98,13 +96,14 @@ router.put('/profile', protect, async (req, res) => {
 // 3. Get eligible founders (STRICT 5-STAGE LOGIC)
 // ==========================================
 // @route   GET /api/provider/eligible-founders
-// @desc    Get list of validated startups for provider to view
+// @route   GET /api/provider/eligible-founders
 router.get('/eligible-founders', protect, async (req, res) => {
   try {
+    // OPTIMIZATION: Use .lean()
     const startups = await Startup.find({ validationScore: { $gte: 70 } })
-      // ✅ CRITICAL: 'state' must be here
       .populate('founderId', 'name email profilePicture rewardPoints state') 
-      .select('name thesis industry validationScore currentStage founderId');
+      .select('name thesis industry validationScore currentStage founderId')
+      .lean();
 
     const eligibleFounders = startups.map(startup => {
       const user = startup.founderId;
@@ -123,7 +122,7 @@ router.get('/eligible-founders', protect, async (req, res) => {
           email: user.email,
           profilePicture: user.profilePicture,
           rewardPoints: user.rewardPoints || 0,
-          state: user.state // ✅ CRITICAL: This must be returned
+          state: user.state // Ensure state is passed
         }
       };
     }).filter(f => f !== null);
@@ -134,6 +133,7 @@ router.get('/eligible-founders', protect, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 // ... existing routes ...
 
 // ==========================================

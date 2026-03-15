@@ -1,5 +1,5 @@
 // ==========================================
-// 1. CONFIGURATION & SETUP socket_url
+// 1. CONFIGURATION & SETUP
 // ==========================================
 const API_URL = 'https://api.dolphinorg.in/api';
 const API_BASE = `${API_URL}/provider`;
@@ -64,7 +64,7 @@ const api = {
 
 function getVerifiedBadgeHtml(state) {
   const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
-  if (verifiedStates.includes(state)) return `<span class="verified-badge"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> VERIFIED</span>`;
+  if (verifiedStates.includes(state)) return `<span class="verified-badge"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span>`;
   return '';
 }
 
@@ -85,6 +85,18 @@ function updateProviderHeaderAvatar(imageUrl) {
   }
 }
 
+// Toggles visibility of verified badges in Navbar and Settings
+function updateVerifiedBadges(state) {
+    const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
+    const isApproved = verifiedStates.includes(state);
+    
+    const navBadge = document.getElementById('navbar-verified-badge');
+    const settingsBadge = document.getElementById('settings-verified-badge');
+    
+    if(navBadge) navBadge.style.display = isApproved ? 'flex' : 'none';
+    if(settingsBadge) settingsBadge.style.display = isApproved ? 'flex' : 'none';
+}
+
 function navigateToPage(pageName) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(`${pageName}-page`)?.classList.add('active');
@@ -100,11 +112,7 @@ function navigateToPage(pageName) {
 
 function showToast(message, type = 'info') {
   const container = document.getElementById('toast-container');
-  if (!container) {
-    console.error("Toast container not found in HTML!");
-    alert(message); // Fallback
-    return;
-  }
+  if (!container) return;
 
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
@@ -135,11 +143,7 @@ function showConfirm(message, onConfirm) {
   const okBtn = document.getElementById('confirm-ok-btn');
   const cancelBtn = document.getElementById('confirm-cancel-btn');
 
-  if (!modal || !msgEl || !okBtn || !cancelBtn) {
-    console.error("Confirm modal elements missing!");
-    if(confirm(message)) onConfirm(); // Fallback
-    return;
-  }
+  if (!modal || !msgEl || !okBtn || !cancelBtn) return;
 
   msgEl.textContent = message;
   modal.classList.add('active');
@@ -161,7 +165,7 @@ function showConfirm(message, onConfirm) {
 }
 
 // ==========================================
-// 4. CORE PAGE LOADERS privacy
+// 4. CORE PAGE LOADERS (OPTIMIZED)
 // ==========================================
 
 function loadPageContent(page) {
@@ -176,39 +180,46 @@ function loadPageContent(page) {
 }
 
 async function loadDashboard() {
+  // 1. INSTANT RENDER FROM CACHE (0ms latency)
   try {
-    const profile = await api.getProfile();
+    const cachedProfile = localStorage.getItem('providerProfileCache');
+    if (cachedProfile) {
+        const profile = JSON.parse(cachedProfile);
+        renderDashboardUI(profile);
+        updateVerifiedBadges(profile.state);
+    }
+  } catch(e) {}
+
+  // 2. PARALLEL FETCH (Background Sync)
+  try {
+    const [profile, requests, founders] = await Promise.all([
+        api.getProfile(),
+        api.getMyRequests(),
+        api.getEligibleFounders()
+    ]);
+
+    // Update Cache
+    localStorage.setItem('providerProfileCache', JSON.stringify(profile));
+
+    // Render Fresh Data
+    renderDashboardUI(profile);
+    updateVerifiedBadges(profile.state);
+    
+    // Update Header Avatar
     if (profile.profilePicture) updateProviderHeaderAvatar(profile.profilePicture);
     else if (profile.userId?.profilePicture) updateProviderHeaderAvatar(profile.userId.profilePicture);
-    else document.querySelector('.user-avatar').textContent = (profile.name || 'User').split(' ').map(n => n.charAt(0)).join('');
-    // ==========================================
-    // ADD THIS: VERIFIED BADGE LOGIC
-    // ==========================================
-    const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
-    // Depending on your backend, the status might be on profile.status or profile.userId.status
-    // Usually for providers, it's directly on the profile object returned by getProfile
-    const userStatus = profile.status || profile.userId?.status; 
-    const isApproved = verifiedStates.includes(userStatus);
 
-    const navBadge = document.getElementById('navbar-verified-badge');
-    const settingsBadge = document.getElementById('settings-verified-badge');
-
-    if(navBadge) navBadge.style.display = isApproved ? 'flex' : 'none';
-    if(settingsBadge) settingsBadge.style.display = isApproved ? 'flex' : 'none';
+    // Update Stats
     document.getElementById('avg-rating').textContent = profile.avgRating || '0.0';
-
-    const requests = await api.getMyRequests();
     const activeEngagements = requests.filter(r => r.status === 'accepted').length;
     document.getElementById('active-engagements').textContent = activeEngagements;
-
     const acceptedRequests = requests.filter(r => r.status === 'accepted').length;
     const rejectedRequests = requests.filter(r => r.status === 'rejected').length;
     const totalClosed = acceptedRequests + rejectedRequests;
     document.getElementById('response-rate').textContent = totalClosed > 0 ? Math.round((acceptedRequests / totalClosed) * 100) + '%' : '0%';
+    document.getElementById('eligible-founders').textContent = String(founders?.length || 0);
 
-    const eligible = await api.getEligibleFounders();
-    document.getElementById('eligible-founders').textContent = String(eligible?.length || 0);
-
+    // Recent Activity
     const recentActivity = document.getElementById('recent-activity');
     recentActivity.innerHTML = '';
     if (requests.length === 0) {
@@ -228,6 +239,15 @@ async function loadDashboard() {
   } catch (error) { console.error('Dashboard Error:', error); }
 }
 
+function renderDashboardUI(profile) {
+    const name = profile.name || user.name || 'Provider';
+    document.getElementById('user-name').textContent = name;
+    const nameArray = name.split(' ');
+    if(!profile.profilePicture && !profile.userId?.profilePicture) {
+        document.querySelector('.user-avatar').textContent = nameArray.map(n => n.charAt(0)).join('');
+    }
+}
+
 async function loadProfile() {
   try {
     const profile = await api.getProfile();
@@ -244,24 +264,100 @@ async function loadProfile() {
 }
 
 function loadSettings() {
+  // 1. Load Basic Info
   const nameInput = document.getElementById('settings-full-name');
   const emailInput = document.getElementById('settings-email');
   if(nameInput) nameInput.value = user.name || '';
   if(emailInput) emailInput.value = user.email || '';
   
+  // 2. Handle Profile Picture & Badge
   const previewImg = document.getElementById('settings-profile-preview');
-  if (user.profilePicture && previewImg) {
-      const imageUrl = user.profilePicture.startsWith('http') ? user.profilePicture : `${window.location.origin}${user.profilePicture}`;
-      previewImg.src = imageUrl;
-  } else if (previewImg) {
-      previewImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=e2e8f0&color=64748b&size=100`;
+  
+  // Load from cache instantly
+  const cachedProfile = localStorage.getItem('providerProfileCache');
+  if (cachedProfile) {
+      const p = JSON.parse(cachedProfile);
+      const pic = p.profilePicture || p.userId?.profilePicture;
+      if (pic && previewImg) previewImg.src = pic.startsWith('http') ? pic : window.location.origin + pic;
+      updateVerifiedBadges(p.state);
   }
+
+  // Fresh fetch in background
   api.getProfile().then(profile => {
-      const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
-      const isApproved = verifiedStates.includes(profile.status || profile.userId?.status);
-      const settingsBadge = document.getElementById('settings-verified-badge');
-      if(settingsBadge) settingsBadge.style.display = isApproved ? 'flex' : 'none';
+      updateVerifiedBadges(profile.state);
+      if (profile.profilePicture && previewImg) {
+          previewImg.src = profile.profilePicture.startsWith('http') ? profile.profilePicture : window.location.origin + profile.profilePicture;
+      }
   });
+
+  // 3. IMAGE UPLOAD LOGIC (Click Camera/Image)
+  const fileInput = document.getElementById('profile-picture-input');
+  const uploadBtn = document.getElementById('upload-picture-btn');
+
+  // Helper function for upload
+  const handleUpload = async (file) => {
+      if (!file) return;
+      
+      // Validation
+      const validTypes = ['image/jpeg', 'image/png'];
+      if (!validTypes.includes(file.type)) return showToast('Only JPG/PNG allowed', 'error');
+      if (file.size > 5 * 1024 * 1024) return showToast('Max size 5MB', 'error');
+
+      const formData = new FormData();
+      formData.append('profilePicture', file);
+
+      // UI: Loading Animation
+      if(uploadBtn) {
+          uploadBtn.innerHTML = 'Uploading...';
+          uploadBtn.disabled = true;
+      }
+      if(previewImg) previewImg.style.opacity = '0.5';
+      
+      try {
+        const res = await fetch(`${API_URL}/auth/upload-profile-picture`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        
+        showToast('Picture updated!', 'success');
+        
+        // Update UI Everywhere
+        const newUrl = data.profilePicture + '?t=' + Date.now(); // Cache busting
+        if(previewImg) {
+            previewImg.src = newUrl;
+            previewImg.style.opacity = '1';
+        }
+        updateProviderHeaderAvatar(newUrl);
+        
+        // Update Cache
+        const cached = JSON.parse(localStorage.getItem('providerProfileCache') || '{}');
+        cached.profilePicture = newUrl;
+        localStorage.setItem('providerProfileCache', JSON.stringify(cached));
+
+      } catch (err) { showToast(err.message, 'error'); }
+      finally { 
+          if(uploadBtn) {
+              uploadBtn.innerHTML = 'Upload New Photo';
+              uploadBtn.disabled = false;
+          }
+          if(fileInput) fileInput.value = '';
+      }
+  };
+
+  // Event Listener for File Input
+  if(fileInput) {
+      fileInput.addEventListener('change', (e) => {
+          handleUpload(e.target.files[0]);
+      });
+  }
+  
+  // Event Listener for Button (trigger file input)
+  if(uploadBtn) {
+      uploadBtn.addEventListener('click', () => fileInput.click());
+  }
 }
 
 // ==========================================
@@ -272,8 +368,11 @@ async function loadFounders() {
   foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">Loading...</p>';
 
   try {
-    const founders = await api.getEligibleFounders();
-    const requests = await api.getMyRequests();
+    // OPTIMIZED: Fetch in parallel
+    const [founders, requests] = await Promise.all([
+        api.getEligibleFounders(),
+        api.getMyRequests()
+    ]);
     
     const sentRequestsMap = {};
     const incomingRequestsMap = {};
@@ -358,12 +457,15 @@ function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = 
       actionsHtml = `<button class="btn btn-primary" onclick="openRequestModal('${startupIdStr}')">Send Connection Request</button><button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>`;
   }
 
+  // Verified Badge Logic for Founder
+  const verifiedBadge = getVerifiedBadgeHtml(userRef.state);
+
   card.innerHTML = `
     <div class="founder-header">
       <div style="display: flex; align-items: center; gap: 1rem;">
         <img src="${profileImg}" alt="${founderName}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
         <div>
-          <div class="founder-name">${founder.startupName || 'Unnamed Startup'} ${getVerifiedBadgeHtml(userRef.state)}</div>
+          <div class="founder-name">${founder.startupName || 'Unnamed Startup'} ${verifiedBadge}</div>
           <div style="font-size: 0.85rem; color: #666;">Founder: ${founderName}</div>
         </div>
       </div>
@@ -458,6 +560,7 @@ window.updateRequest = async function(id, status) {
 // 7. CHAT LOGIC
 // ==========================================
 window.allConversations = [];
+let currentChatPartnerId = null;
 
 async function loadConversations() {
   try {
@@ -639,10 +742,8 @@ window.togglePassword = function(inputId) {
     const icon = document.querySelector(`#${inputId}-toggle-icon`);
     if (input.type === 'password') {
         input.type = 'text';
-        if(icon) icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
     } else {
         input.type = 'password';
-        if(icon) icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
     }
 };
 
@@ -650,23 +751,9 @@ window.togglePassword = function(inputId) {
 const legalDocs = {
     privacy: { title: "Privacy Policy", content: `
                 <p><strong>Effective Date:</strong> March, 2026</p>
-                <p>This privacy policy describes how Dolphin collects, uses, and shares your personal information.</p>
-                <h4 style="margin-top:1rem;">Information We Collect</h4>
-                <p>We collect information you provide directly to us, such as when you create an account, make a purchase, or contact us for support. This may include your name, email address, phone number, and profile information.</p>
-                <h4 style="margin-top:1rem;">How We Use Information</h4>
-                <p>We use the information we collect to provide, maintain, and improve our services, to process transactions and send you related information, to respond to your comments and questions, and to provide customer service.</p>
-                <h4 style="margin-top:1rem;">Data Security</h4>
-                <p>We take reasonable measures to help protect your personal information from loss, theft, misuse, and unauthorized access, disclosure, alteration, and destruction.</p>
-            ` },
+                <p>This privacy policy describes how Dolphin collects, uses, and shares your personal information.</p>` },
     terms: { title: "Terms of Service", content: `<p><strong>Effective Date:</strong> March, 2026</p>
-                <p>Welcome to Dolphin. These Terms of Service govern your use of our website located at dolphin.com and our services.</p>
-                <h4 style="margin-top:1rem;">Acceptance of Terms</h4>
-                <p>By accessing and using our services, you agree to be bound by these Terms of Service and all applicable laws and regulations.</p>
-                <h4 style="margin-top:1rem;">User Responsibilities</h4>
-                <p>You are responsible for maintaining the confidentiality of your account and password and for restricting access to your computer. You agree to accept responsibility for all activities that occur under your account or password.</p>
-                <h4 style="margin-top:1rem;">Limitation of Liability</h4>
-                <p>In no event shall Dolphin, its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses.</p>
-` }
+                <p>Welcome to Dolphin. These Terms of Service govern your use of our website.</p>` }
 };
 
 window.openLegalModal = function(type) {
@@ -722,8 +809,11 @@ document.addEventListener('DOMContentLoaded', () => {
       availability: document.getElementById('availability').value,
       contactMethod: document.getElementById('contact-method').value
     };
-    try { await api.updateProfile(profileData); showToast('Profile updated!', 'success'); } 
-    catch (e) { showToast(e.message, 'error'); }
+    try { 
+        await api.updateProfile(profileData); 
+        showToast('Profile updated!', 'success'); 
+        localStorage.setItem('providerProfileCache', JSON.stringify(profileData));
+    } catch (e) { showToast(e.message, 'error'); }
   });
 
   // Send Request Button
@@ -763,7 +853,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
-  // Close Profile Modal (The Fix)
+  // Close Profile Modal
   document.getElementById('close-profile')?.addEventListener('click', () => {
     document.getElementById('profile-modal').classList.remove('active');
   });
@@ -817,43 +907,6 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('new-password').value = '';
           document.getElementById('confirm-password').value = '';
       } catch(e) { showToast(e.message, 'error'); }
-  });
-
-  // SETTINGS: Upload Picture Button
-  document.getElementById('upload-picture-btn')?.addEventListener('click', async () => {
-      const fileInput = document.getElementById('profile-picture-input');
-      if (!fileInput?.files?.length) return showToast('Select an image first', 'warning');
-
-      const btn = document.getElementById('upload-picture-btn');
-      const originalText = btn.innerHTML;
-      btn.innerHTML = 'Uploading...';
-      btn.disabled = true;
-
-      const formData = new FormData();
-      formData.append('profilePicture', fileInput.files[0]);
-
-      try {
-        const res = await fetch(`${API_URL}/auth/upload-profile-picture`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
-          body: formData
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-        
-        showToast('Picture updated!', 'success');
-        user.profilePicture = data.profilePicture;
-        localStorage.setItem('user', JSON.stringify(user));
-        
-        updateProviderHeaderAvatar(data.profilePicture);
-        const previewImg = document.getElementById('settings-profile-preview');
-        if(previewImg) {
-             const fullUrl = data.profilePicture.startsWith('http') ? data.profilePicture : `${window.location.origin}${data.profilePicture}`;
-             previewImg.src = fullUrl;
-        }
-
-      } catch (err) { showToast(err.message, 'error'); }
-      finally { btn.innerHTML = originalText; btn.disabled = false; fileInput.value = ''; }
   });
 
   // SETTINGS: Delete Account Button
