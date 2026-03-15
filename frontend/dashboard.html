@@ -445,28 +445,39 @@
           <p class="page-subtitle">Manage your account and preferences</p>
         </div>
 
-        <!-- Account Settings -->
-        <div class="card">
-          <div class="card-header"><h3 class="card-title">Account Settings</h3></div>
-              <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;">
-              <img id="settings-profile-preview" src="https://ui-avatars.com/api/?name=User&background=e2e8f0&color=64748b&size=100" alt="Profile" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--border-color);">
-              
-              <!-- Hidden File Input -->
-              <input type="file" id="profile-picture-input" accept="image/jpeg, image/png" style="display: none;">
-              
-              <div style="flex: 1;">
-                <h4 style="margin: 0 0 0.25rem 0;">Profile Picture</h4>
-                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 0.5rem 0;">JPG or PNG. Max size 5MB.</p>
-                <button id="upload-picture-btn" class="btn btn-secondary btn-sm" type="button">Upload New Photo</button>
-              </div>
-              <div class="avatar-wrapper">
-                <img id="settings-profile-preview" src="https://ui-avatars.com/api/?name=User&background=e2e8f0&color=64748b&size=100" alt="Profile" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--border-color);">
-                    <!-- BADGE ADDED -->
-                  <span class="verified-badge" id="settings-verified-badge" style="width: 22px; height: 22px;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  </span>
-              </div>
-          </div>
+        <!-- Inside Settings Page -> Account Settings Card -->
+<div class="card">
+  <div class="card-header"><h3 class="card-title">Account Settings</h3></div>
+  
+  <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;">
+      
+      <!-- Hidden File Input -->
+      <input type="file" id="profile-picture-input" accept="image/jpeg, image/png" style="display: none;">
+      
+      <!-- New Profile Edit Container with Camera Overlay -->
+      <div class="profile-edit-container" onclick="document.getElementById('profile-picture-input').click()">
+          <img id="settings-profile-preview" src="https://ui-avatars.com/api/?name=User&background=e2e8f0&color=64748b&size=100" alt="Profile">
+          
+          <!-- Badge (Positioned via CSS) -->
+          <span class="verified-badge" id="settings-verified-badge" style="width: 22px; height: 22px;">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </span>
+
+          <!-- Camera Overlay -->
+          <button type="button" class="camera-edit-overlay">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+             </svg>
+          </button>
+      </div>
+
+      <div style="flex: 1;">
+        <h4 style="margin: 0 0 0.25rem 0;">Profile Picture</h4>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 0.5rem 0;">Click image to upload JPG or PNG (Max 5MB).</p>
+        <!-- Removed the separate "Upload New Photo" button as the image itself is now the trigger -->
+      </div>
+  </div>
           <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="settings-full-name"></div>
           <div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" id="settings-email" readonly style="background:#f1f5f9;"></div>
           <button class="btn btn-primary" id="update-profile-btn">Update Profile</button>

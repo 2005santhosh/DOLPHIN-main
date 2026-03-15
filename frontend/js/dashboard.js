@@ -1109,7 +1109,10 @@ window.openChat = async function(partnerId, partnerName, partnerPic) {
             chatHeader.prepend(backBtn);
         }
     } else {
+        // Desktop Logic Fix
+        chatWindow.style.display = 'flex'; // <--- THIS WAS MISSING
         chatHeader.style.display = 'flex';
+        chatInputArea.style.display = 'flex';
     }
 
     chatInputArea.style.display = 'flex';
@@ -1256,7 +1259,11 @@ function loadSettings() {
     .then(r => r.json())
     .then(data => {
        const profile = data.profile || data;
+       
+       // Update points in header
        document.getElementById('header-points').textContent = profile.rewardPoints || 0;
+       
+       // Update Profile Picture
        const previewImg = document.getElementById('settings-profile-preview');
        if (previewImg) {
          if (profile.profilePicture) {
@@ -1267,6 +1274,18 @@ function loadSettings() {
            previewImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'User')}&background=e2e8f0&color=64748b&size=100`;
          }
        }
+
+       // ==========================================
+       // NEW: UPDATE VERIFIED BADGE VISIBILITY
+       // ==========================================
+       const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
+       const isApproved = verifiedStates.includes(profile.status);
+       
+       const settingsBadge = document.getElementById('settings-verified-badge');
+       if (settingsBadge) {
+         settingsBadge.style.display = isApproved ? 'flex' : 'none';
+       }
+       
     }).catch(err => console.error(err));
 }
 
