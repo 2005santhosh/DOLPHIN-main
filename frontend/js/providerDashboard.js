@@ -217,13 +217,23 @@ async function updateNotificationBadge() {
     } catch(e) {}
 }
 
+// Helper to increment badge without full reload
+function incrementNotifBadge() {
+    const badge = document.getElementById('notif-badge-count');
+    if(badge) {
+        let count = parseInt(badge.textContent) || 0;
+        badge.textContent = count + 1;
+        badge.style.display = 'flex';
+    }
+}
+
 window.markAllRead = async () => {
     try {
         await fetch(`${API_URL}/notifications/read-all`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` }});
         document.querySelectorAll('.notif-item.unread').forEach(i => i.classList.remove('unread'));
         const badge = document.getElementById('notif-badge-count');
         if(badge) { badge.style.display = 'none'; badge.textContent = '0'; }
-    } catch(e) { alert('Failed'); }
+    } catch(e) { showToast('Failed', 'error'); }
 };
 
 window.clearNotifications = async () => {
@@ -233,7 +243,7 @@ window.clearNotifications = async () => {
         document.getElementById('notif-list').innerHTML = '<p style="padding:1rem; text-align:center;">No notifications</p>';
         const badge = document.getElementById('notif-badge-count');
         if(badge) { badge.style.display = 'none'; badge.textContent = '0'; }
-    } catch(e) { alert('Failed'); }
+    } catch(e) { showToast('Failed', 'error'); }
 };
 
 // ==========================================
@@ -754,10 +764,32 @@ window.togglePassword = function(inputId) {
     if (input) input.type = input.type === 'password' ? 'text' : 'password';
 };
 
-// Legal Modals
+// Legal Modals (Full Content)
 const legalDocs = {
-    privacy: { title: "Privacy Policy", content: `<p>Privacy Policy content...</p>` },
-    terms: { title: "Terms of Service", content: `<p>Terms content...</p>` }
+    privacy: { 
+        title: "Privacy Policy", 
+        content: `
+            <p><strong>Effective Date:</strong> March, 2026</p>
+            <p>This privacy policy describes how Dolphin collects, uses, and shares your personal information.</p>
+            <h4 style="margin-top:1rem;">Information We Collect</h4>
+            <p>We collect information you provide directly to us, such as when you create an account, make a purchase, or contact us for support. This may include your name, email address, phone number, and profile information.</p>
+            <h4 style="margin-top:1rem;">How We Use Information</h4>
+            <p>We use the information we collect to provide, maintain, and improve our services, to process transactions and send you related information, to respond to your comments and questions, and to provide customer service.</p>
+            <h4 style="margin-top:1rem;">Data Security</h4>
+            <p>We take reasonable measures to help protect your personal information from loss, theft, misuse, and unauthorized access, disclosure, alteration, and destruction.</p>` 
+    },
+    terms: { 
+        title: "Terms of Service", 
+        content: `
+            <p><strong>Effective Date:</strong> March, 2026</p>
+            <p>Welcome to Dolphin. These Terms of Service govern your use of our website located at dolphin.com and our services.</p>
+            <h4 style="margin-top:1rem;">Acceptance of Terms</h4>
+            <p>By accessing and using our services, you agree to be bound by these Terms of Service and all applicable laws and regulations.</p>
+            <h4 style="margin-top:1rem;">User Responsibilities</h4>
+            <p>You are responsible for maintaining the confidentiality of your account and password and for restricting access to your computer. You agree to accept responsibility for all activities that occur under your account or password.</p>
+            <h4 style="margin-top:1rem;">Limitation of Liability</h4>
+            <p>In no event shall Dolphin, its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses.</p>` 
+    }
 };
 
 window.openLegalModal = function(type) {
@@ -777,15 +809,31 @@ window.closeLegalModal = function() {
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   
-  // --- FIX: NOTIFICATION LOGIC MOVED INSIDE DOMCONTENTLOADED ---
+  // --- FIX 1: NOTIFICATION DROPDOWN (MUST BE FIRST) ---
   const notifBtn = document.getElementById('notification-btn');
   const notifDropdown = document.getElementById('notification-dropdown');
   
   if (notifBtn && notifDropdown) {
-      notifDropdown.style.display = 'none'; // Ensure hidden on start
+      // Force Parent Relative Positioning
+      const parent = notifBtn.parentElement;
+      if(parent) parent.style.position = 'relative';
+      
+      // Force Dropdown Styles via JS (Ensures visibility regardless of CSS file issues)
+      notifDropdown.style.position = 'absolute';
+      notifDropdown.style.top = '100%';
+      notifDropdown.style.right = '0';
+      notifDropdown.style.zIndex = '2000';
+      notifDropdown.style.backgroundColor = '#fff';
+      notifDropdown.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+      notifDropdown.style.borderRadius = '8px';
+      notifDropdown.style.width = '320px';
+      notifDropdown.style.maxHeight = '400px';
+      notifDropdown.style.overflowY = 'auto';
+      notifDropdown.style.display = 'none'; // Ensure hidden initially
 
       notifBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
+          e.preventDefault();
           const isOpen = notifDropdown.style.display === 'flex';
           notifDropdown.style.display = isOpen ? 'none' : 'flex';
           if (!isOpen) await loadNotificationList();
@@ -794,12 +842,9 @@ document.addEventListener('DOMContentLoaded', () => {
       window.closeNotifDropdown = () => notifDropdown.style.display = 'none';
       
       window.addEventListener('click', (e) => {
-          if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
-              closeNotifDropdown();
-          }
+          if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) closeNotifDropdown();
       });
   }
-  // ---------------------------------------------------------
 
   // Set Header Info
   document.getElementById('user-name').textContent = user.name || 'Provider';
@@ -814,12 +859,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
       e.preventDefault();
-      if (window.innerWidth <= 768) {
-        document.querySelector('.sidebar')?.classList.remove('active');
-        document.querySelector('.sidebar-overlay')?.classList.remove('active');
-      }
-      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-      item.classList.add('active');
+      if (window.innerWidth <= 768) { document.querySelector('.sidebar')?.classList.remove('active'); document.querySelector('.sidebar-overlay')?.classList.remove('active'); }
+      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active')); item.classList.add('active');
       const page = item.dataset.page;
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.getElementById(`${page}-page`)?.classList.add('active');
@@ -830,210 +871,85 @@ document.addEventListener('DOMContentLoaded', () => {
   // Profile Form
   document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const profileData = {
-      name: document.getElementById('provider-name').value,
-      category: document.getElementById('service-category').value,
-      experienceLevel: document.getElementById('experience-level').value,
-      specialties: document.getElementById('specialties').value.split(',').map(s => s.trim()).filter(s => s),
-      description: document.getElementById('bio').value,
-      availability: document.getElementById('availability').value,
-      contactMethod: document.getElementById('contact-method').value
-    };
-    try { 
-        await api.updateProfile(profileData); 
-        showToast('Profile updated!', 'success'); 
-        localStorage.setItem('providerProfileCache', JSON.stringify(profileData));
-    } catch (e) { showToast(e.message, 'error'); }
+    const profileData = { name: document.getElementById('provider-name').value, category: document.getElementById('service-category').value, experienceLevel: document.getElementById('experience-level').value, specialties: document.getElementById('specialties').value.split(',').map(s => s.trim()).filter(s => s), description: document.getElementById('bio').value, availability: document.getElementById('availability').value, contactMethod: document.getElementById('contact-method').value };
+    try { await api.updateProfile(profileData); showToast('Profile updated!', 'success'); localStorage.setItem('providerProfileCache', JSON.stringify(profileData)); } catch (e) { showToast(e.message, 'error'); }
   });
 
   // Send Request Button
   document.getElementById('send-request')?.addEventListener('click', async () => {
-    const message = document.getElementById('request-message').value.trim();
-    const services = document.getElementById('services-offered').value.trim();
+    const message = document.getElementById('request-message').value.trim(); const services = document.getElementById('services-offered').value.trim();
     if (!message || !services) return showToast('Please fill all fields.', 'warning');
-
-    const btn = document.getElementById('send-request');
-    btn.disabled = true; btn.textContent = 'Sending...';
-
+    const btn = document.getElementById('send-request'); btn.disabled = true; btn.textContent = 'Sending...';
     try {
       const result = await api.sendProviderRequest(currentStartupId, message, services);
       if (result.success) {
-        showToast('Request sent!', 'success');
-        document.getElementById('request-modal').classList.remove('active');
-        
+        showToast('Request sent!', 'success'); document.getElementById('request-modal').classList.remove('active');
         const cardEl = document.getElementById(`founder-card-${currentStartupId}`);
         if (cardEl) cardEl.querySelector('.request-actions').innerHTML = `<button class="btn btn-secondary" disabled>Request Sent (Pending)</button>`;
-        
-        if (!window.currentSentRequests) window.currentSentRequests = {};
-        window.currentSentRequests[currentStartupId] = { status: 'pending' };
-        loadDashboard(); 
+        if (!window.currentSentRequests) window.currentSentRequests = {}; window.currentSentRequests[currentStartupId] = { status: 'pending' }; loadDashboard();
       } else { showToast(result.message || 'Failed', 'error'); }
-    } catch(e) { showToast(e.message, 'error'); }
-    finally { btn.disabled = false; btn.textContent = 'Send Request'; }
+    } catch(e) { showToast(e.message, 'error'); } finally { btn.disabled = false; btn.textContent = 'Send Request'; }
   });
 
   // Tabs
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const tabName = tab.dataset.tab;
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      document.getElementById(`${tabName}-tab`)?.classList.add('active');
-    });
-  });
-  
-  // Close Profile Modal
-  document.getElementById('close-profile')?.addEventListener('click', () => {
-    document.getElementById('profile-modal').classList.remove('active');
-  });
+  document.querySelectorAll('.tab').forEach(tab => { tab.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); tab.classList.add('active'); const tabName = tab.dataset.tab; document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById(`${tabName}-tab`)?.classList.add('active'); }); });
+  document.getElementById('close-profile')?.addEventListener('click', () => { document.getElementById('profile-modal').classList.remove('active'); });
 
   // SETTINGS: Update Profile Button
   document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
-      const nameEl = document.getElementById('settings-full-name');
-      const name = nameEl.value.trim();
-      if (!name) return showToast('Name is required', 'warning');
-      
-      try {
-        let res = await fetch(`${API_URL}/auth/profile`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ name })
-        });
-        if (res.status === 404) res = await api.updateProfile({ name });
-        
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || 'Update failed');
-
-        showToast('Profile updated!', 'success');
-        user.name = name;
-        localStorage.setItem('user', JSON.stringify(user));
-        document.getElementById('user-name').textContent = name;
-        document.querySelector('.user-avatar').textContent = name.split(' ').map(n => n.charAt(0)).join('');
-
+      const nameEl = document.getElementById('settings-full-name'); const name = nameEl.value.trim(); if (!name) return showToast('Name is required', 'warning');
+      try { let res = await fetch(`${API_URL}/auth/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name }) }); if (res.status === 404) res = await api.updateProfile({ name }); const data = await res.json(); if (!res.ok) throw new Error(data.message || 'Update failed');
+        showToast('Profile updated!', 'success'); user.name = name; localStorage.setItem('user', JSON.stringify(user)); document.getElementById('user-name').textContent = name; document.querySelector('.user-avatar').textContent = name.split(' ').map(n => n.charAt(0)).join('');
       } catch (err) { showToast(err.message, 'error'); }
   });
 
   // SETTINGS: Update Password Button
   document.getElementById('update-password-btn')?.addEventListener('click', async () => {
-      const curr = document.getElementById('current-password').value;
-      const newP = document.getElementById('new-password').value;
-      const conf = document.getElementById('confirm-password').value;
-
-      if(!curr || !newP || !conf) return showToast('Fill all password fields', 'warning');
-      if(newP !== conf) return showToast('Passwords do not match', 'error');
-      if(newP.length < 8) return showToast('Password must be 8+ characters', 'warning');
-
-      try {
-          const res = await fetch(`${API_URL}/auth/password`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-              body: JSON.stringify({ currentPassword: curr, newPassword: newP })
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.message || 'Failed to update');
-          showToast('Password Updated!', 'success');
-          document.getElementById('current-password').value = ''; 
-          document.getElementById('new-password').value = ''; 
-          document.getElementById('confirm-password').value = '';
+      const curr = document.getElementById('current-password').value; const newP = document.getElementById('new-password').value; const conf = document.getElementById('confirm-password').value;
+      if(!curr || !newP || !conf) return showToast('Fill all password fields', 'warning'); if(newP !== conf) return showToast('Passwords do not match', 'error'); if(newP.length < 8) return showToast('Password must be 8+ characters', 'warning');
+      try { const res = await fetch(`${API_URL}/auth/password`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ currentPassword: curr, newPassword: newP }) }); const data = await res.json(); if (!res.ok) throw new Error(data.message || 'Failed to update'); showToast('Password Updated!', 'success'); document.getElementById('current-password').value = ''; document.getElementById('new-password').value = ''; document.getElementById('confirm-password').value = '';
       } catch(e) { showToast(e.message, 'error'); }
   });
 
-  // SETTINGS: Image Upload Logic
   const fileInput = document.getElementById('profile-picture-input');
   const uploadBtn = document.getElementById('upload-picture-btn');
   const previewImg = document.getElementById('settings-profile-preview');
 
   if (uploadBtn && fileInput) {
       uploadBtn.addEventListener('click', () => fileInput.click());
-      
       fileInput.addEventListener('change', async (e) => {
-          const file = e.target.files[0];
-          if (!file) return;
-
-          // Validation
+          const file = e.target.files[0]; if (!file) return;
           if (file.size > 5000000) return showToast('Max size 5MB.', 'error');
-          
-          // Preview
-          const reader = new FileReader();
-          reader.onload = (ev) => { if(previewImg) previewImg.src = ev.target.result; };
-          reader.readAsDataURL(file);
-
-          // Upload
-          const fd = new FormData();
-          fd.append('profilePicture', file);
-
-          uploadBtn.innerHTML = 'Uploading...';
-          uploadBtn.disabled = true;
-
+          const reader = new FileReader(); reader.onload = (ev) => { if(previewImg) previewImg.src = ev.target.result; }; reader.readAsDataURL(file);
+          const fd = new FormData(); fd.append('profilePicture', file);
+          uploadBtn.innerHTML = 'Uploading...'; uploadBtn.disabled = true;
           try {
-              const res = await fetch(`${API_URL}/auth/upload-profile-picture`, {
-                  method: 'POST',
-                  headers: { 'Authorization': `Bearer ${token}` },
-                  body: fd
-              });
-              const d = await res.json();
-              if (!res.ok) throw new Error(d.message);
-              
+              const res = await fetch(`${API_URL}/auth/upload-profile-picture`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: fd });
+              const d = await res.json(); if (!res.ok) throw new Error(d.message);
               showToast('Uploaded!', 'success');
-              
-              // Update UI & Cache
-              const newUrl = d.profilePicture;
-              user.profilePicture = newUrl;
-              localStorage.setItem('user', JSON.stringify(user));
-              
+              const newUrl = d.profilePicture; user.profilePicture = newUrl; localStorage.setItem('user', JSON.stringify(user));
               if(previewImg) previewImg.src = newUrl.startsWith('http') ? newUrl : window.location.origin + newUrl;
               updateProviderHeaderAvatar(newUrl);
-
-              // Update Cache
-              const cached = JSON.parse(localStorage.getItem('providerProfileCache') || '{}');
-              cached.profilePicture = newUrl;
-              localStorage.setItem('providerProfileCache', JSON.stringify(cached));
-
+              const cached = JSON.parse(localStorage.getItem('providerProfileCache') || '{}'); cached.profilePicture = newUrl; localStorage.setItem('providerProfileCache', JSON.stringify(cached));
           } catch(err) { showToast(err.message, 'error'); }
-          finally { 
-              uploadBtn.innerHTML = 'Upload New Photo';
-              uploadBtn.disabled = false;
-              fileInput.value = '';
-          }
+          finally { uploadBtn.innerHTML = 'Upload New Photo'; uploadBtn.disabled = false; fileInput.value = ''; }
       });
   }
 
-  // SETTINGS: Delete Account Button
-  document.getElementById('delete-account-btn')?.addEventListener('click', async () => {
-      showConfirm('Delete account permanently?', async () => {
-        try {
-          await api.deleteAccount();
-          localStorage.clear();
-          window.location.href = 'login.html';
-        } catch(e) { showToast(e.message, 'error'); }
-      });
-  });
+  document.getElementById('delete-account-btn')?.addEventListener('click', async () => { showConfirm('Delete account permanently?', async () => { try { await api.deleteAccount(); localStorage.clear(); window.location.href = 'login.html'; } catch(e) { showToast(e.message, 'error'); } }); });
+  document.getElementById('logout-btn')?.addEventListener('click', () => { showConfirm('Logout?', () => { localStorage.clear(); window.location.href = 'login.html'; }); });
   
-  // Logout
-  document.getElementById('logout-btn')?.addEventListener('click', () => {
-    showConfirm('Logout?', () => {
-      localStorage.clear(); 
-      window.location.href = 'login.html';
-    });
-  });
-  
-  // Mobile Menu
-  document.getElementById('mobile-menu-toggle')?.addEventListener('click', () => {
-    document.querySelector('.sidebar')?.classList.toggle('active');
-    document.querySelector('.sidebar-overlay')?.classList.toggle('active');
-  });
-  
-  document.querySelector('.sidebar-overlay')?.addEventListener('click', () => {
-     document.querySelector('.sidebar')?.classList.remove('active');
-     document.querySelector('.sidebar-overlay')?.classList.remove('active');
-  });
+  document.getElementById('mobile-menu-toggle')?.addEventListener('click', () => { document.querySelector('.sidebar')?.classList.toggle('active'); document.querySelector('.sidebar-overlay')?.classList.toggle('active'); });
+  document.querySelector('.sidebar-overlay')?.addEventListener('click', () => { document.querySelector('.sidebar')?.classList.remove('active'); document.querySelector('.sidebar-overlay')?.classList.remove('active'); });
 
-  // Socket.io Initialization
+  // ==========================================
+  // SOCKET.IO INTEGRATION (REALTIME)
+  // ==========================================
   if (typeof io === 'function' && userId) {
-    const socket = io("https://dolphin-main-production.up.railway.app", { auth: { token } });
+    const socket = io("https://dolphinorg.in", { auth: { token } });
     socket.emit('join', userId);
 
+    // 1. Real-time Messages
     socket.on('receiveMessage', (msg) => {
       const senderId = (msg.senderId._id || msg.senderId)?.toString();
       const isCurrentChat = currentChatPartnerId?.toString() === senderId;
@@ -1044,7 +960,27 @@ document.addEventListener('DOMContentLoaded', () => {
         div.innerHTML = `<div class="message-bubble">${msg.content}<div class="message-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></div>`;
         container.appendChild(div);
         container.scrollTop = container.scrollHeight;
+      } else if (senderId !== userId) {
+        // If chat not open, increment badge and show toast
+        incrementNotifBadge();
+        showToast('New message received!', 'info');
       }
+    });
+
+    // 2. Real-time Request Notifications
+    socket.on('newRequest', (data) => {
+        incrementNotifBadge();
+        showToast('New connection request received!', 'info');
+        // Refresh dashboard if visible
+        if(document.getElementById('dashboard-page').classList.contains('active')) loadDashboard();
+    });
+
+    socket.on('requestStatusUpdate', (data) => {
+        incrementNotifBadge();
+        // data.status could be 'accepted' or 'rejected'
+        showToast(`Your request was ${data.status}!`, data.status === 'accepted' ? 'success' : 'warning');
+        // Refresh requests page if visible
+        if(document.getElementById('requests-page').classList.contains('active')) loadRequests();
     });
   }
 });
