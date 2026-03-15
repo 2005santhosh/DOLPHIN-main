@@ -2,9 +2,20 @@
 // CORE INIT & HELPERS
 // ==========================================
 // const API_URL = "https://dolphin-main-production.up.railway.app/api";
-const user = JSON.parse(localStorage.getItem('user') || '{}');
-const token = localStorage.getItem('token');
-const userId = user._id || user.id;
+
+// SAFETY CHECK: Prevent crashes if localStorage is blocked
+let user = {};
+let token = null;
+let userId = null;
+
+try {
+    user = JSON.parse(localStorage.getItem('user') || '{}');
+    token = localStorage.getItem('token');
+    userId = user._id || user.id;
+} catch (e) {
+    console.warn("LocalStorage access blocked or corrupted.");
+}
+
 const VALIDATION_STAGES = [
   { key: 'idea', title: 'Idea Validation' },
   { key: 'problem', title: 'Problem Definition' },
@@ -61,19 +72,24 @@ function getVerifiedBadge(userData) {
 
 // INIT UI
 const userNameEl = document.getElementById('user-name');
-userNameEl.textContent = user.name || 'User';
+if(userNameEl) userNameEl.textContent = user.name || 'User';
+
 const nameArray = (user.name || 'User').split(' ');
 const initials = nameArray.map(n => n.charAt(0).toUpperCase()).join('');
-document.querySelector('.user-avatar').textContent = initials || 'U';
+const avatarEl = document.querySelector('.user-avatar');
+if(avatarEl) avatarEl.textContent = initials || 'U';
 
 if (!token) window.location.href = 'login.html';
 
-document.getElementById('user-menu').addEventListener('click', () => {
-  document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-  document.getElementById('settings-page').classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-  document.querySelector('[data-page="settings"]').classList.add('active');
-});
+const userMenu = document.getElementById('user-menu');
+if(userMenu) {
+    userMenu.addEventListener('click', () => {
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      document.getElementById('settings-page')?.classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+      document.querySelector('[data-page="settings"]')?.classList.add('active');
+    });
+}
 
 // ==========================================
 // MOBILE MENU LOGIC
@@ -83,9 +99,9 @@ const sidebar = document.querySelector('.sidebar');
 const overlay = document.getElementById('sidebar-overlay');
 
 function toggleSidebar() {
-    sidebar.classList.toggle('open');
-    overlay.classList.toggle('active');
-    document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    sidebar?.classList.toggle('open');
+    overlay?.classList.toggle('active');
+    document.body.style.overflow = sidebar?.classList.contains('open') ? 'hidden' : '';
 }
 mobileMenuBtn?.addEventListener('click', toggleSidebar);
 overlay?.addEventListener('click', toggleSidebar);
@@ -94,14 +110,14 @@ overlay?.addEventListener('click', toggleSidebar);
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
         e.preventDefault();
-        if (window.innerWidth <= 768 && sidebar.classList.contains('open')) toggleSidebar();
+        if (window.innerWidth <= 768 && sidebar?.classList.contains('open')) toggleSidebar();
         
         document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
         item.classList.add('active');
         
         const page = item.dataset.page;
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(`${page}-page`).classList.add('active');
+        document.getElementById(`${page}-page`)?.classList.add('active');
         
         loadPageContent(page);
     });
@@ -126,6 +142,7 @@ function loadPageContent(page) {
 // ==========================================
 function togglePasswordVisibility(inputId, btn) {
     const input = document.getElementById(inputId);
+    if(!input) return;
     const isPassword = input.type === 'password';
     input.type = isPassword ? 'text' : 'password';
     
@@ -180,10 +197,11 @@ window.addEventListener('click', (e) => {
     }
 });
 
-function closeNotifDropdown() { notifDropdown.style.display = 'none'; }
+function closeNotifDropdown() { if(notifDropdown) notifDropdown.style.display = 'none'; }
 
 async function loadNotificationList() {
     const list = document.getElementById('notif-list');
+    if(!list) return;
     list.innerHTML = '<p style="text-align:center; padding: 1rem;">Loading...</p>';
     try {
         const data = await api.getNotifications();
@@ -242,7 +260,8 @@ async function updateNotificationBadge() {
 async function markAllRead() {
   try {
     await api.markAllRead();
-    document.getElementById('notif-badge-count').style.display = 'none';
+    const badge = document.getElementById('notif-badge-count');
+    if(badge) badge.style.display = 'none';
     loadNotificationList();
   } catch(e) { showToast('Error marking as read', 'error'); }
 }
@@ -252,7 +271,8 @@ async function clearNotifications() {
   try {
     await api.clearNotifications();
     loadNotificationList();
-    document.getElementById('notif-badge-count').style.display = 'none';
+    const badge = document.getElementById('notif-badge-count');
+    if(badge) badge.style.display = 'none';
   } catch(e) { showToast('Error clearing', 'error'); }
 }
 
@@ -260,53 +280,82 @@ async function clearNotifications() {
 // SOCKET.IO
 // ==========================================
 let socket;
+// REVERTED: Use the URL that was working for you
 const SOCKET_URL = "https://api.dolphinorg.in.app";
-if (typeof io === 'function' && userId) {
-    socket = io(SOCKET_URL,{ auth: { token: token } });
-    socket.emit('join', userId);
-    console.log('🔌 Founder Socket connected:', userId);
 
-    socket.on('receiveMessage', (msg) => {
-        if (!msg || !msg.senderId) return;
-        const senderId = (msg.senderId._id || msg.senderId)?.toString();
-        const isCurrentChat = currentChatPartnerId?.toString() === senderId;
-        const isMe = senderId === userId;
+if (typeof io === 'function' && userId && token) {
+    try {
+        socket = io(SOCKET_URL, {
+            auth: { token: token },
+            transports: ['websocket', 'polling'], 
+            reconnectionAttempts: 5, 
+            timeout: 10000
+        });
 
-        if (isCurrentChat && !isMe) {
-            const container = document.getElementById('messages-container');
-            const div = document.createElement('div');
-            div.className = 'message-row received';
-            const time = new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            div.innerHTML = `<div class="message-bubble">${msg.content}<div class="message-time" style="text-align: left;">${time}</div></div>`;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-        } else if (!isMe) {
-            incrementBadge('chat-badge');
-        }
-    });
+        socket.on('connect', () => {
+            socket.emit('join', userId);
+            console.log('🔌 Founder Socket connected:', userId);
+        });
 
-    socket.on('newRequest', (data) => {
-        incrementBadge('requests-badge');
-        incrementBadge('notif-badge-count');
-    });
+        socket.on('connect_error', (err) => {
+            console.warn('Socket connection failed:', err.message);
+        });
 
-    socket.on('requestStatusUpdate', (data) => {
-        incrementBadge('notif-badge-count');
-        if(document.getElementById('requests-page').classList.contains('active')) loadSentRequests();
-    });
+        socket.on('receiveMessage', (msg) => {
+            if (!msg || !msg.senderId) return;
+            const senderId = (msg.senderId._id || msg.senderId)?.toString();
+            const isCurrentChat = currentChatPartnerId?.toString() === senderId;
+            const isMe = senderId === userId;
 
-    socket.on('newNotification', (notification) => {
-        incrementBadge('notif-badge-count');
-        if(document.getElementById('notification-dropdown').style.display === 'flex') loadNotificationList();
-    });
+            if (isCurrentChat && !isMe) {
+                const container = document.getElementById('messages-container');
+                if(!container) return;
+                const div = document.createElement('div');
+                div.className = 'message-row received';
+                const time = new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                div.innerHTML = `<div class="message-bubble">${msg.content}<div class="message-time" style="text-align: left;">${time}</div></div>`;
+                container.appendChild(div);
+                container.scrollTop = container.scrollHeight;
+            } else if (!isMe) {
+                incrementBadge('chat-badge');
+            }
+        });
+
+        socket.on('newRequest', (data) => {
+            incrementBadge('requests-badge');
+            incrementBadge('notif-badge-count');
+        });
+
+        socket.on('requestStatusUpdate', (data) => {
+            incrementBadge('notif-badge-count');
+            if(document.getElementById('requests-page')?.classList.contains('active')) loadSentRequests();
+        });
+
+        socket.on('newNotification', (notification) => {
+            incrementBadge('notif-badge-count');
+            if(document.getElementById('notification-dropdown')?.style.display === 'flex') loadNotificationList();
+        });
+
+    } catch(e) {
+        console.error("Socket init failed", e);
+    }
 }
 
+// ==========================================
+// DASHBOARD & PROFILE
+// ==========================================
 async function loadDashboard() {
-  // 1. INSTANT RENDER FROM CACHE
-  const cachedStartup = localStorage.getItem('startupData');
-  if (cachedStartup) {
-      renderStartupData(JSON.parse(cachedStartup));
-      populateStagesList(JSON.parse(cachedStartup));
+  // 1. INSTANT RENDER FROM CACHE (WITH SAFETY TRY/CATCH)
+  try {
+    const cachedStartup = localStorage.getItem('startupData');
+    if (cachedStartup) {
+        const parsedData = JSON.parse(cachedStartup);
+        renderStartupData(parsedData);
+        populateStagesList(parsedData);
+    }
+  } catch(e) {
+      console.warn("Failed to read cache, clearing it.", e);
+      localStorage.removeItem('startupData'); // Clear corrupted cache
   }
 
   // 2. FETCH FRESH DATA IN BACKGROUND
@@ -322,8 +371,10 @@ async function loadDashboard() {
     const profile = userData.profile || userData;
     
     // Update points and badges
-    document.getElementById('header-points').textContent = profile.rewardPoints ?? 0;
-    document.getElementById('reward-points').textContent = profile.rewardPoints ?? 0;
+    const headerPoints = document.getElementById('header-points');
+    const rewardPoints = document.getElementById('reward-points');
+    if(headerPoints) headerPoints.textContent = profile.rewardPoints ?? 0;
+    if(rewardPoints) rewardPoints.textContent = profile.rewardPoints ?? 0;
     
     if (profile.profilePicture) updateHeaderAvatar(profile.profilePicture);
     
@@ -345,9 +396,9 @@ async function loadDashboard() {
     }
   } catch (error) { 
      console.log("Startup fetch failed:", error.message);
-     if (cachedStartup) {
-         // Already rendered cache, just show toast if needed
-     } else {
+     // If cache was empty and fetch failed, show form
+     const cachedStartup = localStorage.getItem('startupData');
+     if (!cachedStartup) {
          showCreateStartupForm();
      }
   }
@@ -380,6 +431,7 @@ function updateHeaderAvatar(imageUrl) {
 
 function populateStagesList(startup) {
   const stagesList = document.getElementById('stages-list');
+  if(!stagesList) return;
   stagesList.innerHTML = '';
   if (!startup) return;
 
@@ -418,32 +470,40 @@ async function loadProfile() {
   try {
     const startup = await api.getStartup();
     if (startup) {
-      document.getElementById('startup-name').value = startup.name;
-      document.getElementById('problem-statement').value = startup.thesis || '';
-      document.getElementById('target-users').value = startup.targetUsers || '';
-      document.getElementById('industry').value = startup.industry || '';
+      const nameEl = document.getElementById('startup-name');
+      const thesisEl = document.getElementById('problem-statement');
+      const usersEl = document.getElementById('target-users');
+      const industryEl = document.getElementById('industry');
+
+      if(nameEl) nameEl.value = startup.name;
+      if(thesisEl) thesisEl.value = startup.thesis || '';
+      if(usersEl) usersEl.value = startup.targetUsers || '';
+      if(industryEl) industryEl.value = startup.industry || '';
     }
   } catch (error) { console.error('Error loading profile:', error); }
 }
 
-document.getElementById('profile-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const startupData = {
-    name: document.getElementById('startup-name').value,
-    thesis: document.getElementById('problem-statement').value,
-    industry: document.getElementById('industry').value,
-    targetUsers: document.getElementById('target-users').value
-  };
-  try {
-    const existingStartup = await api.getStartup();
-    if (existingStartup) { await api.updateStartup(startupData); showToast('Profile updated successfully!', 'success'); } 
-    else { await api.createStartup(startupData); showToast('Startup created successfully!', 'success'); }
-    loadDashboard(); loadProfile();
-  } catch (error) { showToast(`Failed to save profile: ${error.message}`, 'error'); }
-});
+const profileForm = document.getElementById('profile-form');
+if(profileForm) {
+    profileForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const startupData = {
+        name: document.getElementById('startup-name')?.value,
+        thesis: document.getElementById('problem-statement')?.value,
+        industry: document.getElementById('industry')?.value,
+        targetUsers: document.getElementById('target-users')?.value
+      };
+      try {
+        const existingStartup = await api.getStartup();
+        if (existingStartup) { await api.updateStartup(startupData); showToast('Profile updated successfully!', 'success'); } 
+        else { await api.createStartup(startupData); showToast('Startup created successfully!', 'success'); }
+        loadDashboard(); loadProfile();
+      } catch (error) { showToast(`Failed to save profile: ${error.message}`, 'error'); }
+    });
+}
 
 // ==========================================
-// STAGES VALIDATION LOGIC setting
+// STAGES VALIDATION LOGIC
 // ==========================================
 async function loadStages() {
   try {
@@ -452,7 +512,8 @@ async function loadStages() {
 
     if (!startup) {
       if (msg) { msg.style.display = 'block'; msg.textContent = 'Create a startup first to access validation stages.'; }
-      document.getElementById('overall-validation-summary').style.display = 'none';
+      const summary = document.getElementById('overall-validation-summary');
+      if(summary) summary.style.display = 'none';
       VALIDATION_STAGES.forEach(({ key }) => {
          const statusEl = document.getElementById(`stage-status-${key}`);
          if(statusEl) { statusEl.textContent = 'Create Startup'; statusEl.className = 'list-item-status status-pending'; }
@@ -512,8 +573,10 @@ function renderValidationRoadmap(startup) {
 async function openStageValidationModal(stageKey) {
   const modal = document.getElementById('idea-validation-modal');
   const container = document.getElementById('validation-questions-container');
+  if(!modal || !container) return;
   modal.dataset.stageKey = stageKey;
-  document.getElementById('stage-validation-modal-title').textContent = `Validate: ${VALIDATION_STAGES.find(s => s.key === stageKey)?.title || stageKey}`;
+  const titleEl = document.getElementById('stage-validation-modal-title');
+  if(titleEl) titleEl.textContent = `Validate: ${VALIDATION_STAGES.find(s => s.key === stageKey)?.title || stageKey}`;
 
   try {
     const response = await fetch(`${API_URL}/founder/validate-stage/${stageKey}/questions`, { headers: { 'Authorization': `Bearer ${token}` } });
@@ -536,9 +599,12 @@ async function openStageValidationModal(stageKey) {
       container.appendChild(questionDiv);
     });
 
-    document.getElementById('idea-validation-form').onsubmit = submitStageValidation;
-    document.getElementById('validation-loading').style.display = 'none';
-    document.getElementById('idea-validation-form').style.display = 'block';
+    const form = document.getElementById('idea-validation-form');
+    if(form) form.onsubmit = submitStageValidation;
+    
+    const loading = document.getElementById('validation-loading');
+    if(loading) loading.style.display = 'none';
+    if(form) form.style.display = 'block';
     modal.classList.add('active');
   } catch (error) { showToast('Failed to load validation questions', 'error'); }
 }
@@ -546,7 +612,7 @@ async function openStageValidationModal(stageKey) {
 async function submitStageValidation(e) {
   e.preventDefault();
   const modal = document.getElementById('idea-validation-modal');
-  const stageKey = modal.dataset.stageKey;
+  const stageKey = modal?.dataset.stageKey;
   const formEl = document.getElementById('idea-validation-form');
   const loadingEl = document.getElementById('validation-loading');
 
@@ -557,8 +623,8 @@ async function submitStageValidation(e) {
     answers.push({ id: parseInt(elem.dataset.questionId), answer: elem.value.trim(), category: elem.dataset.category });
   });
 
-  formEl.style.display = 'none';
-  loadingEl.style.display = 'block';
+  if(formEl) formEl.style.display = 'none';
+  if(loadingEl) loadingEl.style.display = 'block';
 
   try {
     const response = await fetch(`${API_URL}/founder/validate-stage/${stageKey}`, {
@@ -567,18 +633,21 @@ async function submitStageValidation(e) {
       body: JSON.stringify({ answers })
     });
     const result = await response.json();
-    formEl.style.display = 'block';
-    loadingEl.style.display = 'none';
+    if(formEl) formEl.style.display = 'block';
+    if(loadingEl) loadingEl.style.display = 'none';
 
     if (result.success) {
       closeIdeaValidationModal();
       showToast(result.isValidated ? `✓ Stage Validated (${result.validationScore}%)` : `Stage Score: ${result.validationScore}% (need 70%)`, result.isValidated ? 'success' : 'info');
       loadStages(); loadDashboard();
     } else { showToast(`Error: ${result.message || 'Validation failed'}`, 'error'); }
-  } catch (error) { formEl.style.display = 'block'; loadingEl.style.display = 'none'; showToast('Failed to submit validation', 'error'); }
+  } catch (error) { if(formEl) formEl.style.display = 'block'; if(loadingEl) loadingEl.style.display = 'none'; showToast('Failed to submit validation', 'error'); }
 }
 
-function closeIdeaValidationModal() { document.getElementById('idea-validation-modal').classList.remove('active'); }
+function closeIdeaValidationModal() { 
+    const modal = document.getElementById('idea-validation-modal');
+    if(modal) modal.classList.remove('active'); 
+}
 
 async function showStageValidationResults(stageKey) {
   try {
@@ -613,10 +682,11 @@ async function showStageValidationResults(stageKey) {
     `;
 
     const modal = document.getElementById('detail-modal');
-    document.getElementById('detail-modal-title').textContent = stageTitle;
-    document.getElementById('detail-modal-body').innerHTML = contentHtml;
-    modal.classList.add('active');
-    modal.style.display = 'flex';
+    const title = document.getElementById('detail-modal-title');
+    const body = document.getElementById('detail-modal-body');
+    if(title) title.textContent = stageTitle;
+    if(body) body.innerHTML = contentHtml;
+    if(modal) { modal.classList.add('active'); modal.style.display = 'flex'; }
 
   } catch (error) { showToast('Failed to load results', 'error'); }
 }
@@ -627,11 +697,12 @@ async function showStageValidationResults(stageKey) {
 async function loadRoadmapTasks() {
     const container = document.getElementById('tasks-container');
     const lockedMsg = document.getElementById('tasks-locked-message');
+    if(!container) return;
     container.innerHTML = '<p style="text-align:center;">Loading...</p>';
     try {
         const res = await api.getRoadmap();
-        if (!res.unlocked) { lockedMsg.style.display = 'block'; container.innerHTML = ''; return; }
-        lockedMsg.style.display = 'none';
+        if (!res.unlocked) { if(lockedMsg) lockedMsg.style.display = 'block'; container.innerHTML = ''; return; }
+        if(lockedMsg) lockedMsg.style.display = 'none';
         if (!res.tasks || res.tasks.length === 0) { container.innerHTML = '<p>No tasks available.</p>'; return; }
 
         container.innerHTML = res.tasks.map(task => {
@@ -659,8 +730,10 @@ async function completeTask(taskKey) {
     try {
         const res = await api.completeRoadmapTask(taskKey);
         showToast(res.message, 'success');
-        document.getElementById('header-points').textContent = res.totalPoints;
-        document.getElementById('reward-points').textContent = res.totalPoints;
+        const headerPoints = document.getElementById('header-points');
+        const rewardPoints = document.getElementById('reward-points');
+        if(headerPoints) headerPoints.textContent = res.totalPoints;
+        if(rewardPoints) rewardPoints.textContent = res.totalPoints;
         loadRoadmapTasks(); loadDashboard();
     } catch (err) { showToast(err.message || 'Failed to complete task', 'error'); }
 }
@@ -670,6 +743,7 @@ async function completeTask(taskKey) {
 // ==========================================
 async function loadAnalytics() {
   const grid = document.getElementById('analytics-grid');
+  if(!grid) return;
   grid.innerHTML = '<p style="text-align: center;">Loading...</p>';
   try {
     const result = await api.getAnalytics();
@@ -711,20 +785,19 @@ function renderSkeletons(containerId, count = 3) {
     container.innerHTML = html;
 }
 
-// Usage Example in loadInvestorsProviders:
 async function loadInvestorsProviders() {
   const gateEl = document.getElementById('investors-providers-gate-message');
   const contentEl = document.getElementById('investors-providers-content');
   
   try {
     const startup = await api.getStartup();
-    if ((startup?.validationScore ?? 0) < 70) { gateEl.style.display = 'block'; contentEl.style.display = 'none'; return; }
+    if ((startup?.validationScore ?? 0) < 70) { if(gateEl) gateEl.style.display = 'block'; if(contentEl) contentEl.style.display = 'none'; return; }
     
-    contentEl.style.display = 'block';
+    if(contentEl) contentEl.style.display = 'block';
     
-    // Show Skeletons immediately
-    document.getElementById('founder-investors-list').innerHTML = '<div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div>';
-    document.getElementById('founder-providers-list').innerHTML = '<div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div>';
+    // Show Skeletons
+    renderSkeletons('founder-investors-list');
+    renderSkeletons('founder-providers-list');
 
     const investors = await api.request('/founder/investors');
     const providers = await api.request('/founder/providers');
@@ -737,8 +810,9 @@ async function loadInvestorsProviders() {
 
 async function loadInvestors() {
   const list = document.getElementById('founder-investors-list');
+  if(!list) return;
   list.innerHTML = '<p style="text-align:center;">Loading...</p>';
-  const search = document.getElementById('investor-search').value;
+  const search = document.getElementById('investor-search')?.value;
   try {
     let endpoint = `/founder/investors?`; if(search) endpoint += `search=${encodeURIComponent(search)}&`;
     const investors = await api.request(endpoint);
@@ -748,9 +822,10 @@ async function loadInvestors() {
 
 async function loadProviders() {
   const list = document.getElementById('founder-providers-list');
+  if(!list) return;
   list.innerHTML = '<p style="text-align:center;">Loading...</p>';
-  const search = document.getElementById('provider-search').value;
-  const category = document.getElementById('provider-category').value;
+  const search = document.getElementById('provider-search')?.value;
+  const category = document.getElementById('provider-category')?.value;
   try {
     let endpoint = `/founder/providers?`; if(search) endpoint += `search=${encodeURIComponent(search)}&`; if(category && category !== 'all') endpoint += `category=${encodeURIComponent(category)}`;
     const providers = await api.request(endpoint);
@@ -758,31 +833,37 @@ async function loadProviders() {
   } catch(e) { list.innerHTML = '<p style="color:red; text-align:center;">Failed to load</p>'; }
 }
 
-document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
-  const name = document.getElementById('settings-full-name').value.trim();
-  if (!name) return showToast('Name cannot be empty', 'error');
-  try {
-    const res = await fetch(`${API_URL}/auth/profile`, { 
-        method: 'PUT', 
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-        body: JSON.stringify({ name }) 
+const updateProfileBtn = document.getElementById('update-profile-btn');
+if(updateProfileBtn) {
+    updateProfileBtn.addEventListener('click', async () => {
+      const name = document.getElementById('settings-full-name')?.value.trim();
+      if (!name) return showToast('Name cannot be empty', 'error');
+      try {
+        const res = await fetch(`${API_URL}/auth/profile`, { 
+            method: 'PUT', 
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+            body: JSON.stringify({ name }) 
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+
+        showToast('Profile updated successfully!', 'success');
+
+        const updatedUser = { ...user, name: data.user.name };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+
+        const userNameEl = document.getElementById('user-name');
+        if(userNameEl) userNameEl.textContent = data.user.name;
+        const avatarEl = document.querySelector('.user-avatar');
+        if(avatarEl) avatarEl.textContent = data.user.name.split(' ').map(n => n[0]).join('');
+
+      } catch (err) { showToast(err.message, 'error'); }
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message);
-
-    showToast('Profile updated successfully!', 'success');
-
-    const updatedUser = { ...user, name: data.user.name };
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-
-    document.getElementById('user-name').textContent = data.user.name;
-    document.querySelector('.user-avatar').textContent = data.user.name.split(' ').map(n => n[0]).join('');
-
-  } catch (err) { showToast(err.message, 'error'); }
-});
+}
 
 function renderInvestorList(investors) {
   const list = document.getElementById('founder-investors-list');
+  if(!list) return;
   list.innerHTML = '';
   if (!investors || investors.length === 0) { list.innerHTML = '<p style="text-align:center;">No investors found.</p>'; return; }
   
@@ -805,6 +886,7 @@ function renderInvestorList(investors) {
 
 function renderProviderList(providers) {
   const list = document.getElementById('founder-providers-list');
+  if(!list) return;
   list.innerHTML = '';
   if (!providers || providers.length === 0) { list.innerHTML = '<p style="text-align:center;">No providers found.</p>'; return; }
   
@@ -828,8 +910,6 @@ function renderProviderList(providers) {
   }).join('')}</div>`;
 }
 
-
-
 window.searchInvestors = loadInvestors;
 window.searchProviders = loadProviders;
 document.getElementById('investor-search')?.addEventListener('keypress', (e) => { if(e.key === 'Enter') loadInvestors(); });
@@ -838,29 +918,36 @@ document.getElementById('provider-search')?.addEventListener('keypress', (e) => 
 let currentRequestId = null;
 window.sendFounderRequest = function(providerId, providerName) {
     currentRequestId = providerId;
-    document.getElementById('founder-request-message').value = '';
-    document.getElementById('founder-request-modal-title').textContent = `Connect with ${providerName}`;
-    document.getElementById('founder-request-modal').classList.add('active');
+    const msgInput = document.getElementById('founder-request-message');
+    if(msgInput) msgInput.value = '';
+    const title = document.getElementById('founder-request-modal-title');
+    if(title) title.textContent = `Connect with ${providerName}`;
+    const modal = document.getElementById('founder-request-modal');
+    if(modal) modal.classList.add('active');
 }
 
-document.getElementById('submit-founder-request')?.addEventListener('click', async () => {
-    const message = document.getElementById('founder-request-message').value.trim();
-    if (!message) return showToast('Please enter a message.', 'error');
-    const btn = document.getElementById('submit-founder-request');
-    btn.disabled = true; btn.textContent = 'Sending...';
-    try {
-        const res = await fetch(`${API_URL}/founder/send-request`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ providerId: currentRequestId, message })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-        showToast('✅ ' + data.message, 'success');
-        document.getElementById('founder-request-modal').classList.remove('active');
-        loadInvestors(); loadProviders(); loadSentRequests();
-    } catch(e) { showToast('❌ ' + e.message, 'error'); btn.disabled = false; btn.textContent = 'Send Request'; }
-});
+const submitReqBtn = document.getElementById('submit-founder-request');
+if(submitReqBtn) {
+    submitReqBtn.addEventListener('click', async () => {
+        const message = document.getElementById('founder-request-message')?.value.trim();
+        if (!message) return showToast('Please enter a message.', 'error');
+        const btn = document.getElementById('submit-founder-request');
+        btn.disabled = true; btn.textContent = 'Sending...';
+        try {
+            const res = await fetch(`${API_URL}/founder/send-request`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ providerId: currentRequestId, message })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
+            showToast('✅ ' + data.message, 'success');
+            const modal = document.getElementById('founder-request-modal');
+            if(modal) modal.classList.remove('active');
+            loadInvestors(); loadProviders(); loadSentRequests();
+        } catch(e) { showToast('❌ ' + e.message, 'error'); btn.disabled = false; btn.textContent = 'Send Request'; }
+    });
+}
 
 // ==========================================
 // DETAIL MODAL & RATING
@@ -869,10 +956,10 @@ window.navigateToChat = function(partnerId, partnerName, partnerPic) {
     closeDetailModal(); 
 
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('chat-page').classList.add('active');
+    document.getElementById('chat-page')?.classList.add('active');
     
     document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-    document.querySelector('[data-page="chat"]').classList.add('active');
+    document.querySelector('[data-page="chat"]')?.classList.add('active');
     
     openChat(partnerId?.toString(), partnerName, partnerPic);
 };
@@ -881,17 +968,14 @@ async function openDetailModal(type, id) {
   const modal = document.getElementById('detail-modal');
   const title = document.getElementById('detail-modal-title');
   const body = document.getElementById('detail-modal-body');
-  title.textContent = type === 'investor' ? 'Investor Profile' : 'Provider Profile';
-  body.innerHTML = '<p>Loading...</p>';
-  modal.classList.add('active');
-  modal.style.display = 'flex';
+  if(title) title.textContent = type === 'investor' ? 'Investor Profile' : 'Provider Profile';
+  if(body) body.innerHTML = '<p>Loading...</p>';
+  if(modal) { modal.classList.add('active'); modal.style.display = 'flex'; }
   
   try {
     const data = type === 'investor' ? await api.getFounderInvestorDetail(id) : await api.getFounderProviderDetail(id);
     
-    // ==========================================
     // UPDATED VERIFICATION LOGIC
-    // ==========================================
     const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
     const isVerified = data.isVerified || verifiedStates.includes(data.status || data.state);
     
@@ -943,26 +1027,26 @@ async function openDetailModal(type, id) {
       </div>
     `;
 
-    // ==========================================
     // UPDATED HEADER HTML (META STYLE BADGE)
-    // ==========================================
-    body.innerHTML = `
-      <div style="text-align:center; margin-bottom: 1.5rem;">
-        <div class="profile-img-wrapper" style="width: 80px; height: 80px; border-radius: 50%; margin: 0 auto; border: 2px solid var(--border-color);">
-            <img src="${imgUrl}" style="border-radius: 50%;">
-            ${isVerified ? `<span class="verified-badge" style="display: flex;"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></span>` : ''}
-        </div>
-        <h2 style="margin: 0.5rem 0 0.25rem;">${data.name}</h2>
-        <div style="font-size: 0.9rem; color: var(--text-secondary);">${type === 'investor' ? 'Investor' : 'Service Provider'}</div>
-      </div>
-      ${detailsHtml}
-      <div style="margin-top: 1.5rem;">${actionBtnHtml}</div>
-      ${ratingSectionHtml}
-    `;
+    if(body) {
+        body.innerHTML = `
+          <div style="text-align:center; margin-bottom: 1.5rem;">
+            <div class="profile-img-wrapper" style="width: 80px; height: 80px; border-radius: 50%; margin: 0 auto; border: 2px solid var(--border-color);">
+                <img src="${imgUrl}" style="border-radius: 50%;">
+                ${isVerified ? `<span class="verified-badge" style="display: flex;"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></span>` : ''}
+            </div>
+            <h2 style="margin: 0.5rem 0 0.25rem;">${data.name}</h2>
+            <div style="font-size: 0.9rem; color: var(--text-secondary);">${type === 'investor' ? 'Investor' : 'Service Provider'}</div>
+          </div>
+          ${detailsHtml}
+          <div style="margin-top: 1.5rem;">${actionBtnHtml}</div>
+          ${ratingSectionHtml}
+        `;
+    }
 
     setupStarListeners();
 
-  } catch (err) { body.innerHTML = '<p style="color: var(--error);">Failed to load details.</p>'; }
+  } catch (err) { if(body) body.innerHTML = '<p style="color: var(--error);">Failed to load details.</p>'; }
 }
 
 let selectedRating = 0;
@@ -990,7 +1074,7 @@ function updateStarDisplay(rating) {
 }
 
 async function submitRating(targetUserId) {
-  const comment = document.getElementById('rating-comment').value.trim();
+  const comment = document.getElementById('rating-comment')?.value.trim();
   if (!selectedRating) return showToast('Please select a star rating.', 'error');
   try {
     const res = await fetch(`${API_URL}/founder/rate`, {
@@ -1011,6 +1095,7 @@ window.closeDetailModal = closeDetailModal;
 
 async function loadFounderRequests() {
     const list = document.getElementById('founder-requests-list');
+    if(!list) return;
     list.innerHTML = '<p style="text-align:center;">Loading...</p>';
     try {
         const res = await fetch(`${API_URL}/founder/requests`, { headers: { 'Authorization': `Bearer ${token}` } });
@@ -1018,7 +1103,8 @@ async function loadFounderRequests() {
         list.innerHTML = '';
         if (!reqs || reqs.length === 0) {
             list.innerHTML = '<p style="padding:2rem; text-align:center;">No requests yet.</p>';
-            document.getElementById('requests-badge').style.display = 'none';
+            const badge = document.getElementById('requests-badge');
+            if(badge) badge.style.display = 'none';
             return;
         }
 
@@ -1057,6 +1143,7 @@ async function loadFounderRequests() {
 
 async function loadSentRequests() {
     const list = document.getElementById('founder-sent-requests-list');
+    if(!list) return;
     list.innerHTML = '<p style="text-align:center;">Loading...</p>';
     try {
         const res = await fetch(`${API_URL}/founder/requests/sent`, { headers: { 'Authorization': `Bearer ${token}` }});
@@ -1131,38 +1218,37 @@ window.openChat = async function(partnerId, partnerName, partnerPic) {
     const chatInputArea = document.getElementById('chat-input-area');
     
     let headerAvatarHtml = partnerPic ? `<img src="${partnerPic}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : partnerName.charAt(0);
-    chatHeader.innerHTML = `<div class="chat-avatar">${headerAvatarHtml}</div> <span style="color:white; font-weight:600;">${partnerName}</span>`;
+    if(chatHeader) chatHeader.innerHTML = `<div class="chat-avatar">${headerAvatarHtml}</div> <span style="color:white; font-weight:600;">${partnerName}</span>`;
     
     if (window.innerWidth <= 768) {
-        chatList.style.display = 'none';
-        chatWindow.classList.add('active'); 
-        chatWindow.style.display = 'flex';
+        if(chatList) chatList.style.display = 'none';
+        if(chatWindow) { chatWindow.classList.add('active'); chatWindow.style.display = 'flex'; }
         
         let backBtn = document.getElementById('chat-back-btn');
-        if (!backBtn) {
+        if (!backBtn && chatHeader) {
             backBtn = document.createElement('button'); 
             backBtn.id = 'chat-back-btn'; 
             backBtn.className = 'chat-back-btn';
             backBtn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>`;
             backBtn.onclick = () => { 
-                chatWindow.classList.remove('active'); 
-                chatWindow.style.display = 'none'; 
-                chatList.style.display = 'flex'; 
+                if(chatWindow) { chatWindow.classList.remove('active'); chatWindow.style.display = 'none'; }
+                if(chatList) chatList.style.display = 'flex'; 
             };
             chatHeader.prepend(backBtn);
         }
     } else {
         // Desktop Logic Fix
-        chatWindow.style.display = 'flex'; // <--- THIS WAS MISSING
-        chatHeader.style.display = 'flex';
-        chatInputArea.style.display = 'flex';
+        if(chatWindow) chatWindow.style.display = 'flex';
+        if(chatHeader) chatHeader.style.display = 'flex';
+        if(chatInputArea) chatInputArea.style.display = 'flex';
     }
 
-    chatInputArea.style.display = 'flex';
+    if(chatInputArea) chatInputArea.style.display = 'flex';
 
     try {
         const msgs = await chatApiCall(`/${partnerId}`);
         const container = document.getElementById('messages-container');
+        if(!container) return;
         container.innerHTML = '';
         
         if(msgs.length === 0) { 
@@ -1196,7 +1282,7 @@ async function loadConversations() {
         searchInput.dataset.listenerAdded = 'true';
     }
 
-    listContainer.innerHTML = '<p style="text-align:center; padding: 2rem;">Loading...</p>';
+    if(listContainer) listContainer.innerHTML = '<p style="text-align:center; padding: 2rem;">Loading...</p>';
     
     try {
         const convs = await chatApiCall('/conversations');
@@ -1205,16 +1291,18 @@ async function loadConversations() {
 
     } catch(e) { 
         console.error(e);
-        listContainer.innerHTML = `
-          <div class="chat-error-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-            <p>Failed to load chats.</p>
-            <button class="btn btn-secondary btn-sm" onclick="loadConversations()">Retry</button>
-          </div>`;
+        if(listContainer) {
+            listContainer.innerHTML = `
+              <div class="chat-error-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <p>Failed to load chats.</p>
+                <button class="btn btn-secondary btn-sm" onclick="loadConversations()">Retry</button>
+              </div>`;
+        }
     }
 }
 
@@ -1229,6 +1317,7 @@ function filterConversations(searchTerm) {
 
 function renderConversationList(convs) {
     const listContainer = document.getElementById('conversations-container');
+    if(!listContainer) return;
     listContainer.innerHTML = '';
 
     if (!convs || convs.length === 0) { 
@@ -1256,9 +1345,10 @@ function renderConversationList(convs) {
 
 window.sendMessage = async function() {
     const input = document.getElementById('message-input');
-    const content = input.value.trim();
+    const content = input?.value.trim();
     if (!content || !currentChatPartnerId) return;
     const container = document.getElementById('messages-container');
+    if(!container) return;
     const emptyMsg = container.querySelector('p');
     if(emptyMsg) emptyMsg.remove();
     const div = document.createElement('div');
@@ -1266,7 +1356,7 @@ window.sendMessage = async function() {
     div.innerHTML = `<div class="message-bubble">${content}<div class="message-time" style="text-align: right;">Just now</div></div>`;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
-    input.value = '';
+    if(input) input.value = '';
     try { await chatApiCall('/send', 'POST', { receiverId: currentChatPartnerId, content }); } catch(e) { showToast('Failed to send message', 'error'); }
 };
 
@@ -1295,8 +1385,10 @@ async function chatApiCall(endpoint, method = 'GET', body = null) {
 // SETTINGS LOADERS
 // ==========================================
 function loadSettings() {
-  document.getElementById('settings-full-name').value = user.name || '';
-  document.getElementById('settings-email').value = user.email || '';
+  const nameInput = document.getElementById('settings-full-name');
+  const emailInput = document.getElementById('settings-email');
+  if(nameInput) nameInput.value = user.name || '';
+  if(emailInput) emailInput.value = user.email || '';
   
   fetch(`${API_URL}/auth/profile`, { headers: { 'Authorization': `Bearer ${token}` } })
     .then(r => r.json())
@@ -1304,7 +1396,8 @@ function loadSettings() {
        const profile = data.profile || data;
        
        // Update points in header
-       document.getElementById('header-points').textContent = profile.rewardPoints || 0;
+       const headerPoints = document.getElementById('header-points');
+       if(headerPoints) headerPoints.textContent = profile.rewardPoints || 0;
        
        // Update Profile Picture
        const previewImg = document.getElementById('settings-profile-preview');
@@ -1318,9 +1411,7 @@ function loadSettings() {
          }
        }
 
-       // ==========================================
-       // NEW: UPDATE VERIFIED BADGE VISIBILITY profile picture
-       // ==========================================
+       // UPDATE VERIFIED BADGE VISIBILITY
        const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
        const isApproved = verifiedStates.includes(profile.status);
        
@@ -1333,18 +1424,23 @@ function loadSettings() {
 }
 
 // Profile Update button listener
-document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
-  const name = document.getElementById('settings-full-name').value.trim();
-  if (!name) return showToast('Name cannot be empty', 'error');
-  try {
-    const res = await fetch(`${API_URL}/auth/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name }) });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message);
-    showToast('Profile updated successfully!', 'success');
-    document.getElementById('user-name').textContent = data.user.name;
-    document.querySelector('.user-avatar').textContent = data.user.name.split(' ').map(n => n[0]).join('');
-  } catch (err) { showToast(err.message, 'error'); }
-});
+const updateProfileBtnSettings = document.getElementById('update-profile-btn');
+if(updateProfileBtnSettings) {
+    updateProfileBtnSettings.addEventListener('click', async () => {
+      const name = document.getElementById('settings-full-name')?.value.trim();
+      if (!name) return showToast('Name cannot be empty', 'error');
+      try {
+        const res = await fetch(`${API_URL}/auth/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        showToast('Profile updated successfully!', 'success');
+        const userNameEl = document.getElementById('user-name');
+        if(userNameEl) userNameEl.textContent = data.user.name;
+        const avatarEl = document.querySelector('.user-avatar');
+        if(avatarEl) avatarEl.textContent = data.user.name.split(' ').map(n => n[0]).join('');
+      } catch (err) { showToast(err.message, 'error'); }
+    });
+}
 
 // ==========================================
 // SETTINGS: PROFILE PICTURE UPLOAD
@@ -1408,24 +1504,30 @@ if (fileInput) {
     });
 }
 
-document.getElementById('update-password-btn')?.addEventListener('click', async () => {
-    const curr = document.getElementById('current-password').value;
-    const newP = document.getElementById('new-password').value;
-    const conf = document.getElementById('confirm-password').value;
-    if(!curr || !newP || !conf) return showToast('Fill all password fields', 'error');
-    if(newP !== conf) return showToast('Passwords do not match', 'error');
-    if(newP.length < 8) return showToast('Password must be 8+ characters', 'error');
-    try {
-        const res = await fetch(`${API_URL}/auth/password`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ currentPassword: curr, newPassword: newP }) });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-        showToast('Password Updated!', 'success');
-    } catch(e) { showToast(e.message, 'error'); }
-});
+const updatePwdBtn = document.getElementById('update-password-btn');
+if(updatePwdBtn) {
+    updatePwdBtn.addEventListener('click', async () => {
+        const curr = document.getElementById('current-password')?.value;
+        const newP = document.getElementById('new-password')?.value;
+        const conf = document.getElementById('confirm-password')?.value;
+        if(!curr || !newP || !conf) return showToast('Fill all password fields', 'error');
+        if(newP !== conf) return showToast('Passwords do not match', 'error');
+        if(newP.length < 8) return showToast('Password must be 8+ characters', 'error');
+        try {
+            const res = await fetch(`${API_URL}/auth/password`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ currentPassword: curr, newPassword: newP }) });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
+            showToast('Password Updated!', 'success');
+        } catch(e) { showToast(e.message, 'error'); }
+    });
+}
 
-document.getElementById('logout-btn')?.addEventListener('click', () => {
-  if (confirm('Logout?')) { localStorage.clear(); window.location.href = 'login.html'; }
-});
+const logoutBtn = document.getElementById('logout-btn');
+if(logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      if (confirm('Logout?')) { localStorage.clear(); window.location.href = 'login.html'; }
+    });
+}
 
 // ==========================================
 // DELETE ACCOUNT MODAL LOGIC
@@ -1445,31 +1547,34 @@ function closeDeleteModal() {
 }
 window.closeDeleteModal = closeDeleteModal;
 
-document.getElementById('confirm-delete-action')?.addEventListener('click', async () => {
-    const inputVal = document.getElementById('delete-confirm-input').value;
-    if (inputVal !== 'DELETE') {
-        showToast("Please type 'DELETE' to confirm.", 'error');
-        return;
-    }
+const confirmDeleteBtn = document.getElementById('confirm-delete-action');
+if(confirmDeleteBtn) {
+    confirmDeleteBtn.addEventListener('click', async () => {
+        const inputVal = document.getElementById('delete-confirm-input')?.value;
+        if (inputVal !== 'DELETE') {
+            showToast("Please type 'DELETE' to confirm.", 'error');
+            return;
+        }
 
-    try {
-        const res = await fetch(`${API_URL}/auth/account`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        try {
+            const res = await fetch(`${API_URL}/auth/account`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
 
-        const data = await res.json();
+            const data = await res.json();
 
-        if (!res.ok) throw new Error(data.message || 'Failed to delete account');
+            if (!res.ok) throw new Error(data.message || 'Failed to delete account');
 
-        showToast('✅ Your account has been deleted successfully.', 'success');
-        localStorage.clear();
-        window.location.href = 'index.html';
+            showToast('✅ Your account has been deleted successfully.', 'success');
+            localStorage.clear();
+            window.location.href = 'index.html';
 
-    } catch (err) {
-        showToast(err.message, 'error');
-    }
-});
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    });
+}
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
