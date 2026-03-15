@@ -281,7 +281,7 @@ async function clearNotifications() {
 // ==========================================
 let socket;
 // REVERTED: Use the URL that was working for you
-const SOCKET_URL = "https://api.dolphinorg.in.app";
+const SOCKET_URL = "https://api.dolphinorg.in";
 
 if (typeof io === 'function' && userId && token) {
     try {
