@@ -460,51 +460,7 @@ function updateDashboardStats(startup) {
     if(tasksEl) tasksEl.textContent = `${completedTasks}/${totalTasks}`;
 }
 
-  // 2. FETCH FRESH DATA IN BACKGROUND
-  let startup = null;
-  try {
-    startup = await api.getStartup();
-    // Update Cache
-    if(startup) localStorage.setItem('startupData', JSON.stringify(startup));
-    
-    const userRes = await fetch(`${API_URL}/auth/profile`, { headers: { 'Authorization': `Bearer ${token}` } });
-    if (!userRes.ok) throw new Error("Could not fetch profile data");
-    const userData = await userRes.json();
-    const profile = userData.profile || userData;
-    
-    // Update points and badges
-    const headerPoints = document.getElementById('header-points');
-    const rewardPoints = document.getElementById('reward-points');
-    if(headerPoints) headerPoints.textContent = profile.rewardPoints ?? 0;
-    if(rewardPoints) rewardPoints.textContent = profile.rewardPoints ?? 0;
-    
-    if (profile.profilePicture) updateHeaderAvatar(profile.profilePicture);
-    
-    // Badge Logic
-    const isApproved = profile.isVerified || ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'].includes(profile.status);
-    
-    const navBadge = document.getElementById('navbar-verified-badge');
-    const settingsBadge = document.getElementById('settings-verified-badge');
-    
-    if(navBadge) navBadge.style.display = isApproved ? 'flex' : 'none';
-    if(settingsBadge) settingsBadge.style.display = isApproved ? 'flex' : 'none';
-
-    // Render Fresh Data
-    if (startup) {
-      renderStartupData(startup);
-      populateStagesList(startup);
-    } else {
-      showCreateStartupForm();
-    }
-  } catch (error) { 
-     console.log("Startup fetch failed:", error.message);
-     // If cache was empty and fetch failed, show form
-     const cachedStartup = localStorage.getItem('startupData');
-     if (!cachedStartup) {
-         showCreateStartupForm();
-     }
-  }
-}
+  
 
 function showCreateStartupForm() {
     const formContainer = document.getElementById('startup-form-container');
