@@ -344,42 +344,51 @@ if (typeof io === 'function' && userId && token) {
 // ==========================================
 // DASHBOARD & PROFILE
 // ==========================================
+// ==========================================
+// DASHBOARD & PROFILE - OPTIMIZED
+// ==========================================
 async function loadDashboard() {
-  // 1. INSTANT RENDER FROM CACHE (Safety Check)
+  // 1. INSTANT RENDER FROM CACHE (0ms latency for user)
+  // We render whatever we have saved locally immediately.
   try {
     const cachedStartup = localStorage.getItem('startupData');
+    const cachedUser = localStorage.getItem('user');
+    
     if (cachedStartup) {
         const parsedData = JSON.parse(cachedStartup);
-        // Only render if data seems valid (has an ID)
         if(parsedData && parsedData._id) {
             renderStartupData(parsedData);
             populateStagesList(parsedData);
-            // Also update stats immediately from cache
             updateDashboardStats(parsedData);
-        } else {
-            // If cache is corrupt (e.g. just "octopus"), clear it
-            localStorage.removeItem('startupData');
         }
     }
+    
+    // Update UI with cached user info instantly
+    if(cachedUser) {
+        const u = JSON.parse(cachedUser);
+        const headerPoints = document.getElementById('header-points');
+        const rewardPoints = document.getElementById('reward-points');
+        if(headerPoints) headerPoints.textContent = u.rewardPoints || 0;
+        if(rewardPoints) rewardPoints.textContent = u.rewardPoints || 0;
+    }
   } catch(e) {
-      console.warn("Cache read failed, clearing.", e);
-      localStorage.removeItem('startupData');
+      console.warn("Cache render failed", e);
   }
 
-  // 2. FETCH FRESH DATA IN BACKGROUND
-  let startup = null;
+  // 2. FETCH FRESH DATA IN PARALLEL (Background)
+  // We don't wait for startup to finish before fetching profile. Both run at the same time.
   try {
-    startup = await api.getStartup();
+    const [startup, userRes] = await Promise.all([
+        api.getStartup().catch(e => null), // Handle graceful failure
+        fetch(`${API_URL}/auth/profile`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json())
+    ]);
     
+    const profile = userRes.profile || userRes;
+
     // Update Cache
     if(startup) localStorage.setItem('startupData', JSON.stringify(startup));
     
-    const userRes = await fetch(`${API_URL}/auth/profile`, { headers: { 'Authorization': `Bearer ${token}` } });
-    if (!userRes.ok) throw new Error("Could not fetch profile data");
-    const userData = await userRes.json();
-    const profile = userData.profile || userData;
-    
-    // Update Points
+    // Update UI with fresh data
     const headerPoints = document.getElementById('header-points');
     const rewardPoints = document.getElementById('reward-points');
     if(headerPoints) headerPoints.textContent = profile.rewardPoints ?? 0;
@@ -398,17 +407,13 @@ async function loadDashboard() {
     if (startup) {
       renderStartupData(startup);
       populateStagesList(startup);
-      // *** THIS WAS MISSING - Update the stats cards ***
       updateDashboardStats(startup);
     } else {
-      showCreateStartupForm();
+      // Only show create form if we have NO cache AND no server data
+      if(!localStorage.getItem('startupData')) showCreateStartupForm();
     }
   } catch (error) { 
-     console.log("Startup fetch failed:", error.message);
-     const cachedStartup = localStorage.getItem('startupData');
-     if (!cachedStartup) {
-         showCreateStartupForm();
-     }
+     console.log("Background sync failed:", error.message);
   }
 }
 

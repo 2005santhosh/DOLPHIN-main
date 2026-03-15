@@ -7,6 +7,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const compression = require('compression');
 const connectDB = require('./config/db');
 const { securePage } = require('./middleware/securePage');
 const { initializeSocket } = require('./services/socketService');
@@ -69,6 +70,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.use(compression());
 app.post("/test-cors", (req, res) => {
   res.json({ message: "CORS working" });
 });
