@@ -63,9 +63,6 @@ const api = {
 };
 
 // ==========================================
-// HELPER: VERIFIED BADGE (WITH INLINE STYLES)
-// ==========================================
-// ==========================================
 // HELPER: VERIFIED BADGE (WITH WHITE CHECKMARK)
 // ==========================================
 function getVerifiedBadgeHtml(state) {
@@ -81,7 +78,6 @@ function getVerifiedBadgeHtml(state) {
     </svg>
   </span>`;
 }
-
 
 function identifyRequestType(req, currentUserId) {
   if (req.initiator === 'provider') return 'sent';
@@ -180,7 +176,68 @@ function showConfirm(message, onConfirm) {
 }
 
 // ==========================================
-// 4. CORE PAGE LOADERS (OPTIMIZED)
+// 4. NOTIFICATION LOGIC
+// ==========================================
+
+async function loadNotificationList() {
+    const list = document.getElementById('notif-list');
+    if(!list) return;
+    list.innerHTML = '<p style="padding:1rem; text-align:center;">Loading...</p>';
+    try {
+        const res = await fetch(`${API_URL}/notifications`, { headers: { 'Authorization': `Bearer ${token}` }});
+        const data = await res.json();
+        const notifications = data.notifications || [];
+        if (notifications.length === 0) return list.innerHTML = '<p style="padding:1rem; text-align:center; color:#666;">No notifications</p>';
+        list.innerHTML = notifications.map(n => `
+            <div class="notif-item ${n.read ? '' : 'unread'}" onclick="handleNotifClick('${n._id}')">
+                <div style="font-weight:600;">${n.title}</div>
+                <div style="font-size:0.85rem; color:#555;">${n.message}</div>
+                <div style="font-size:0.75rem; color:#999; margin-top:4px;">${new Date(n.createdAt).toLocaleString()}</div>
+            </div>
+        `).join('');
+    } catch(e) { list.innerHTML = '<p style="color:red; text-align:center;">Error</p>'; }
+}
+
+window.handleNotifClick = async (id) => { 
+    closeNotifDropdown(); 
+    await fetch(`${API_URL}/notifications/${id}/read`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); 
+    updateNotificationBadge(); 
+};
+
+async function updateNotificationBadge() {
+    try {
+        const res = await fetch(`${API_URL}/notifications`, { headers: { 'Authorization': `Bearer ${token}` }});
+        const data = await res.json();
+        const unread = (data.notifications || []).filter(n => !n.read).length;
+        const badge = document.getElementById('notif-badge-count');
+        if(badge) {
+            badge.textContent = unread;
+            badge.style.display = unread > 0 ? 'flex' : 'none';
+        }
+    } catch(e) {}
+}
+
+window.markAllRead = async () => {
+    try {
+        await fetch(`${API_URL}/notifications/read-all`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` }});
+        document.querySelectorAll('.notif-item.unread').forEach(i => i.classList.remove('unread'));
+        const badge = document.getElementById('notif-badge-count');
+        if(badge) { badge.style.display = 'none'; badge.textContent = '0'; }
+    } catch(e) { alert('Failed'); }
+};
+
+window.clearNotifications = async () => {
+    if(!confirm('Clear all?')) return;
+    try {
+        await fetch(`${API_URL}/notifications/clear`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }});
+        document.getElementById('notif-list').innerHTML = '<p style="padding:1rem; text-align:center;">No notifications</p>';
+        const badge = document.getElementById('notif-badge-count');
+        if(badge) { badge.style.display = 'none'; badge.textContent = '0'; }
+    } catch(e) { alert('Failed'); }
+};
+
+// ==========================================
+// 5. CORE PAGE LOADERS (OPTIMIZED)
 // ==========================================
 
 function loadPageContent(page) {
@@ -304,79 +361,10 @@ function loadSettings() {
           previewImg.src = profile.profilePicture.startsWith('http') ? profile.profilePicture : window.location.origin + profile.profilePicture;
       }
   });
-
-  // 3. IMAGE UPLOAD LOGIC (Click Camera/Image)
-  const fileInput = document.getElementById('profile-picture-input');
-  const uploadBtn = document.getElementById('upload-picture-btn');
-
-  // Helper function for upload
-  const handleUpload = async (file) => {
-      if (!file) return;
-      
-      // Validation
-      const validTypes = ['image/jpeg', 'image/png'];
-      if (!validTypes.includes(file.type)) return showToast('Only JPG/PNG allowed', 'error');
-      if (file.size > 5 * 1024 * 1024) return showToast('Max size 5MB', 'error');
-
-      const formData = new FormData();
-      formData.append('profilePicture', file);
-
-      // UI: Loading Animation
-      if(uploadBtn) {
-          uploadBtn.innerHTML = 'Uploading...';
-          uploadBtn.disabled = true;
-      }
-      if(previewImg) previewImg.style.opacity = '0.5';
-      
-      try {
-        const res = await fetch(`${API_URL}/auth/upload-profile-picture`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
-          body: formData
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-        
-        showToast('Picture updated!', 'success');
-        
-        // Update UI Everywhere
-        const newUrl = data.profilePicture + '?t=' + Date.now(); // Cache busting
-        if(previewImg) {
-            previewImg.src = newUrl;
-            previewImg.style.opacity = '1';
-        }
-        updateProviderHeaderAvatar(newUrl);
-        
-        // Update Cache
-        const cached = JSON.parse(localStorage.getItem('providerProfileCache') || '{}');
-        cached.profilePicture = newUrl;
-        localStorage.setItem('providerProfileCache', JSON.stringify(cached));
-
-      } catch (err) { showToast(err.message, 'error'); }
-      finally { 
-          if(uploadBtn) {
-              uploadBtn.innerHTML = 'Upload New Photo';
-              uploadBtn.disabled = false;
-          }
-          if(fileInput) fileInput.value = '';
-      }
-  };
-
-  // Event Listener for File Input
-  if(fileInput) {
-      fileInput.addEventListener('change', (e) => {
-          handleUpload(e.target.files[0]);
-      });
-  }
-  
-  // Event Listener for Button (trigger file input)
-  if(uploadBtn) {
-      uploadBtn.addEventListener('click', () => fileInput.click());
-  }
 }
 
 // ==========================================
-// 5. FOUNDERS PAGE LOGIC
+// 6. FOUNDERS PAGE LOGIC
 // ==========================================
 async function loadFounders() {
   const foundersList = document.getElementById('founders-list');
@@ -504,7 +492,7 @@ function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = 
 
 
 // ==========================================
-// 6. REQUESTS PAGE LOGIC
+// 7. REQUESTS PAGE LOGIC
 // ==========================================
 async function loadRequests() {
   try {
@@ -581,7 +569,7 @@ window.updateRequest = async function(id, status) {
 };
 
 // ==========================================
-// 7. CHAT LOGIC
+// 8. CHAT LOGIC
 // ==========================================
 window.allConversations = [];
 let currentChatPartnerId = null;
@@ -726,7 +714,7 @@ window.sendMessage = async function() {
 };
 
 // ==========================================
-// 8. MODALS & GLOBAL FUNCTIONS
+// 9. MODALS & GLOBAL FUNCTIONS
 // ==========================================
 
 window.viewFounderProfile = function(startupId) {
@@ -763,21 +751,13 @@ window.openRequestModal = function(startupId) {
 
 window.togglePassword = function(inputId) {
     const input = document.getElementById(inputId);
-    const icon = document.querySelector(`#${inputId}-toggle-icon`);
-    if (input.type === 'password') {
-        input.type = 'text';
-    } else {
-        input.type = 'password';
-    }
+    if (input) input.type = input.type === 'password' ? 'text' : 'password';
 };
 
 // Legal Modals
 const legalDocs = {
-    privacy: { title: "Privacy Policy", content: `
-                <p><strong>Effective Date:</strong> March, 2026</p>
-                <p>This privacy policy describes how Dolphin collects, uses, and shares your personal information.</p>` },
-    terms: { title: "Terms of Service", content: `<p><strong>Effective Date:</strong> March, 2026</p>
-                <p>Welcome to Dolphin. These Terms of Service govern your use of our website.</p>` }
+    privacy: { title: "Privacy Policy", content: `<p>Privacy Policy content...</p>` },
+    terms: { title: "Terms of Service", content: `<p>Terms content...</p>` }
 };
 
 window.openLegalModal = function(type) {
@@ -793,9 +773,34 @@ window.closeLegalModal = function() {
 };
 
 // ==========================================
-// 9. EVENT LISTENERS & INITIALIZATION
+// 10. EVENT LISTENERS & INITIALIZATION
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
+  
+  // --- FIX: NOTIFICATION LOGIC MOVED INSIDE DOMCONTENTLOADED ---
+  const notifBtn = document.getElementById('notification-btn');
+  const notifDropdown = document.getElementById('notification-dropdown');
+  
+  if (notifBtn && notifDropdown) {
+      notifDropdown.style.display = 'none'; // Ensure hidden on start
+
+      notifBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const isOpen = notifDropdown.style.display === 'flex';
+          notifDropdown.style.display = isOpen ? 'none' : 'flex';
+          if (!isOpen) await loadNotificationList();
+      });
+      
+      window.closeNotifDropdown = () => notifDropdown.style.display = 'none';
+      
+      window.addEventListener('click', (e) => {
+          if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
+              closeNotifDropdown();
+          }
+      });
+  }
+  // ---------------------------------------------------------
+
   // Set Header Info
   document.getElementById('user-name').textContent = user.name || 'Provider';
   const nameArray = (user.name || 'Provider').split(' ');
@@ -803,6 +808,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initial Load
   loadDashboard();
+  updateNotificationBadge();
 
   // Navigation
   document.querySelectorAll('.nav-item').forEach(item => {
@@ -927,11 +933,71 @@ document.addEventListener('DOMContentLoaded', () => {
           const data = await res.json();
           if (!res.ok) throw new Error(data.message || 'Failed to update');
           showToast('Password Updated!', 'success');
-          document.getElementById('current-password').value = '';
-          document.getElementById('new-password').value = '';
+          document.getElementById('current-password').value = ''; 
+          document.getElementById('new-password').value = ''; 
           document.getElementById('confirm-password').value = '';
       } catch(e) { showToast(e.message, 'error'); }
   });
+
+  // SETTINGS: Image Upload Logic
+  const fileInput = document.getElementById('profile-picture-input');
+  const uploadBtn = document.getElementById('upload-picture-btn');
+  const previewImg = document.getElementById('settings-profile-preview');
+
+  if (uploadBtn && fileInput) {
+      uploadBtn.addEventListener('click', () => fileInput.click());
+      
+      fileInput.addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          // Validation
+          if (file.size > 5000000) return showToast('Max size 5MB.', 'error');
+          
+          // Preview
+          const reader = new FileReader();
+          reader.onload = (ev) => { if(previewImg) previewImg.src = ev.target.result; };
+          reader.readAsDataURL(file);
+
+          // Upload
+          const fd = new FormData();
+          fd.append('profilePicture', file);
+
+          uploadBtn.innerHTML = 'Uploading...';
+          uploadBtn.disabled = true;
+
+          try {
+              const res = await fetch(`${API_URL}/auth/upload-profile-picture`, {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${token}` },
+                  body: fd
+              });
+              const d = await res.json();
+              if (!res.ok) throw new Error(d.message);
+              
+              showToast('Uploaded!', 'success');
+              
+              // Update UI & Cache
+              const newUrl = d.profilePicture;
+              user.profilePicture = newUrl;
+              localStorage.setItem('user', JSON.stringify(user));
+              
+              if(previewImg) previewImg.src = newUrl.startsWith('http') ? newUrl : window.location.origin + newUrl;
+              updateProviderHeaderAvatar(newUrl);
+
+              // Update Cache
+              const cached = JSON.parse(localStorage.getItem('providerProfileCache') || '{}');
+              cached.profilePicture = newUrl;
+              localStorage.setItem('providerProfileCache', JSON.stringify(cached));
+
+          } catch(err) { showToast(err.message, 'error'); }
+          finally { 
+              uploadBtn.innerHTML = 'Upload New Photo';
+              uploadBtn.disabled = false;
+              fileInput.value = '';
+          }
+      });
+  }
 
   // SETTINGS: Delete Account Button
   document.getElementById('delete-account-btn')?.addEventListener('click', async () => {
