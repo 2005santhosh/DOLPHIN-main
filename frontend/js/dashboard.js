@@ -301,73 +301,55 @@ if (typeof io === 'function' && userId) {
     });
 }
 
-// ==========================================
-// DASHBOARD & PROFILE
-// ==========================================
 async function loadDashboard() {
+  // 1. INSTANT RENDER FROM CACHE
+  const cachedStartup = localStorage.getItem('startupData');
+  if (cachedStartup) {
+      renderStartupData(JSON.parse(cachedStartup));
+      populateStagesList(JSON.parse(cachedStartup));
+  }
+
+  // 2. FETCH FRESH DATA IN BACKGROUND
   let startup = null;
   try {
     startup = await api.getStartup();
+    // Update Cache
+    if(startup) localStorage.setItem('startupData', JSON.stringify(startup));
+    
     const userRes = await fetch(`${API_URL}/auth/profile`, { headers: { 'Authorization': `Bearer ${token}` } });
     if (!userRes.ok) throw new Error("Could not fetch profile data");
     const userData = await userRes.json();
     const profile = userData.profile || userData;
-    const currentPoints = profile.rewardPoints ?? 0;
-
-    document.getElementById('header-points').textContent = currentPoints;
-    document.getElementById('reward-points').textContent = currentPoints;
+    
+    // Update points and badges
+    document.getElementById('header-points').textContent = profile.rewardPoints ?? 0;
+    document.getElementById('reward-points').textContent = profile.rewardPoints ?? 0;
     
     if (profile.profilePicture) updateHeaderAvatar(profile.profilePicture);
-    const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
-    const isApproved = verifiedStates.includes(profile.status);
+    
+    // Badge Logic
+    const isApproved = profile.isVerified || ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'].includes(profile.status);
     
     const navBadge = document.getElementById('navbar-verified-badge');
     const settingsBadge = document.getElementById('settings-verified-badge');
     
     if(navBadge) navBadge.style.display = isApproved ? 'flex' : 'none';
     if(settingsBadge) settingsBadge.style.display = isApproved ? 'flex' : 'none';
+
+    // Render Fresh Data
     if (startup) {
-      const validationStages = startup.validationStages || {};
-      let validatedCount = 0;
-      VALIDATION_STAGES.forEach(({ key }) => { if (validationStages[key]?.isValidated) validatedCount++; });
-
-      const totalStages = VALIDATION_STAGES.length;
-      const completionPercent = Math.round((validatedCount / totalStages) * 100);
-      const completedAttempts = VALIDATION_STAGES.filter(({ key }) => validationStages[key]?.completedAt).length;
-      const allCompleted = completedAttempts === totalStages;
-
-      document.getElementById('startup-name-display').textContent = startup.name;
-      document.getElementById('progress-text').textContent = `${completionPercent}% Complete (${validatedCount}/${totalStages} stages validated)`;
-      document.getElementById('progress-badge').textContent = allCompleted ? `${startup.validationScore}% Overall` : `Overall: Pending`;
-      document.getElementById('progress-fill').style.width = `${completionPercent}%`;
-      document.getElementById('stages-completed').textContent = `${validatedCount}/${totalStages}`;
-
-      const roadmapTasks = startup.roadmapTasks || [];
-      const completedTasks = roadmapTasks.filter(t => t.status === 'completed').length;
-      const totalTasks = roadmapTasks.length || 10;
-      document.getElementById('tasks-completed').textContent = `${completedTasks}/${totalTasks}`;
-
+      renderStartupData(startup);
       populateStagesList(startup);
     } else {
-      document.getElementById('startup-name-display').textContent = 'No Startup Found';
-      document.getElementById('progress-text').textContent = 'Create a startup to get started';
-      populateStagesList(null);
+      showCreateStartupForm();
     }
-    if (startup) renderStartupData(startup);
   } catch (error) { 
      console.log("Startup fetch failed:", error.message);
-     if (error.message.includes('No startup found') || error.message.includes('404')) {
-         showCreateStartupForm();
+     if (cachedStartup) {
+         // Already rendered cache, just show toast if needed
      } else {
-         const container = document.getElementById('startup-data-container');
-         if(container) container.innerHTML = `<p style="color:red; text-align:center;">Error loading data. Please refresh.</p>`;
+         showCreateStartupForm();
      }
-     return; 
-  }
-  if (startup) {
-      renderStartupData(startup);
-  } else {
-      showCreateStartupForm();
   }
 }
 
@@ -461,7 +443,7 @@ document.getElementById('profile-form').addEventListener('submit', async (e) => 
 });
 
 // ==========================================
-// STAGES VALIDATION LOGIC
+// STAGES VALIDATION LOGIC setting
 // ==========================================
 async function loadStages() {
   try {
@@ -718,20 +700,38 @@ function initCharts(perf, tasks) {
 // ==========================================
 // INVESTORS & PROVIDERS
 // ==========================================
+function renderSkeletons(containerId, count = 3) {
+    const container = document.getElementById(containerId);
+    if(!container) return;
+    
+    let html = '';
+    for(let i=0; i<count; i++) {
+        html += `<div class="skeleton skeleton-card"></div>`;
+    }
+    container.innerHTML = html;
+}
+
+// Usage Example in loadInvestorsProviders:
 async function loadInvestorsProviders() {
   const gateEl = document.getElementById('investors-providers-gate-message');
   const contentEl = document.getElementById('investors-providers-content');
+  
   try {
     const startup = await api.getStartup();
     if ((startup?.validationScore ?? 0) < 70) { gateEl.style.display = 'block'; contentEl.style.display = 'none'; return; }
+    
     contentEl.style.display = 'block';
+    
+    // Show Skeletons immediately
+    document.getElementById('founder-investors-list').innerHTML = '<div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div>';
+    document.getElementById('founder-providers-list').innerHTML = '<div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div>';
+
     const investors = await api.request('/founder/investors');
     const providers = await api.request('/founder/providers');
     
-    contentEl.innerHTML = `
-       <div class="card"><div class="card-header"><h3 class="card-title">Investors</h3></div><div class="profile-grid">${investors.map(inv => `<div class="profile-card" onclick="openDetailModal('investor', '${inv._id}')"><div class="profile-card-image"><img src="${inv.profilePicture || `https://ui-avatars.com/api/?name=${inv.name}`}"></div><div class="profile-card-body"><div><h4>${inv.name} ${getVerifiedBadge(inv.state)}</h4><p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">${(inv.interestAreas || []).slice(0, 2).join(', ') || 'General'}</p></div></div></div>`).join('')}</div></div>
-       <div class="card" style="margin-top:1.5rem;"><div class="card-header"><h3 class="card-title">Providers</h3></div><div class="profile-grid">${providers.map(prov => `<div class="profile-card" onclick="openDetailModal('provider', '${prov._id}')"><div class="profile-card-image"><img src="${prov.profilePicture || `https://ui-avatars.com/api/?name=${prov.name}`}"></div><div class="profile-card-body"><div><h4>${prov.name} ${getVerifiedBadge(prov.state)}</h4><p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">${prov.category || 'Provider'}</p></div></div></div>`).join('')}</div></div>
-    `;
+    renderInvestorList(investors);
+    renderProviderList(providers);
+    
   } catch(e) { console.error(e); }
 }
 
@@ -785,11 +785,20 @@ function renderInvestorList(investors) {
   const list = document.getElementById('founder-investors-list');
   list.innerHTML = '';
   if (!investors || investors.length === 0) { list.innerHTML = '<p style="text-align:center;">No investors found.</p>'; return; }
+  
   list.innerHTML = `<div class="profile-grid">${investors.map(inv => {
       const imgUrl = inv.profilePicture ? (inv.profilePicture.startsWith('http') ? inv.profilePicture : `${window.location.origin}${inv.profilePicture}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(inv.name || 'User')}&background=6366f1&color=fff&size=128`;
+      
       return `<div class="profile-card" onclick="openDetailModal('investor', '${inv._id}')">
-        <div class="profile-card-image"><img src="${imgUrl}" alt="${inv.name}"></div>
-        <div class="profile-card-body"><div><h4>${inv.name || 'Unknown'} ${getVerifiedBadge(inv)}</h4><p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">Investor</p></div></div>
+        <div class="profile-card-image">
+           <div class="profile-img-wrapper">
+            <img src="${imgUrl}" alt="${inv.name}">
+            ${getVerifiedBadge(inv)}
+           </div>
+        </div>
+        <div class="profile-card-body">
+            <div><h4>${inv.name || 'Unknown'}</h4><p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">Investor</p></div>
+        </div>
       </div>`;
   }).join('')}</div>`;
 }
@@ -798,6 +807,7 @@ function renderProviderList(providers) {
   const list = document.getElementById('founder-providers-list');
   list.innerHTML = '';
   if (!providers || providers.length === 0) { list.innerHTML = '<p style="text-align:center;">No providers found.</p>'; return; }
+  
   list.innerHTML = `<div class="profile-grid">${providers.map(prov => {
       const imgUrl = prov.profilePicture ? (prov.profilePicture.startsWith('http') ? prov.profilePicture : `${window.location.origin}${prov.profilePicture}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(prov.name || 'Service')}&background=10b981&color=fff&size=128`;
       let actionBtn = '';
@@ -807,11 +817,18 @@ function renderProviderList(providers) {
       else actionBtn = `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); sendFounderRequest('${prov.userId}', '${prov.name}')">Request</button>`;
       
       return `<div class="profile-card" onclick="openDetailModal('provider', '${prov._id}')">
-        <div class="profile-card-image"><img src="${imgUrl}" alt="${prov.name}"></div>
-        <div class="profile-card-body"><div><h4>${prov.name || 'Unknown'} ${getVerifiedBadge(prov)}</h4><p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">${prov.category || 'Provider'}</p></div>${actionBtn}</div>
+        <div class="profile-card-image">
+            <div class="profile-img-wrapper">
+                <img src="${imgUrl}" alt="${prov.name}">
+                ${getVerifiedBadge(prov)}
+            </div>
+        </div>
+        <div class="profile-card-body"><div><h4>${prov.name || 'Unknown'}</h4><p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">${prov.category || 'Provider'}</p></div>${actionBtn}</div>
       </div>`;
   }).join('')}</div>`;
 }
+
+
 
 window.searchInvestors = loadInvestors;
 window.searchProviders = loadProviders;
@@ -871,10 +888,16 @@ async function openDetailModal(type, id) {
   
   try {
     const data = type === 'investor' ? await api.getFounderInvestorDetail(id) : await api.getFounderProviderDetail(id);
-    const isVerified = data.state === 'APPROVED';
-    const verifiedHtml = isVerified ? '<span class="verified-badge"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></span>' : '';
+    
+    // ==========================================
+    // UPDATED VERIFICATION LOGIC
+    // ==========================================
+    const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
+    const isVerified = data.isVerified || verifiedStates.includes(data.status || data.state);
+    
     const imgUrl = data.profilePicture ? (data.profilePicture.startsWith('http') ? data.profilePicture : `${window.location.origin}${data.profilePicture}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name || 'User')}&background=${type === 'investor' ? '6366f1' : '10b981'}&color=fff`;
 
+    // Build Details HTML
     let detailsHtml = `<div style="margin-bottom: 8px; color: #555; line-height: 1.5;">${data.description || data.bio || 'No description provided.'}</div>`;
     detailsHtml += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 1rem 0; padding: 1rem; background: #f9fafb; border-radius: 8px; font-size: 0.9rem;">`;
     
@@ -920,10 +943,16 @@ async function openDetailModal(type, id) {
       </div>
     `;
 
+    // ==========================================
+    // UPDATED HEADER HTML (META STYLE BADGE)
+    // ==========================================
     body.innerHTML = `
       <div style="text-align:center; margin-bottom: 1.5rem;">
-        <img src="${imgUrl}" style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--border-color);">
-        <h2 style="margin: 0.5rem 0 0.25rem; display:flex; align-items:center; justify-content:center; gap:0.5rem;">${data.name} ${verifiedHtml}</h2>
+        <div class="profile-img-wrapper" style="width: 80px; height: 80px; border-radius: 50%; margin: 0 auto; border: 2px solid var(--border-color);">
+            <img src="${imgUrl}" style="border-radius: 50%;">
+            ${isVerified ? `<span class="verified-badge" style="display: flex;"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></span>` : ''}
+        </div>
+        <h2 style="margin: 0.5rem 0 0.25rem;">${data.name}</h2>
         <div style="font-size: 0.9rem; color: var(--text-secondary);">${type === 'investor' ? 'Investor' : 'Service Provider'}</div>
       </div>
       ${detailsHtml}
@@ -1321,13 +1350,14 @@ document.getElementById('update-profile-btn')?.addEventListener('click', async (
 // SETTINGS: PROFILE PICTURE UPLOAD
 // ==========================================
 const fileInput = document.getElementById('profile-picture-input');
+const uploadContainer = document.querySelector('.profile-edit-container'); // The wrapper div
 
 if (fileInput) {
-    // Listen for change directly on the input
     fileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
+        // Validation
         const validTypes = ['image/jpeg', 'image/png'];
         if (!validTypes.includes(file.type)) return showToast('Please select a JPG or PNG image.', 'error');
         if (file.size > 5 * 1024 * 1024) return showToast('File size exceeds 5MB limit.', 'error');
@@ -1335,10 +1365,16 @@ if (fileInput) {
         const formData = new FormData();
         formData.append('profilePicture', file);
 
-        // Show loading state on the image or container
-        const previewEl = document.getElementById('settings-profile-preview');
-        const originalSrc = previewEl.src;
-        previewEl.style.opacity = '0.5';
+        // ADD LOADING ANIMATION
+        if (uploadContainer) {
+            // Add spinner dynamically if it doesn't exist
+            if (!document.querySelector('.upload-spinner')) {
+                const spinner = document.createElement('div');
+                spinner.className = 'upload-spinner';
+                uploadContainer.appendChild(spinner);
+            }
+            uploadContainer.classList.add('uploading');
+        }
 
         try {
             const res = await fetch(`${API_URL}/auth/upload-profile-picture`, {
@@ -1348,29 +1384,26 @@ if (fileInput) {
             });
 
             const data = await res.json();
-
             if (!res.ok) throw new Error(data.message || 'Failed to upload image');
 
             const newImageUrl = data.profilePicture;
-            // Add timestamp to prevent caching
             const fullUrl = newImageUrl.startsWith('http') ? newImageUrl : `${window.location.origin}${newImageUrl}?t=${Date.now()}`;
 
-            // Update UI
+            const previewEl = document.getElementById('settings-profile-preview');
             if (previewEl) previewEl.src = fullUrl;
             updateHeaderAvatar(fullUrl);
 
-            // Update local storage
             const updatedUser = { ...user, profilePicture: newImageUrl };
             localStorage.setItem('user', JSON.stringify(updatedUser));
 
-            showToast('✅ Profile picture updated successfully!', 'success');
+            showToast('✅ Profile picture updated!', 'success');
 
         } catch (err) {
             showToast(err.message, 'error');
-            previewEl.src = originalSrc; // Revert on error
         } finally {
-            previewEl.style.opacity = '1';
-            fileInput.value = ''; // Reset input
+            // REMOVE LOADING ANIMATION
+            if (uploadContainer) uploadContainer.classList.remove('uploading');
+            fileInput.value = '';
         }
     });
 }
