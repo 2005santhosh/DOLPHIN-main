@@ -1510,7 +1510,7 @@ function loadSettings() {
 
        // UPDATE VERIFIED BADGE VISIBILITY
        const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
-       const isApproved = verifiedStates.includes(profile.status);
+       const isApproved = verifiedStates.includes(profile.state);
        
        const settingsBadge = document.getElementById('settings-verified-badge');
        if (settingsBadge) {
