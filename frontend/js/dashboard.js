@@ -345,18 +345,120 @@ if (typeof io === 'function' && userId && token) {
 // DASHBOARD & PROFILE
 // ==========================================
 async function loadDashboard() {
-  // 1. INSTANT RENDER FROM CACHE (WITH SAFETY TRY/CATCH)
+  // 1. INSTANT RENDER FROM CACHE (Safety Check)
   try {
     const cachedStartup = localStorage.getItem('startupData');
     if (cachedStartup) {
         const parsedData = JSON.parse(cachedStartup);
-        renderStartupData(parsedData);
-        populateStagesList(parsedData);
+        // Only render if data seems valid (has an ID)
+        if(parsedData && parsedData._id) {
+            renderStartupData(parsedData);
+            populateStagesList(parsedData);
+            // Also update stats immediately from cache
+            updateDashboardStats(parsedData);
+        } else {
+            // If cache is corrupt (e.g. just "octopus"), clear it
+            localStorage.removeItem('startupData');
+        }
     }
   } catch(e) {
-      console.warn("Failed to read cache, clearing it.", e);
-      localStorage.removeItem('startupData'); // Clear corrupted cache
+      console.warn("Cache read failed, clearing.", e);
+      localStorage.removeItem('startupData');
   }
+
+  // 2. FETCH FRESH DATA IN BACKGROUND
+  let startup = null;
+  try {
+    startup = await api.getStartup();
+    
+    // Update Cache
+    if(startup) localStorage.setItem('startupData', JSON.stringify(startup));
+    
+    const userRes = await fetch(`${API_URL}/auth/profile`, { headers: { 'Authorization': `Bearer ${token}` } });
+    if (!userRes.ok) throw new Error("Could not fetch profile data");
+    const userData = await userRes.json();
+    const profile = userData.profile || userData;
+    
+    // Update Points
+    const headerPoints = document.getElementById('header-points');
+    const rewardPoints = document.getElementById('reward-points');
+    if(headerPoints) headerPoints.textContent = profile.rewardPoints ?? 0;
+    if(rewardPoints) rewardPoints.textContent = profile.rewardPoints ?? 0;
+    
+    if (profile.profilePicture) updateHeaderAvatar(profile.profilePicture);
+    
+    // Update Badges
+    const isApproved = profile.isVerified || ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'].includes(profile.status);
+    const navBadge = document.getElementById('navbar-verified-badge');
+    const settingsBadge = document.getElementById('settings-verified-badge');
+    if(navBadge) navBadge.style.display = isApproved ? 'flex' : 'none';
+    if(settingsBadge) settingsBadge.style.display = isApproved ? 'flex' : 'none';
+
+    // Render Fresh Data
+    if (startup) {
+      renderStartupData(startup);
+      populateStagesList(startup);
+      // *** THIS WAS MISSING - Update the stats cards ***
+      updateDashboardStats(startup);
+    } else {
+      showCreateStartupForm();
+    }
+  } catch (error) { 
+     console.log("Startup fetch failed:", error.message);
+     const cachedStartup = localStorage.getItem('startupData');
+     if (!cachedStartup) {
+         showCreateStartupForm();
+     }
+  }
+}
+
+// *** ADD THIS NEW HELPER FUNCTION ***
+function updateDashboardStats(startup) {
+    if (!startup) return;
+
+    const validationStages = startup.validationStages || {};
+    
+    // 1. Calculate Stage Progress
+    let validatedCount = 0;
+    VALIDATION_STAGES.forEach(({ key }) => { 
+        if (validationStages[key]?.isValidated) validatedCount++; 
+    });
+
+    const totalStages = VALIDATION_STAGES.length;
+    const completionPercent = Math.round((validatedCount / totalStages) * 100);
+    
+    // 2. Update Progress Card
+    const nameEl = document.getElementById('startup-name-display');
+    if(nameEl) nameEl.textContent = startup.name || 'My Startup';
+    
+    const progressText = document.getElementById('progress-text');
+    if(progressText) progressText.textContent = `${completionPercent}% Complete (${validatedCount}/${totalStages} stages validated)`;
+    
+    const progressFill = document.getElementById('progress-fill');
+    if(progressFill) progressFill.style.width = `${completionPercent}%`;
+    
+    // Badge Logic
+    const completedAttempts = VALIDATION_STAGES.filter(({ key }) => validationStages[key]?.completedAt).length;
+    const allCompleted = completedAttempts === totalStages;
+    
+    const progressBadge = document.getElementById('progress-badge');
+    if(progressBadge) {
+        progressBadge.textContent = allCompleted ? `${startup.validationScore}% Overall` : `Overall: Pending`;
+        progressBadge.className = `list-item-status ${allCompleted ? 'status-approved' : 'status-pending'}`;
+    }
+
+    // 3. Update Stat Cards
+    const stagesEl = document.getElementById('stages-completed');
+    if(stagesEl) stagesEl.textContent = `${validatedCount}/${totalStages}`;
+
+    // 4. Update Tasks
+    const roadmapTasks = startup.roadmapTasks || [];
+    const completedTasks = roadmapTasks.filter(t => t.status === 'completed').length;
+    const totalTasks = roadmapTasks.length || 10; // Default to 10 if empty
+    
+    const tasksEl = document.getElementById('tasks-completed');
+    if(tasksEl) tasksEl.textContent = `${completedTasks}/${totalTasks}`;
+}
 
   // 2. FETCH FRESH DATA IN BACKGROUND
   let startup = null;
@@ -651,14 +753,37 @@ function closeIdeaValidationModal() {
 
 async function showStageValidationResults(stageKey) {
   try {
+    // Check if api method exists
+    if (!api || !api.getStartup) {
+        throw new Error("API helper is not loaded correctly.");
+    }
+
     const startup = await api.getStartup();
-    const rec = startup?.validationStages?.[stageKey];
-    if (!rec || !rec.completedAt) { showToast('No results yet.', 'info'); return; }
+    
+    if (!startup) {
+        showToast('No startup data found.', 'error');
+        return;
+    }
+
+    const rec = startup.validationStages?.[stageKey];
+    
+    if (!rec || !rec.completedAt) {
+        showToast('No results yet for this stage.', 'info');
+        return;
+    }
+
     const stageTitle = VALIDATION_STAGES.find(s => s.key === stageKey)?.title || stageKey;
     
-    let scoreColor = '#ef4444'; let statusText = 'Needs Improvement';
-    if (rec.score >= 70) { scoreColor = '#10b981'; statusText = 'Validated'; }
-    else if (rec.score >= 50) { scoreColor = '#f59e0b'; statusText = 'Almost There'; }
+    let scoreColor = '#ef4444'; 
+    let statusText = 'Needs Improvement';
+    
+    if (rec.score >= 70) { 
+        scoreColor = '#10b981'; 
+        statusText = 'Validated'; 
+    } else if (rec.score >= 50) { 
+        scoreColor = '#f59e0b'; 
+        statusText = 'Almost There'; 
+    }
 
     let answersHtml = (rec.answers || []).map((a, idx) => `
         <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
@@ -682,15 +807,18 @@ async function showStageValidationResults(stageKey) {
     `;
 
     const modal = document.getElementById('detail-modal');
-    const title = document.getElementById('detail-modal-title');
-    const body = document.getElementById('detail-modal-body');
-    if(title) title.textContent = stageTitle;
-    if(body) body.innerHTML = contentHtml;
+    const titleEl = document.getElementById('detail-modal-title');
+    const bodyEl = document.getElementById('detail-modal-body');
+    
+    if(titleEl) titleEl.textContent = stageTitle;
+    if(bodyEl) bodyEl.innerHTML = contentHtml;
     if(modal) { modal.classList.add('active'); modal.style.display = 'flex'; }
 
-  } catch (error) { showToast('Failed to load results', 'error'); }
+  } catch (error) {
+    console.error("Error loading stage results:", error);
+    showToast('Failed to load results: ' + error.message, 'error');
+  }
 }
-
 // ==========================================
 // TASKS & RESOURCES
 // ==========================================
@@ -968,13 +1096,23 @@ async function openDetailModal(type, id) {
   const modal = document.getElementById('detail-modal');
   const title = document.getElementById('detail-modal-title');
   const body = document.getElementById('detail-modal-body');
+  
   if(title) title.textContent = type === 'investor' ? 'Investor Profile' : 'Provider Profile';
   if(body) body.innerHTML = '<p>Loading...</p>';
   if(modal) { modal.classList.add('active'); modal.style.display = 'flex'; }
   
   try {
+    // Check if api methods exist
+    if (!api || !api.getFounderInvestorDetail || !api.getFounderProviderDetail) {
+        throw new Error("API methods missing. Check api.js file.");
+    }
+
     const data = type === 'investor' ? await api.getFounderInvestorDetail(id) : await api.getFounderProviderDetail(id);
     
+    if (!data) {
+        throw new Error("No data returned from server.");
+    }
+
     // UPDATED VERIFICATION LOGIC
     const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
     const isVerified = data.isVerified || verifiedStates.includes(data.status || data.state);
@@ -1046,7 +1184,10 @@ async function openDetailModal(type, id) {
 
     setupStarListeners();
 
-  } catch (err) { if(body) body.innerHTML = '<p style="color: var(--error);">Failed to load details.</p>'; }
+  } catch (err) {
+    console.error("Detail Modal Error:", err);
+    if(body) body.innerHTML = `<p style="color: var(--error);">Failed to load details: ${err.message}</p>`;
+  }
 }
 
 let selectedRating = 0;
@@ -1203,7 +1344,7 @@ function updateRequestsBadge(requests) {
 }
 
 // ==========================================
-// CHAT UI LOGIC (UPDATED)
+// CHAT UI LOGIC (UPDATED) stagevalidation
 // ==========================================
 let currentChatPartnerId = null;
 let allConversations = []; 
