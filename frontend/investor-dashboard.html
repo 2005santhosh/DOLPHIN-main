@@ -4,9 +4,32 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dolphin • Investor Dashboard</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐬</text></svg>">
+  
   <link rel="stylesheet" href="./css/investorDashboard.css">
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
   
+  <!-- Critical Styles for Settings & Upload -->
+  <style>
+    /* Verified Badge Styling */
+    .verified-badge {
+      position: absolute; bottom: -2px; right: -2px; background: #2563eb; border-radius: 50%; width: 18px; height: 18px; display: none; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 2;
+    }
+    .verified-badge svg { width: 10px; height: 10px; stroke: white; stroke-width: 3; }
+    .verified-badge.active { display: flex; }
+
+    /* Upload Overlay Styling */
+    .upload-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; background: rgba(0,0,0,0.5); cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; z-index: 1;
+    }
+    .avatar-wrapper:hover .upload-overlay { opacity: 1; }
+    .upload-overlay svg { color: white; }
+    
+    /* Spinning Animation for Loading */
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
 
@@ -60,15 +83,13 @@
       </div>
 
       <div class="user-menu" id="user-menu">
-    <!-- WRAPPER ADDED -->
-    <div class="avatar-wrapper">
-        <div class="user-avatar">AI</div>
-        <!-- BADGE ADDED -->
-        <span class="verified-badge" id="navbar-verified-badge">
-             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"></polyline></svg>
-        </span>
-    </div>
-</div>
+        <div class="avatar-wrapper">
+            <div class="user-avatar">AI</div>
+            <span class="verified-badge" id="navbar-verified-badge">
+                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </span>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -168,17 +189,12 @@
           <p class="page-subtitle">Talk to founders</p>
         </div>
         <div class="card">
-            <!-- Inside <div id="chat-page" class="page"> ... -->
-
-<div id="conversations-list">
-    <!-- Search Header -->
-    <div style="padding: 1rem; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;">
-        <input type="text" id="chat-search-input" class="form-input" placeholder="Search conversations..." style="margin-bottom: 0; background: var(--background); font-size: 0.95rem;">
-    </div>
-    
-    <!-- New Container for List Items (Important for JS targeting) -->
-    <div id="conversations-container"></div>
-</div>
+            <div id="conversations-list">
+                <div style="padding: 1rem; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10;">
+                    <input type="text" id="chat-search-input" class="form-input" placeholder="Search conversations..." style="margin-bottom: 0; background: var(--background); font-size: 0.95rem;">
+                </div>
+                <div id="conversations-container"></div>
+            </div>
             <div id="chat-window">
                 <div id="chat-header">
                     <button class="back-btn" onclick="closeChatMobile()">
@@ -204,24 +220,36 @@
          <div class="card">
             <div class="card-header"><h3 class="card-title">Account Settings</h3></div>
             <div style="padding: 2rem;">
+                
+                <!-- PROFILE PICTURE SECTION (UPDATED) -->
                 <div class="form-group" style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
-                   <div class="avatar-wrapper" style="position: relative;">
-        <img id="settings-profile-preview" src="https://ui-avatars.com/api/?name=User" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid #eee;">
-        <!-- BADGE ADDED -->
-        <span class="verified-badge" id="settings-verified-badge" style="width: 24px; height: 24px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"></polyline></svg>
-        </span>
-        
-        <!-- Keep your existing file input label logic below this or adjust z-index -->
-        <label for="profile-picture-input" style="position: absolute; bottom: 0; right: 0; ...">
-           <!-- camera icon -->
-        </label>
-        <input type="file" id="profile-picture-input" accept="image/*" style="display: none;">
-    </div>
+                   
+                   <!-- Wrapper: Added onclick to open file selector -->
+                   <div class="avatar-wrapper" style="position: relative; cursor: pointer;" onclick="document.getElementById('profile-picture-input').click()">
+                        <img id="settings-profile-preview" src="https://ui-avatars.com/api/?name=User" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid #eee;">
+                        
+                        <!-- Badge -->
+                        <span class="verified-badge" id="settings-verified-badge" style="width: 24px; height: 24px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </span>
+                        
+                        <!-- Camera Overlay (Shows on Hover) -->
+                        <div class="upload-overlay">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                                <circle cx="12" cy="13" r="4"></circle>
+                            </svg>
+                        </div>
+                        
+                        <input type="file" id="profile-picture-input" accept="image/*" style="display: none;">
+                   </div>
+                   
                   <div style="flex:1;">
+                     <!-- Button Text changes via JS to "Done" when file selected -->
                      <button id="upload-picture-btn" class="btn btn-secondary btn-sm">Upload Photo</button>
                   </div>
                 </div>
+
                 <div class="form-group">
                   <label class="form-label">Full Name</label>
                   <input type="text" class="form-input" id="settings-full-name" required>
@@ -291,7 +319,6 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
                     </div>
                 </a>
-                <!-- Modified: Direct link to support.html -->
                 <a href="support.html" class="list-item" style="text-decoration: none; color: inherit; border-bottom: none;">
                     <div class="list-item-content">
                         <div class="list-item-title">Support</div>
@@ -333,10 +360,9 @@
   <script src="./js/api.js"></script>
   <script src="./js/investorDashboard.js"></script>
   <script>
-    // Auth Guard: Run immediately before DOM renders
+    // Auth Guard
     (function() {
         const token = localStorage.getItem('token');
-        // If no token found, kick user to index immediately
         if (!token) {
             window.location.replace('index.html');
         }
