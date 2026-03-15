@@ -65,15 +65,18 @@ const api = {
 // ==========================================
 // HELPER: VERIFIED BADGE (WITH INLINE STYLES)
 // ==========================================
+// ==========================================
+// HELPER: VERIFIED BADGE (WITH WHITE CHECKMARK)
+// ==========================================
 function getVerifiedBadgeHtml(state) {
   const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
   
   // If not verified, return empty string
   if (!verifiedStates.includes(state)) return '';
 
-  // Return span with INLINE absolute positioning styles to ensure it shows on the image
-  return `<span class="verified-badge" style="position: absolute; bottom: 0; right: 0; background: #2563eb; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border: 2px solid white;">
-    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" style="width: 10px; height: 10px;">
+  // Inline styles ensure the White Checkmark appears on Blue Background
+  return `<span class="verified-badge" style="position: absolute; bottom: 0; right: 0; background: #2563eb; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="width: 10px; height: 10px;">
       <polyline points="20 6 9 17 4 12"></polyline>
     </svg>
   </span>`;
