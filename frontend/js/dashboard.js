@@ -260,7 +260,7 @@ async function clearNotifications() {
 // SOCKET.IO
 // ==========================================
 let socket;
-const SOCKET_URL = "https://api.dolphinorg.in";
+const SOCKET_URL = "https://api.dolphinorg.in.app";
 if (typeof io === 'function' && userId) {
     socket = io(SOCKET_URL,{ auth: { token: token } });
     socket.emit('join', userId);
