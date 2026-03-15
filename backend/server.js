@@ -18,7 +18,6 @@ const supportRoutes = require('./routes/support');
 dotenv.config();
 
 // --- CRITICAL FIX: GLOBAL ERROR HANDLERS ---
-// This prevents the server from crashing silently on errors
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION! 💥');
   console.error(err);
@@ -34,10 +33,7 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
-// Call the service function. It should return the 'io' instance.
-const io = initializeSocket(server); 
-
-// --- CORS SETUP ---
+// --- CORS SETUP (Defined BEFORE Socket Initialization) ---
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -53,9 +49,7 @@ const corsOptions = {
        return callback(null, true);
     }
 
-    // ==========================================
-    // FIX: Allow your new custom domain
-    // ==========================================
+    // FIX: Allow your new custom domain (checks string presence)
     if (origin.includes('dolphinorg.in')) {
        return callback(null, true);
     }
@@ -69,12 +63,21 @@ const corsOptions = {
   credentials: true
 };
 
+// Initialize Socket.io WITH the CORS options
+const io = initializeSocket(server, corsOptions); 
+
+// Apply CORS to Express
 app.use(cors(corsOptions));
 app.use(compression());
+
 app.post("/test-cors", (req, res) => {
   res.json({ message: "CORS working" });
 });
+
 // Make io accessible to routes (CRITICAL)
+app.set('socketio', io); 
+app.locals.tokenBlacklist = new Set();
+
 // 2. Apply Helmet with Cross-Origin Policy
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -85,7 +88,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.socket.io", "https://cdn.jsdelivr.net"],
       imgSrc: ["'self'", "data:", "https:"],
       fontSrc: ["'self'", "https:", "data:"],
-      connectSrc: ["*"],
+      connectSrc: ["*"], // Ensure this is open for Socket connections
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
@@ -99,12 +102,10 @@ app.use(helmet({
     },
   },
 }));
-app.set('socketio', io); 
-app.locals.tokenBlacklist = new Set();
+
 // Security middleware
 app.use(express.json()); 
 
-// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100
@@ -162,7 +163,6 @@ app.use('/api/provider', require('./routes/provider'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/admin/admin-notifications', require('./routes/admin-notifications'));
-
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

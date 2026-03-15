@@ -10,14 +10,11 @@ const userSockets = new Map(); // userId -> Set of socket IDs
 /**
  * Initialize Socket.io server
  * @param {Object} server - HTTP server instance
+ * @param {Object} corsOptions - CORS configuration object (from server.js)
  */
-function initializeSocket(server) {
+function initializeSocket(server, corsOptions) {
   io = socketIO(server, {
-    cors: {
-      origin: process.env.FRONTEND_URL || '*',
-      methods: ['GET', 'POST'],
-      credentials: true
-    }
+    cors: corsOptions // Use the same robust CORS logic as Express
   });
 
   // Authentication middleware
@@ -29,7 +26,7 @@ function initializeSocket(server) {
         return next(new Error('Authentication error: No token provided'));
       }
 
-            // Add fallback secret 'your-secret-key'
+      // Add fallback secret 'your-secret-key'
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mysecretkey');
       
       // Support both 'id' (correct) and fallback just in case
