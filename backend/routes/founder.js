@@ -809,11 +809,18 @@ const requireFounderValidationScore = async (req, res, next) => {
   }
 };
 
-// List all investors (for founders with score >= 70%)
+// @route   GET /api/founder/investors
+// @desc    List all investors (Restricted to Validated Founders)
+// @access  Private (Requires 70% Validation Score)
 router.get('/investors', protect, requireFounderValidationScore, async (req, res) => {
   try {
     const { search, sort } = req.query;
-    let query = { role: 'investor' };
+    
+    // ✅ FIX: Filter out deleted users explicitly
+    let query = { 
+      role: 'investor', 
+      isDeleted: { $ne: true } 
+    };
     
     if (search) {
       query.$or = [
@@ -822,12 +829,10 @@ router.get('/investors', protect, requireFounderValidationScore, async (req, res
       ];
     }
 
-    // Use .lean() for pure JSON objects (Much faster than Mongoose Documents)
     let investors = await User.find(query)
       .select('name email interestAreas stagePreference createdAt profilePicture rewardPoints state ratings')
       .lean();
 
-    // Map and calculate ratings in memory
     let results = investors.map(u => {
       const ratings = u.ratings || [];
       const totalScore = ratings.reduce((sum, r) => sum + (r.score || 0), 0);
@@ -847,7 +852,12 @@ router.get('/investors', protect, requireFounderValidationScore, async (req, res
       };
     });
 
-    // Sorting logic...
+    // Sorting
+    if (sort === 'rating') {
+      results.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
+    } else if (sort === 'name') {
+      results.sort((a, b) => a.name.localeCompare(b.name));
+    }
 
     res.json(results);
   } catch (err) {
@@ -855,18 +865,23 @@ router.get('/investors', protect, requireFounderValidationScore, async (req, res
     res.status(500).json({ message: 'Server error' });
   }
 });
-// backend/routes/founder.js
 
-// Get single investor detail (for founders with score >= 70%)
+// @route   GET /api/founder/investors/:id
+// @desc    Get single investor detail (Restricted)
 router.get('/investors/:id', protect, requireFounderValidationScore, async (req, res) => {
   try {
-    const investor = await User.findById(req.params.id)
-      .select('name email interestAreas stagePreference createdAt profilePicture rewardPoints state ratings');
+    // ✅ FIX: Filter out deleted users
+    const investor = await User.findOne({ 
+      _id: req.params.id, 
+      role: 'investor',
+      isDeleted: { $ne: true } 
+    })
+    .select('name email interestAreas stagePreference createdAt profilePicture rewardPoints state ratings');
 
     if (!investor) return res.status(404).json({ message: 'Investor not found' });
 
     const ratings = investor.ratings || [];
-    const totalScore = ratings.reduce((sum, r) => sum + (r.score || 0), 0);
+    const totalScore = ratings.reduce((sum, r) => sum => (r.score || 0), 0);
     const avgRating = ratings.length > 0 ? (totalScore / ratings.length) : 0;
 
     res.json({
@@ -879,7 +894,7 @@ router.get('/investors/:id', protect, requireFounderValidationScore, async (req,
       profilePicture: investor.profilePicture || "",
       rewardPoints: investor.rewardPoints || 0,
       state: investor.state,
-      rating: avgRating.toFixed(1) // Calculated Average
+      rating: avgRating.toFixed(1)
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
@@ -934,43 +949,53 @@ router.post('/rate', protect, async (req, res) => {
   }
 });
 // @route   GET /api/founder/providers
-// @route   GET /api/founder/providers
-// OPTIMIZED: Fixed N+1 Query Problem
-router.get('/providers', protect, requireFounderValidationScore, async (req, res) => {
+// @desc    Get all providers (Available to ALL founders, No validation gate)
+// @access  Private
+router.get('/providers', protect, async (req, res) => {
   try {
     const { search, sort, category } = req.query;
-    let query = {}; 
+    
+    // 1. Base Query: Filter by category AND Exclude deleted Providers
+    let query = { 
+      isDeleted: { $ne: true } // Assuming Provider schema has isDeleted
+    }; 
     
     if (category && category !== 'all') {
       query.category = new RegExp(category, 'i');
     }
 
-    // 1. Fetch providers efficiently (.lean() makes it 10x faster by returning plain JSON)
+    // 2. Fetch Providers
+    // ✅ CRITICAL: Use match in populate to exclude deleted Users
     let providers = await Provider.find(query)
-      .populate('userId', 'name email profilePicture state rewardPoints ratings')
+      .populate({
+        path: 'userId',
+        select: 'name email profilePicture state rewardPoints ratings',
+        match: { isDeleted: { $ne: true } } // Exclude if the User record is deleted
+      })
       .select('name category description bio experienceLevel specialties availability contactMethod rating userId verified')
-      .lean(); // CRITICAL: Use .lean() for speed
+      .lean(); 
 
     if (!providers || providers.length === 0) {
       return res.json([]);
     }
 
-    // 2. OPTIMIZED REQUEST FETCHING
-    // Instead of querying one by one, fetch ALL relevant requests in ONE single query
+    // 3. Filter out providers where the User was deleted (populate returns null if match fails)
+    providers = providers.filter(p => p.userId); 
+
+    // 4. OPTIMIZED REQUEST FETCHING
     const providerUserIds = providers.map(p => p.userId?._id).filter(id => id);
     
     const myRequests = await IntroRequest.find({
       founderId: req.user.id,
-      providerId: { $in: providerUserIds } // $in is fast and uses indexes
+      providerId: { $in: providerUserIds }
     }).select('providerId status').lean();
 
-    // 3. Create a map for O(1) lookup
     const requestMap = {};
     myRequests.forEach(r => {
       requestMap[r.providerId.toString()] = r.status;
     });
 
-    // 4. Process Data in Memory (Fast)
+    // 5. Process Data in Memory
     let results = providers.map(p => {
       const user = p.userId || {};
       const ratings = user.ratings || [];
@@ -996,7 +1021,7 @@ router.get('/providers', protect, requireFounderValidationScore, async (req, res
       };
     });
 
-    // Sort logic...
+    // Sort logic
     if (sort === 'rating') {
       results.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
     } else if (sort === 'name') {
@@ -1011,21 +1036,28 @@ router.get('/providers', protect, requireFounderValidationScore, async (req, res
 });
 
 // @route   GET /api/founder/providers/:id
-// @desc    Get single provider detail
-// @route   GET /api/founder/providers/:id
-router.get('/providers/:id', protect, requireFounderValidationScore, async (req, res) => {
+// @desc    Get single provider detail (Available to ALL founders)
+router.get('/providers/:id', protect, async (req, res) => {
   try {
-    const provider = await Provider.findById(req.params.id)
-      .populate('userId', 'name email profilePicture state rewardPoints ratings');
+    const provider = await Provider.findOne({ 
+      _id: req.params.id, 
+      isDeleted: { $ne: true } // Filter deleted providers
+    })
+    .populate({
+      path: 'userId',
+      select: 'name email profilePicture state rewardPoints ratings',
+      match: { isDeleted: { $ne: true } } // Filter deleted users
+    });
       
-    if (!provider) return res.status(404).json({ message: 'Provider not found' });
+    // Check if provider exists AND if the populated user exists
+    if (!provider || !provider.userId) return res.status(404).json({ message: 'Provider not found' });
 
-    const user = provider.userId || {};
+    const user = provider.userId;
     const ratings = user.ratings || [];
     const totalScore = ratings.reduce((sum, r) => sum + (parseFloat(r.score) || 0), 0);
     const avgRating = ratings.length > 0 ? (totalScore / ratings.length) : 0;
 
-    // ✅ Check Request Status
+    // Check Request Status
     const existingRequest = await IntroRequest.findOne({
       founderId: req.user.id,
       providerId: user._id
@@ -1046,7 +1078,6 @@ router.get('/providers/:id', protect, requireFounderValidationScore, async (req,
       availability: provider.availability || 'N/A',
       contactMethod: provider.contactMethod || 'N/A',
       rating: avgRating.toFixed(1),
-      // ✅ Attach status
       requestStatus: existingRequest ? existingRequest.status : null
     });
   } catch (err) {
