@@ -714,7 +714,7 @@ window.sendMessage = async function() {
 };
 
 // ==========================================
-// 9. MODALS & GLOBAL FUNCTIONS
+// 9. MODALS & GLOBAL FUNCTIONS notif
 // ==========================================
 
 window.viewFounderProfile = function(startupId) {
@@ -777,22 +777,38 @@ window.closeLegalModal = function() {
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   
-  // --- FIX: NOTIFICATION LOGIC MOVED INSIDE DOMCONTENTLOADED ---
+   // ==========================================
+  // --- FIX: NOTIFICATION LOGIC (USES .active CLASS) ---
+  // ==========================================
   const notifBtn = document.getElementById('notification-btn');
   const notifDropdown = document.getElementById('notification-dropdown');
   
   if (notifBtn && notifDropdown) {
-      notifDropdown.style.display = 'none'; // Ensure hidden on start
+      // 1. Ensure parent container allows absolute positioning
+      const parent = notifBtn.parentElement;
+      if (parent) parent.style.position = 'relative';
 
       notifBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          const isOpen = notifDropdown.style.display === 'flex';
-          notifDropdown.style.display = isOpen ? 'none' : 'flex';
-          if (!isOpen) await loadNotificationList();
+          
+          // 2. Toggle the .active CLASS (Matches your CSS)
+          const isOpen = notifDropdown.classList.contains('active');
+          
+          if (isOpen) {
+              notifDropdown.classList.remove('active');
+          } else {
+              notifDropdown.classList.add('active');
+              // Load content only when opening
+              await loadNotificationList();
+          }
       });
       
-      window.closeNotifDropdown = () => notifDropdown.style.display = 'none';
+      // Global function to close dropdown
+      window.closeNotifDropdown = () => {
+          notifDropdown.classList.remove('active');
+      };
       
+      // Close if clicking outside
       window.addEventListener('click', (e) => {
           if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
               closeNotifDropdown();
