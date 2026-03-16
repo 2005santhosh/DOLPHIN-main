@@ -95,18 +95,27 @@ router.put('/profile', protect, async (req, res) => {
 // ==========================================
 // 3. Get eligible founders (STRICT 5-STAGE LOGIC)
 // ==========================================
-// @route   GET /api/provider/eligible-founders
+// ==========================================
+// 3. Get eligible founders (NOW SHOWS ALL)
+// ==========================================
 // @route   GET /api/provider/eligible-founders
 router.get('/eligible-founders', protect, async (req, res) => {
   try {
-    // OPTIMIZATION: Use .lean()
-    const startups = await Startup.find({ validationScore: { $gte: 70 } })
-      .populate('founderId', 'name email profilePicture rewardPoints state') 
+    // 1. FETCH ALL STARTUPS
+    // REMOVED: .find({ validationScore: { $gte: 70 } })
+    const startups = await Startup.find({}) 
+      .populate({
+        path: 'founderId',
+        select: 'name email profilePicture rewardPoints state',
+        match: { isDeleted: { $ne: true } } // Exclude startups of deleted users
+      }) 
       .select('name thesis industry validationScore currentStage founderId')
       .lean();
 
     const eligibleFounders = startups.map(startup => {
       const user = startup.founderId;
+      
+      // If user is deleted (populate returns null) or missing, filter out
       if (!user) return null;
 
       return {
@@ -114,7 +123,7 @@ router.get('/eligible-founders', protect, async (req, res) => {
         startupName: startup.name,
         thesis: startup.thesis,
         industry: startup.industry,
-        validationScore: startup.validationScore,
+        validationScore: startup.validationScore || 0, // Default to 0 if null
         currentStage: startup.currentStage,
         founderId: {
           _id: user._id,
