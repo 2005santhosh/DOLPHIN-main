@@ -10,7 +10,7 @@ mongoose.connect(process.env.MONGO_URI);
 const User = require('../models/User');
 
 async function createAdmin() {
-  const email = 'admin@dolphin.com';
+  const email = 'adminpacific@dolphin.com';
   const exists = await User.findOne({ email });
 
   if (exists) {
@@ -18,7 +18,7 @@ async function createAdmin() {
     process.exit(0);
   }
 
-  const hashedPassword = await bcrypt.hash('Admin@1234', 10);
+  const hashedPassword = await bcrypt.hash('AdminDolPac@123#', 10);
 
   const admin = await User.create({
     name: 'Platform Admin',
