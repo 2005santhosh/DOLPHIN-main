@@ -224,7 +224,7 @@
         </div>
       </div>
 
-      <!-- Profile Page -->
+            <!-- Profile Page -->
       <div id="profile-page" class="page">
         <div class="page-header">
           <h1 class="page-title">Startup Profile</h1>
@@ -244,10 +244,19 @@
               <label class="form-label">Target Users</label>
               <input type="text" class="form-input" id="target-users" required>
             </div>
+            
+            <!-- ✅ UPDATED: Industry Select Input -->
             <div class="form-group">
               <label class="form-label">Industry</label>
-              <input type="text" class="form-input" id="industry" required>
+              <select class="form-select" id="industry" required>
+                <option value="General" selected>General</option>
+                <option value="Technology">Technology</option>
+                <option value="Healthcare">Healthcare</option>
+                <option value="Fintech">Fintech</option>
+                <option value="Retail/E-commerce">Retail/E-commerce</option>
+              </select>
             </div>
+            
             <button type="submit" class="btn btn-primary">Save Changes</button>
           </form>
         </div>
