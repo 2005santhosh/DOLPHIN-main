@@ -587,7 +587,7 @@ body {
   padding: 8px; margin-right: 8px;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  color: white; 
+  color: rgb(16, 4, 4); 
 }
 
 @media (max-width: 768px) {

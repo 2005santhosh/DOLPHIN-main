@@ -953,10 +953,23 @@ if(updateProfileBtn) {
 function renderInvestorList(investors) {
   const list = document.getElementById('founder-investors-list');
   if(!list) return;
-  list.innerHTML = '';
-  if (!investors || investors.length === 0) { list.innerHTML = '<p style="text-align:center;">No investors found.</p>'; return; }
   
-  list.innerHTML = `<div class="profile-grid">${investors.map(inv => {
+  // ✅ FILTER: Remove deleted profiles
+  const activeInvestors = (investors || []).filter(inv => {
+    // Check if the profile itself is deleted
+    if (inv.isDeleted === true || inv.status === 'deleted') return false;
+    // Check if the associated user is deleted (if user data is populated)
+    if (inv.userId && typeof inv.userId === 'object' && (inv.userId.isDeleted || inv.userId.status === 'deleted')) return false;
+    return true;
+  });
+
+  list.innerHTML = '';
+  if (!activeInvestors || activeInvestors.length === 0) { 
+      list.innerHTML = '<p style="text-align:center;">No investors found.</p>'; 
+      return; 
+  }
+  
+  list.innerHTML = `<div class="profile-grid">${activeInvestors.map(inv => {
       const imgUrl = inv.profilePicture ? (inv.profilePicture.startsWith('http') ? inv.profilePicture : `${window.location.origin}${inv.profilePicture}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(inv.name || 'User')}&background=6366f1&color=fff&size=128`;
       
       return `<div class="profile-card" onclick="openDetailModal('investor', '${inv._id}')">
@@ -976,13 +989,27 @@ function renderInvestorList(investors) {
 function renderProviderList(providers) {
   const list = document.getElementById('founder-providers-list');
   if(!list) return;
-  list.innerHTML = '';
-  if (!providers || providers.length === 0) { list.innerHTML = '<p style="text-align:center;">No providers found.</p>'; return; }
   
-  list.innerHTML = `<div class="profile-grid">${providers.map(prov => {
+  // ✅ FILTER: Remove deleted profiles
+  const activeProviders = (providers || []).filter(prov => {
+    // Check if the profile itself is deleted
+    if (prov.isDeleted === true || prov.status === 'deleted') return false;
+    // Check if the associated user is deleted (if user data is populated)
+    if (prov.userId && typeof prov.userId === 'object' && (prov.userId.isDeleted || prov.userId.status === 'deleted')) return false;
+    return true;
+  });
+
+  list.innerHTML = '';
+  if (!activeProviders || activeProviders.length === 0) { 
+      list.innerHTML = '<p style="text-align:center;">No providers found.</p>'; 
+      return; 
+  }
+  
+  list.innerHTML = `<div class="profile-grid">${activeProviders.map(prov => {
       const imgUrl = prov.profilePicture ? (prov.profilePicture.startsWith('http') ? prov.profilePicture : `${window.location.origin}${prov.profilePicture}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(prov.name || 'Service')}&background=10b981&color=fff&size=128`;
       let actionBtn = '';
       const status = prov.requestStatus;
+      
       if (status === 'accepted') actionBtn = `<button class="btn btn-success btn-sm" disabled>Connected</button>`;
       else if (status === 'pending') actionBtn = `<button class="btn btn-secondary btn-sm" disabled>Pending</button>`;
       else actionBtn = `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); sendFounderRequest('${prov.userId}', '${prov.name}')">Request</button>`;
