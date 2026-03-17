@@ -256,32 +256,40 @@ router.post('/block-user', protect, authorize('admin', 'investor'), async (req, 
 // Get pending approvals dashboard
 router.get('/dashboard', protect, authorize('admin', 'investor'), async (req, res) => {
   try {
-    const pendingUsers = await User.find({ state: 'PENDING_APPROVAL' }).countDocuments();
-    const approvedUsers = await User.find({ state: 'APPROVED' }).countDocuments();
-    const blockedUsers = await User.find({ state: 'BLOCKED' }).countDocuments();
+    // 1. FIX: Count total users directly from the collection
+    // Exclude soft-deleted users if your schema supports it, otherwise count all
+    const totalUsers = await User.countDocuments({}); 
     
-    const pendingProviders = await Provider.find({ verified: false }).countDocuments();
-    const verifiedProviders = await Provider.find({ verified: true }).countDocuments();
+    const pendingUsers = await User.countDocuments({ state: 'PENDING_APPROVAL' });
+    const blockedUsers = await User.countDocuments({ state: 'BLOCKED' });
     
-    const startups = await Startup.find();
-    const validatedStartups = startups.filter(s => s.validationScore >= 70).length;
-    const totalStartups = startups.length;
+    // Calculate active users (Total - Pending - Blocked)
+    const activeUsers = totalUsers - pendingUsers - blockedUsers;
 
-    const pendingTaskSubmissions = startups.reduce((acc, startup) => {
-      startup.milestones.forEach(milestone => {
-        if (milestone.taskSubmissions) {
-          acc += milestone.taskSubmissions.filter(t => t.status === 'Submitted').length;
-        }
-      });
-      return acc;
-    }, 0);
+    // 2. Providers Count
+    const pendingProviders = await Provider.countDocuments({ verified: false });
+    const verifiedProviders = await Provider.countDocuments({ verified: true });
+    
+    // 3. Startups Count
+    // Optimization: Use countDocuments instead of fetching all startups
+    const totalStartups = await Startup.countDocuments({});
+    const validatedStartups = await Startup.countDocuments({ validationScore: { $gte: 70 } });
+
+    const pendingTaskSubmissions = await Startup.aggregate([
+      { $unwind: "$milestones" },
+      { $unwind: "$milestones.taskSubmissions" },
+      { $match: { "milestones.taskSubmissions.status": "Submitted" } },
+      { $count: "total" }
+    ]);
+
+    const tasksCount = pendingTaskSubmissions.length > 0 ? pendingTaskSubmissions[0].total : 0;
 
     res.json({
       users: {
         pending: pendingUsers,
-        approved: approvedUsers,
+        approved: activeUsers, // This now correctly includes users in STAGE_1, STAGE_2, etc.
         blocked: blockedUsers,
-        total: pendingUsers + approvedUsers + blockedUsers
+        total: totalUsers
       },
       providers: {
         pending: pendingProviders,
@@ -294,14 +302,14 @@ router.get('/dashboard', protect, authorize('admin', 'investor'), async (req, re
         percentage: totalStartups > 0 ? ((validatedStartups / totalStartups) * 100).toFixed(1) : 0
       },
       tasks: {
-        pendingReview: pendingTaskSubmissions
+        pendingReview: tasksCount
       }
     });
   } catch (error) {
+    console.error('Dashboard Error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 // Get pending users
 router.get('/pending-users', protect, authorize('admin', 'investor'), async (req, res) => {
   try {
