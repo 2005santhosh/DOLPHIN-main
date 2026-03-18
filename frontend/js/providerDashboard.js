@@ -5,25 +5,67 @@ const API_URL = 'https://api.dolphinorg.in/api';
 const API_BASE = `${API_URL}/provider`;
 const AUTH_BASE = `${API_URL}/auth`;
 
-const user = JSON.parse(localStorage.getItem('user') || '{}');
-const token = localStorage.getItem('token');
-const userId = (user._id || user.id)?.toString();
+// We no longer store the token in a JS variable. It is in an HttpOnly Cookie.
+let user = {};
+let userId = null;
 
-if (!token) console.warn("No token found.");
+try {
+    user = JSON.parse(localStorage.getItem('user') || '{}');
+    userId = user._id || user.id;
+} catch (e) {
+    console.warn("LocalStorage access blocked.");
+}
 
 // ==========================================
-// 2. API & HELPER FUNCTIONS
+// 2. AUTH CHECK (COOKIE BASED)
+// ==========================================
+async function checkAuthStatus() {
+    try {
+        const res = await fetch(`${API_URL}/auth/profile`, { 
+            credentials: 'include' // IMPORTANT: Send the HttpOnly cookie
+        });
+
+        if (res.status === 401) {
+            // Not authenticated
+            window.location.href = 'login.html';
+            return false;
+        }
+
+        const data = await res.json();
+        user = data.profile || data;
+        userId = user._id || user.id;
+        
+        // Update UI immediately
+        document.getElementById('user-name').textContent = user.name || 'Provider';
+        const nameArray = (user.name || 'Provider').split(' ');
+        document.querySelector('.user-avatar').textContent = nameArray.map(n => n.charAt(0)).join('');
+        
+        return true;
+    } catch (error) {
+        console.error("Auth check failed:", error);
+        window.location.href = 'login.html';
+        return false;
+    }
+}
+
+// ==========================================
+// 3. API & HELPER FUNCTIONS (FIXED FOR COOKIES)
 // ==========================================
 
 async function apiCall(endpoint, method = 'GET', body = null, base = API_BASE) {
   const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const config = { method, headers };
+  // FIX: Removed Authorization header
+  const config = { 
+      method, 
+      headers,
+      credentials: 'include' // FIX: Added credentials
+  };
   if (body) config.body = JSON.stringify(body);
 
   try {
     const response = await fetch(`${base}${endpoint}`, config);
     if (response.status === 401) {
+      // Cookie might be invalid or expired
       localStorage.clear();
       window.location.href = 'login.html';
       return;
@@ -40,8 +82,12 @@ async function apiCall(endpoint, method = 'GET', body = null, base = API_BASE) {
 }
 
 async function chatApiCall(endpoint, method = 'GET', body = null) {
-  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
-  const config = { method, headers };
+  const headers = { 'Content-Type': 'application/json' };
+  const config = { 
+      method, 
+      headers,
+      credentials: 'include' // FIX: Added credentials
+  };
   if (body) config.body = JSON.stringify(body);
   const response = await fetch(`${API_URL}/chat${endpoint}`, config);
   if (!response.ok) throw new Error('Network Error');
@@ -63,15 +109,12 @@ const api = {
 };
 
 // ==========================================
-// HELPER: VERIFIED BADGE (WITH WHITE CHECKMARK)
+// HELPER: VERIFIED BADGE
 // ==========================================
 function getVerifiedBadgeHtml(state) {
   const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
-  
-  // If not verified, return empty string
   if (!verifiedStates.includes(state)) return '';
 
-  // Inline styles ensure the White Checkmark appears on Blue Background
   return `<span class="verified-badge" style="position: absolute; bottom: 0; right: 0; background: #2563eb; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
     <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="width: 10px; height: 10px;">
       <polyline points="20 6 9 17 4 12"></polyline>
@@ -96,7 +139,6 @@ function updateProviderHeaderAvatar(imageUrl) {
   }
 }
 
-// Toggles visibility of verified badges in Navbar and Settings
 function updateVerifiedBadges(state) {
     const verifiedStates = ['APPROVED', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_5', 'STAGE_6', 'STAGE_7'];
     const isApproved = verifiedStates.includes(state);
@@ -118,9 +160,8 @@ function navigateToPage(pageName) {
 }
 
 // ==========================================
-// 3. UI HELPERS: TOAST & CONFIRM
+// 4. UI HELPERS: TOAST & CONFIRM
 // ==========================================
-
 function showToast(message, type = 'info') {
   const container = document.getElementById('toast-container');
   if (!container) return;
@@ -176,15 +217,15 @@ function showConfirm(message, onConfirm) {
 }
 
 // ==========================================
-// 4. NOTIFICATION LOGIC
+// 5. NOTIFICATION LOGIC (FIXED)
 // ==========================================
-
 async function loadNotificationList() {
     const list = document.getElementById('notif-list');
     if(!list) return;
     list.innerHTML = '<p style="padding:1rem; text-align:center;">Loading...</p>';
     try {
-        const res = await fetch(`${API_URL}/notifications`, { headers: { 'Authorization': `Bearer ${token}` }});
+        // FIX: Added credentials
+        const res = await fetch(`${API_URL}/notifications`, { credentials: 'include' });
         const data = await res.json();
         const notifications = data.notifications || [];
         if (notifications.length === 0) return list.innerHTML = '<p style="padding:1rem; text-align:center; color:#666;">No notifications</p>';
@@ -200,13 +241,15 @@ async function loadNotificationList() {
 
 window.handleNotifClick = async (id) => { 
     closeNotifDropdown(); 
-    await fetch(`${API_URL}/notifications/${id}/read`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }); 
+    // FIX: Added credentials
+    await fetch(`${API_URL}/notifications/${id}/read`, { method: 'PUT', credentials: 'include' }); 
     updateNotificationBadge(); 
 };
 
 async function updateNotificationBadge() {
     try {
-        const res = await fetch(`${API_URL}/notifications`, { headers: { 'Authorization': `Bearer ${token}` }});
+        // FIX: Added credentials
+        const res = await fetch(`${API_URL}/notifications`, { credentials: 'include' });
         const data = await res.json();
         const unread = (data.notifications || []).filter(n => !n.read).length;
         const badge = document.getElementById('notif-badge-count');
@@ -219,7 +262,8 @@ async function updateNotificationBadge() {
 
 window.markAllRead = async () => {
     try {
-        await fetch(`${API_URL}/notifications/read-all`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` }});
+        // FIX: Added credentials
+        await fetch(`${API_URL}/notifications/read-all`, { method: 'PUT', credentials: 'include' });
         document.querySelectorAll('.notif-item.unread').forEach(i => i.classList.remove('unread'));
         const badge = document.getElementById('notif-badge-count');
         if(badge) { badge.style.display = 'none'; badge.textContent = '0'; }
@@ -229,7 +273,8 @@ window.markAllRead = async () => {
 window.clearNotifications = async () => {
     if(!confirm('Clear all?')) return;
     try {
-        await fetch(`${API_URL}/notifications/clear`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }});
+        // FIX: Added credentials
+        await fetch(`${API_URL}/notifications/clear`, { method: 'DELETE', credentials: 'include' });
         document.getElementById('notif-list').innerHTML = '<p style="padding:1rem; text-align:center;">No notifications</p>';
         const badge = document.getElementById('notif-badge-count');
         if(badge) { badge.style.display = 'none'; badge.textContent = '0'; }
@@ -237,9 +282,8 @@ window.clearNotifications = async () => {
 };
 
 // ==========================================
-// 5. CORE PAGE LOADERS (OPTIMIZED)
+// 6. CORE PAGE LOADERS
 // ==========================================
-
 function loadPageContent(page) {
   switch(page) {
     case 'dashboard': loadDashboard(); break;
@@ -252,7 +296,6 @@ function loadPageContent(page) {
 }
 
 async function loadDashboard() {
-  // 1. INSTANT RENDER FROM CACHE (0ms latency)
   try {
     const cachedProfile = localStorage.getItem('providerProfileCache');
     if (cachedProfile) {
@@ -262,7 +305,6 @@ async function loadDashboard() {
     }
   } catch(e) {}
 
-  // 2. PARALLEL FETCH (Background Sync)
   try {
     const [profile, requests, founders] = await Promise.all([
         api.getProfile(),
@@ -270,18 +312,13 @@ async function loadDashboard() {
         api.getEligibleFounders()
     ]);
 
-    // Update Cache
     localStorage.setItem('providerProfileCache', JSON.stringify(profile));
-
-    // Render Fresh Data
     renderDashboardUI(profile);
     updateVerifiedBadges(profile.state);
     
-    // Update Header Avatar
     if (profile.profilePicture) updateProviderHeaderAvatar(profile.profilePicture);
     else if (profile.userId?.profilePicture) updateProviderHeaderAvatar(profile.userId.profilePicture);
 
-    // Update Stats
     document.getElementById('avg-rating').textContent = profile.avgRating || '0.0';
     const activeEngagements = requests.filter(r => r.status === 'accepted').length;
     document.getElementById('active-engagements').textContent = activeEngagements;
@@ -291,7 +328,6 @@ async function loadDashboard() {
     document.getElementById('response-rate').textContent = totalClosed > 0 ? Math.round((acceptedRequests / totalClosed) * 100) + '%' : '0%';
     document.getElementById('eligible-founders').textContent = String(founders?.length || 0);
 
-    // Recent Activity
     const recentActivity = document.getElementById('recent-activity');
     recentActivity.innerHTML = '';
     if (requests.length === 0) {
@@ -336,16 +372,13 @@ async function loadProfile() {
 }
 
 function loadSettings() {
-  // 1. Load Basic Info
   const nameInput = document.getElementById('settings-full-name');
   const emailInput = document.getElementById('settings-email');
   if(nameInput) nameInput.value = user.name || '';
   if(emailInput) emailInput.value = user.email || '';
   
-  // 2. Handle Profile Picture & Badge
   const previewImg = document.getElementById('settings-profile-preview');
   
-  // Load from cache instantly
   const cachedProfile = localStorage.getItem('providerProfileCache');
   if (cachedProfile) {
       const p = JSON.parse(cachedProfile);
@@ -354,7 +387,6 @@ function loadSettings() {
       updateVerifiedBadges(p.state);
   }
 
-  // Fresh fetch in background
   api.getProfile().then(profile => {
       updateVerifiedBadges(profile.state);
       if (profile.profilePicture && previewImg) {
@@ -364,14 +396,13 @@ function loadSettings() {
 }
 
 // ==========================================
-// 6. FOUNDERS PAGE LOGIC
+// 7. FOUNDERS PAGE LOGIC
 // ==========================================
 async function loadFounders() {
   const foundersList = document.getElementById('founders-list');
   foundersList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">Loading...</p>';
 
   try {
-    // OPTIMIZED: Fetch in parallel
     const [founders, requests] = await Promise.all([
         api.getEligibleFounders(),
         api.getMyRequests()
@@ -430,9 +461,6 @@ function filterFounders(allFounders, sentMap, incomingMap) {
     }
 }
 
-// ==========================================
-// HELPER: CREATE FOUNDER CARD (FIXED)
-// ==========================================
 function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = {}) {
   const card = document.createElement('div');
   card.className = 'founder-card';
@@ -463,7 +491,6 @@ function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = 
       actionsHtml = `<button class="btn btn-primary" onclick="openRequestModal('${startupIdStr}')">Send Connection Request</button><button class="btn btn-secondary" onclick="viewFounderProfile('${startupIdStr}')">View Profile</button>`;
   }
 
-  // FIX: Wrap Image and Badge in a container with position: relative
   const imageContainer = `
     <div style="position: relative; width: 48px; height: 48px; flex-shrink: 0;">
         <img src="${profileImg}" alt="${founderName}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
@@ -490,9 +517,8 @@ function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = 
   return card;
 }
 
-
 // ==========================================
-// 7. REQUESTS PAGE LOGIC
+// 8. REQUESTS PAGE LOGIC
 // ==========================================
 async function loadRequests() {
   try {
@@ -569,7 +595,7 @@ window.updateRequest = async function(id, status) {
 };
 
 // ==========================================
-// 8. CHAT LOGIC
+// 9. CHAT LOGIC
 // ==========================================
 window.allConversations = [];
 let currentChatPartnerId = null;
@@ -632,14 +658,11 @@ function renderConversations(conversations) {
 function setupChatSearch() {
   const searchInput = document.getElementById('chat-search-input');
   if (!searchInput) return;
-
   const newInput = searchInput.cloneNode(true);
   searchInput.parentNode.replaceChild(newInput, searchInput);
-
   newInput.addEventListener('input', (e) => {
     const term = e.target.value.toLowerCase().trim();
     if (!term) return renderConversations(window.allConversations);
-
     const filtered = window.allConversations.filter(c => {
       let partnerName = '';
       if (c.name) partnerName = c.name;
@@ -714,7 +737,7 @@ window.sendMessage = async function() {
 };
 
 // ==========================================
-// 9. MODALS & GLOBAL FUNCTIONS notif
+// 10. MODALS & GLOBAL FUNCTIONS
 // ==========================================
 
 window.viewFounderProfile = function(startupId) {
@@ -723,18 +746,18 @@ window.viewFounderProfile = function(startupId) {
   if (!target) return;
 
   profileModal.classList.add('active');
-  const user = target.founderId || {};
-  const profileImg = user.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=random`;
+  const userRef = target.founderId || {};
+  const profileImg = userRef.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(userRef.name || 'User')}&background=random`;
 
-  document.getElementById('detail-startup-name').innerHTML = `${target.startupName} ${getVerifiedBadgeHtml(user.state)}`;
+  document.getElementById('detail-startup-name').innerHTML = `${target.startupName} ${getVerifiedBadgeHtml(userRef.state)}`;
   document.getElementById('detail-thesis').textContent = target.thesis || 'N/A';
   document.getElementById('detail-industry').textContent = target.industry || 'N/A';
   document.getElementById('detail-score').textContent = (target.validationScore ?? 0) + '%';
-  document.getElementById('detail-founder-name').textContent = user.name || 'Unknown';
-  document.getElementById('detail-founder-email').textContent = user.email || 'N/A';
+  document.getElementById('detail-founder-name').textContent = userRef.name || 'Unknown';
+  document.getElementById('detail-founder-email').textContent = userRef.email || 'N/A';
   
   const founderNameRow = document.querySelector('#profile-content .founder-details .detail-item:first-child');
-  if(founderNameRow) founderNameRow.innerHTML = `<span class="detail-label">Founder</span><span class="detail-value" style="display: flex; align-items: center; gap: 8px;"><img src="${profileImg}" style="width: 24px; height: 24px; border-radius: 50%;">${user.name || 'Unknown'}</span>`;
+  if(founderNameRow) founderNameRow.innerHTML = `<span class="detail-label">Founder</span><span class="detail-value" style="display: flex; align-items: center; gap: 8px;"><img src="${profileImg}" style="width: 24px; height: 24px; border-radius: 50%;">${userRef.name || 'Unknown'}</span>`;
   
   document.getElementById('profile-content').style.display = 'block';
   document.getElementById('profile-loader').style.display = 'none';
@@ -754,7 +777,6 @@ window.togglePassword = function(inputId) {
     if (input) input.type = input.type === 'password' ? 'text' : 'password';
 };
 
-// Legal Modals
 const legalDocs = {
     privacy: { title: "Privacy Policy", content: `<p>Privacy Policy content...</p>` },
     terms: { title: "Terms of Service", content: `<p>Terms content...</p>` }
@@ -773,58 +795,43 @@ window.closeLegalModal = function() {
 };
 
 // ==========================================
-// 10. EVENT LISTENERS & INITIALIZATION
+// 11. EVENT LISTENERS & INITIALIZATION
 // ==========================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   
-   // ==========================================
-  // --- FIX: NOTIFICATION LOGIC (USES .active CLASS) ---
-  // ==========================================
+  // CHECK AUTH FIRST
+  const isAuthed = await checkAuthStatus();
+
+  if(isAuthed) {
+      loadDashboard();
+      updateNotificationBadge();
+  }
+
+  // --- NOTIFICATION LOGIC ---
   const notifBtn = document.getElementById('notification-btn');
   const notifDropdown = document.getElementById('notification-dropdown');
   
   if (notifBtn && notifDropdown) {
-      // 1. Ensure parent container allows absolute positioning
       const parent = notifBtn.parentElement;
       if (parent) parent.style.position = 'relative';
 
       notifBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          
-          // 2. Toggle the .active CLASS (Matches your CSS)
           const isOpen = notifDropdown.classList.contains('active');
-          
           if (isOpen) {
               notifDropdown.classList.remove('active');
           } else {
               notifDropdown.classList.add('active');
-              // Load content only when opening
               await loadNotificationList();
           }
       });
       
-      // Global function to close dropdown
-      window.closeNotifDropdown = () => {
-          notifDropdown.classList.remove('active');
-      };
+      window.closeNotifDropdown = () => notifDropdown.classList.remove('active');
       
-      // Close if clicking outside
       window.addEventListener('click', (e) => {
-          if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) {
-              closeNotifDropdown();
-          }
+          if (!notifDropdown.contains(e.target) && !notifBtn.contains(e.target)) closeNotifDropdown();
       });
   }
-  // ---------------------------------------------------------
-
-  // Set Header Info
-  document.getElementById('user-name').textContent = user.name || 'Provider';
-  const nameArray = (user.name || 'Provider').split(' ');
-  document.querySelector('.user-avatar').textContent = nameArray.map(n => n.charAt(0)).join('');
-
-  // Initial Load
-  loadDashboard();
-  updateNotificationBadge();
 
   // Navigation
   document.querySelectorAll('.nav-item').forEach(item => {
@@ -911,9 +918,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!name) return showToast('Name is required', 'warning');
       
       try {
+        // FIX: Added credentials
         let res = await fetch(`${API_URL}/auth/profile`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ name })
         });
         if (res.status === 404) res = await api.updateProfile({ name });
@@ -941,9 +950,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if(newP.length < 8) return showToast('Password must be 8+ characters', 'warning');
 
       try {
+          // FIX: Added credentials
           const res = await fetch(`${API_URL}/auth/password`, {
               method: 'PUT',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
               body: JSON.stringify({ currentPassword: curr, newPassword: newP })
           });
           const data = await res.json();
@@ -966,16 +977,12 @@ document.addEventListener('DOMContentLoaded', () => {
       fileInput.addEventListener('change', async (e) => {
           const file = e.target.files[0];
           if (!file) return;
-
-          // Validation
           if (file.size > 5000000) return showToast('Max size 5MB.', 'error');
           
-          // Preview
           const reader = new FileReader();
           reader.onload = (ev) => { if(previewImg) previewImg.src = ev.target.result; };
           reader.readAsDataURL(file);
 
-          // Upload
           const fd = new FormData();
           fd.append('profilePicture', file);
 
@@ -983,9 +990,10 @@ document.addEventListener('DOMContentLoaded', () => {
           uploadBtn.disabled = true;
 
           try {
+              // FIX: Added credentials
               const res = await fetch(`${API_URL}/auth/upload-profile-picture`, {
                   method: 'POST',
-                  headers: { 'Authorization': `Bearer ${token}` },
+                  credentials: 'include',
                   body: fd
               });
               const d = await res.json();
@@ -993,7 +1001,6 @@ document.addEventListener('DOMContentLoaded', () => {
               
               showToast('Uploaded!', 'success');
               
-              // Update UI & Cache
               const newUrl = d.profilePicture;
               user.profilePicture = newUrl;
               localStorage.setItem('user', JSON.stringify(user));
@@ -1001,7 +1008,6 @@ document.addEventListener('DOMContentLoaded', () => {
               if(previewImg) previewImg.src = newUrl.startsWith('http') ? newUrl : window.location.origin + newUrl;
               updateProviderHeaderAvatar(newUrl);
 
-              // Update Cache
               const cached = JSON.parse(localStorage.getItem('providerProfileCache') || '{}');
               cached.profilePicture = newUrl;
               localStorage.setItem('providerProfileCache', JSON.stringify(cached));
@@ -1027,8 +1033,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   // Logout
-  document.getElementById('logout-btn')?.addEventListener('click', () => {
-    showConfirm('Logout?', () => {
+  document.getElementById('logout-btn')?.addEventListener('click', async () => {
+    showConfirm('Logout?', async () => {
+      try {
+          // FIX: Call backend to clear cookie
+          await fetch(`${API_URL}/auth/logout`, { 
+              method: 'POST', 
+              credentials: 'include' 
+          });
+      } catch(e) {
+          console.warn("Backend logout failed", e);
+      }
       localStorage.clear(); 
       window.location.href = 'login.html';
     });
@@ -1047,7 +1062,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Socket.io Initialization
   if (typeof io === 'function' && userId) {
-    const socket = io("https://dolphinorg.in", { auth: { token } });
+    const socket = io("https://api.dolphinorg.in", { 
+        withCredentials: true // FIX: Added for cookies
+    });
     socket.emit('join', userId);
 
     socket.on('receiveMessage', (msg) => {

@@ -1,16 +1,15 @@
 // ==========================================
 // CORE INIT & HELPERS
 // ==========================================
-// const API_URL = "https://dolphin-main-production.up.railway.app/api";
+// const API_URL = 'https://api.dolphinorg.in/api';
 
 // SAFETY CHECK: Prevent crashes if localStorage is blocked
 let user = {};
-let token = null;
 let userId = null;
 
+// We no longer store the token in JS variables. It is in an HttpOnly Cookie.
 try {
     user = JSON.parse(localStorage.getItem('user') || '{}');
-    token = localStorage.getItem('token');
     userId = user._id || user.id;
 } catch (e) {
     console.warn("LocalStorage access blocked or corrupted.");
@@ -23,6 +22,42 @@ const VALIDATION_STAGES = [
   { key: 'market', title: 'Market Validation' },
   { key: 'business', title: 'Business Model Validation' }
 ];
+
+// ==========================================
+// AUTHENTICATION CHECK (COOKIE BASED)
+// ==========================================
+async function checkAuthStatus() {
+    try {
+        const res = await fetch(`${API_URL}/auth/profile`, { 
+            credentials: 'include' // IMPORTANT: Send the HttpOnly cookie
+        });
+
+        if (res.status === 401) {
+            // Not authenticated (cookie missing or invalid)
+            window.location.href = 'login.html';
+            return false;
+        }
+
+        const data = await res.json();
+        user = data.profile || data;
+        userId = user._id || user.id;
+        
+        // Update UI immediately with user data
+        const userNameEl = document.getElementById('user-name');
+        if(userNameEl) userNameEl.textContent = user.name || 'User';
+        
+        const nameArray = (user.name || 'User').split(' ');
+        const initials = nameArray.map(n => n.charAt(0).toUpperCase()).join('');
+        const avatarEl = document.querySelector('.user-avatar');
+        if(avatarEl) avatarEl.textContent = initials || 'U';
+
+        return true;
+    } catch (error) {
+        console.error("Auth check failed:", error);
+        window.location.href = 'login.html';
+        return false;
+    }
+}
 
 // ==========================================
 // TOAST NOTIFICATION SYSTEM
@@ -70,7 +105,7 @@ function getVerifiedBadge(userData) {
   return '';
 }
 
-// INIT UI
+// INIT UI (Pre-fill from cache if available, overwrite later)
 const userNameEl = document.getElementById('user-name');
 if(userNameEl) userNameEl.textContent = user.name || 'User';
 
@@ -78,8 +113,6 @@ const nameArray = (user.name || 'User').split(' ');
 const initials = nameArray.map(n => n.charAt(0).toUpperCase()).join('');
 const avatarEl = document.querySelector('.user-avatar');
 if(avatarEl) avatarEl.textContent = initials || 'U';
-
-if (!token) window.location.href = 'login.html';
 
 const userMenu = document.getElementById('user-menu');
 if(userMenu) {
@@ -224,7 +257,11 @@ async function loadNotificationList() {
 async function handleNotifClick(notifId) {
     try {
         closeNotifDropdown();
-        await fetch(`${API_URL}/notifications/${notifId}/read`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } });
+        // FIX: Added credentials
+        await fetch(`${API_URL}/notifications/${notifId}/read`, { 
+            method: 'PUT', 
+            credentials: 'include' 
+        });
         updateNotificationBadge();
     } catch (err) { console.error('Error handling notification click:', err); }
 }
@@ -249,7 +286,10 @@ function resetBadge(elementId) {
 
 async function updateNotificationBadge() {
   try {
-    const res = await fetch(`${API_URL}/notifications`, { headers: { 'Authorization': `Bearer ${token}` } });
+    // FIX: Added credentials
+    const res = await fetch(`${API_URL}/notifications`, { 
+        credentials: 'include' 
+    });
     const data = await res.json();
     const unread = (data.notifications || []).filter(n => !n.read).length;
     const badge = document.getElementById('notif-badge-count');
@@ -283,13 +323,15 @@ let socket;
 // REVERTED: Use the URL that was working for you
 const SOCKET_URL = "https://api.dolphinorg.in";
 
-if (typeof io === 'function' && userId && token) {
+// Connect only if we have a userId (verified via checkAuthStatus)
+if (typeof io === 'function' && userId) {
     try {
         socket = io(SOCKET_URL, {
-            auth: { token: token },
+            // FIX: Pass credentials for socket.io handshake if needed (depends on backend config)
             transports: ['websocket', 'polling'], 
             reconnectionAttempts: 5, 
-            timeout: 10000
+            timeout: 10000,
+            withCredentials: true // Important for cookies
         });
 
         socket.on('connect', () => {
@@ -349,7 +391,6 @@ if (typeof io === 'function' && userId && token) {
 // ==========================================
 async function loadDashboard() {
   // 1. INSTANT RENDER FROM CACHE (0ms latency for user)
-  // We render whatever we have saved locally immediately.
   try {
     const cachedStartup = localStorage.getItem('startupData');
     const cachedUser = localStorage.getItem('user');
@@ -376,11 +417,11 @@ async function loadDashboard() {
   }
 
   // 2. FETCH FRESH DATA IN PARALLEL (Background)
-  // We don't wait for startup to finish before fetching profile. Both run at the same time.
   try {
     const [startup, userRes] = await Promise.all([
-        api.getStartup().catch(e => null), // Handle graceful failure
-        fetch(`${API_URL}/auth/profile`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json())
+        api.getStartup().catch(e => null), 
+        // FIX: Added credentials
+        fetch(`${API_URL}/auth/profile`, { credentials: 'include' }).then(r => r.json())
     ]);
     
     const profile = userRes.profile || userRes;
@@ -417,7 +458,6 @@ async function loadDashboard() {
   }
 }
 
-// *** ADD THIS NEW HELPER FUNCTION ***
 function updateDashboardStats(startup) {
     if (!startup) return;
 
@@ -642,7 +682,10 @@ async function openStageValidationModal(stageKey) {
   if(titleEl) titleEl.textContent = `Validate: ${VALIDATION_STAGES.find(s => s.key === stageKey)?.title || stageKey}`;
 
   try {
-    const response = await fetch(`${API_URL}/founder/validate-stage/${stageKey}/questions`, { headers: { 'Authorization': `Bearer ${token}` } });
+    // FIX: Added credentials
+    const response = await fetch(`${API_URL}/founder/validate-stage/${stageKey}/questions`, { 
+        credentials: 'include' 
+    });
     const data = await response.json();
     if (!data.success) { showToast(data.message || 'Failed to load questions', 'error'); return; }
 
@@ -690,9 +733,11 @@ async function submitStageValidation(e) {
   if(loadingEl) loadingEl.style.display = 'block';
 
   try {
+    // FIX: Added credentials
     const response = await fetch(`${API_URL}/founder/validate-stage/${stageKey}`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ answers })
     });
     const result = await response.json();
@@ -928,9 +973,11 @@ if(updateProfileBtn) {
       const name = document.getElementById('settings-full-name')?.value.trim();
       if (!name) return showToast('Name cannot be empty', 'error');
       try {
+        // FIX: Added credentials
         const res = await fetch(`${API_URL}/auth/profile`, { 
             method: 'PUT', 
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ name }) 
         });
         const data = await res.json();
@@ -1050,9 +1097,11 @@ if(submitReqBtn) {
         const btn = document.getElementById('submit-founder-request');
         btn.disabled = true; btn.textContent = 'Sending...';
         try {
+            // FIX: Added credentials
             const res = await fetch(`${API_URL}/founder/send-request`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ providerId: currentRequestId, message })
             });
             const data = await res.json();
@@ -1206,9 +1255,11 @@ async function submitRating(targetUserId) {
   const comment = document.getElementById('rating-comment')?.value.trim();
   if (!selectedRating) return showToast('Please select a star rating.', 'error');
   try {
+    // FIX: Added credentials
     const res = await fetch(`${API_URL}/founder/rate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ targetUserId, score: parseInt(selectedRating), comment })
     });
     const data = await res.json();
@@ -1227,7 +1278,10 @@ async function loadFounderRequests() {
     if(!list) return;
     list.innerHTML = '<p style="text-align:center;">Loading...</p>';
     try {
-        const res = await fetch(`${API_URL}/founder/requests`, { headers: { 'Authorization': `Bearer ${token}` } });
+        // FIX: Added credentials
+        const res = await fetch(`${API_URL}/founder/requests`, { 
+            credentials: 'include' 
+        });
         const reqs = await res.json();
         list.innerHTML = '';
         if (!reqs || reqs.length === 0) {
@@ -1275,7 +1329,10 @@ async function loadSentRequests() {
     if(!list) return;
     list.innerHTML = '<p style="text-align:center;">Loading...</p>';
     try {
-        const res = await fetch(`${API_URL}/founder/requests/sent`, { headers: { 'Authorization': `Bearer ${token}` }});
+        // FIX: Added credentials
+        const res = await fetch(`${API_URL}/founder/requests/sent`, { 
+            credentials: 'include' 
+        });
         if (!res.ok) throw new Error(`Server Error: ${res.status}`);
         const reqs = await res.json();
         list.innerHTML = '';
@@ -1316,7 +1373,11 @@ async function loadSentRequests() {
 
 async function handleRequest(id, status) {
   try {
-    const res = await fetch(`${API_URL}/founder/requests/${id}/${status === 'accepted' ? 'accept' : 'reject'}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } });
+    // FIX: Added credentials
+    const res = await fetch(`${API_URL}/founder/requests/${id}/${status === 'accepted' ? 'accept' : 'reject'}`, { 
+        method: 'PUT', 
+        credentials: 'include' 
+    });
     if (!res.ok) throw new Error("Failed");
     showToast(`Request ${status}`, 'success');
     loadFounderRequests();
@@ -1490,8 +1551,11 @@ window.sendMessage = async function() {
 };
 
 async function chatApiCall(endpoint, method = 'GET', body = null) {
-  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
-  const config = { method, headers };
+  const config = { 
+      method, 
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include' // FIX: Added credentials
+  };
   if (body) config.body = JSON.stringify(body);
   const response = await fetch(`${API_URL}/chat${endpoint}`, config);
   
@@ -1519,7 +1583,8 @@ function loadSettings() {
   if(nameInput) nameInput.value = user.name || '';
   if(emailInput) emailInput.value = user.email || '';
   
-  fetch(`${API_URL}/auth/profile`, { headers: { 'Authorization': `Bearer ${token}` } })
+  // FIX: Added credentials
+  fetch(`${API_URL}/auth/profile`, { credentials: 'include' })
     .then(r => r.json())
     .then(data => {
        const profile = data.profile || data;
@@ -1559,7 +1624,13 @@ if(updateProfileBtnSettings) {
       const name = document.getElementById('settings-full-name')?.value.trim();
       if (!name) return showToast('Name cannot be empty', 'error');
       try {
-        const res = await fetch(`${API_URL}/auth/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name }) });
+        // FIX: Added credentials
+        const res = await fetch(`${API_URL}/auth/profile`, { 
+            method: 'PUT', 
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include', 
+            body: JSON.stringify({ name }) 
+        });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message);
         showToast('Profile updated successfully!', 'success');
@@ -1602,9 +1673,10 @@ if (fileInput) {
         }
 
         try {
+            // FIX: Added credentials
             const res = await fetch(`${API_URL}/auth/upload-profile-picture`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
+                credentials: 'include',
                 body: formData
             });
 
@@ -1643,7 +1715,13 @@ if(updatePwdBtn) {
         if(newP !== conf) return showToast('Passwords do not match', 'error');
         if(newP.length < 8) return showToast('Password must be 8+ characters', 'error');
         try {
-            const res = await fetch(`${API_URL}/auth/password`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ currentPassword: curr, newPassword: newP }) });
+            // FIX: Added credentials
+            const res = await fetch(`${API_URL}/auth/password`, { 
+                method: 'PUT', 
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', 
+                body: JSON.stringify({ currentPassword: curr, newPassword: newP }) 
+            });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
             showToast('Password Updated!', 'success');
@@ -1651,10 +1729,29 @@ if(updatePwdBtn) {
     });
 }
 
+// ==========================================
+// LOGOUT LOGIC (FIXED FOR COOKIES)
+// ==========================================
 const logoutBtn = document.getElementById('logout-btn');
 if(logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-      if (confirm('Logout?')) { localStorage.clear(); window.location.href = 'login.html'; }
+    logoutBtn.addEventListener('click', async () => {
+      if (confirm('Logout?')) { 
+        try {
+            // 1. Call backend to clear the HttpOnly cookie
+            await fetch(`${API_URL}/auth/logout`, { 
+                method: 'POST',
+                credentials: 'include' 
+            });
+        } catch(e) {
+            console.warn("Backend logout failed, proceeding with client cleanup.", e);
+        }
+        
+        // 2. Clear local storage
+        localStorage.clear();
+        
+        // 3. Redirect
+        window.location.href = 'login.html'; 
+      }
     });
 }
 
@@ -1686,9 +1783,10 @@ if(confirmDeleteBtn) {
         }
 
         try {
+            // FIX: Added credentials
             const res = await fetch(`${API_URL}/auth/account`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
 
             const data = await res.json();
@@ -1706,13 +1804,18 @@ if(confirmDeleteBtn) {
 }
 
 // Init
-document.addEventListener('DOMContentLoaded', () => {
-  loadDashboard();
-  loadFounderRequests();
-  updateNotificationBadge(); 
+document.addEventListener('DOMContentLoaded', async () => {
+  // CHECK AUTH FIRST
+  const isAuthed = await checkAuthStatus();
   
-  const deleteBtn = document.getElementById('delete-account-btn');
-  if (deleteBtn) {
-      deleteBtn.addEventListener('click', openDeleteModal);
+  if(isAuthed) {
+      loadDashboard();
+      loadFounderRequests();
+      updateNotificationBadge(); 
+      
+      const deleteBtn = document.getElementById('delete-account-btn');
+      if (deleteBtn) {
+          deleteBtn.addEventListener('click', openDeleteModal);
+      }
   }
 });
