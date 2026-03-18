@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const crypto = require('crypto'); // IMPORT CRYPTO for hashing
 
 /**
  * Helper to detect if request is from a browser or API client
@@ -13,23 +14,24 @@ const isBrowserRequest = (req) => {
 
 /**
  * Middleware to protect HTML pages with role-based access
- * Unlike API protection, this redirects browser users to login instead of returning JSON
+ * Includes User-Agent Fingerprinting to prevent Token Copy-Paste attacks
  */
 const securePage = (allowedRoles = []) => {
   return async (req, res, next) => {
     try {
       let token;
       
-      // Check if authorization header exists
-      if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-        token = req.headers.authorization.split(' ')[1];
-      }
-      
-      // Also check for token in cookies or query params
-      if (!token && req.cookies && req.cookies.token) {
+      // 1. Check for token in Cookies (Primary for HTML pages)
+      if (req.cookies && req.cookies.token) {
         token = req.cookies.token;
       }
       
+      // 2. Check Authorization Header (Fallback for API/AJAX)
+      if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        token = req.headers.authorization.split(' ')[1];
+      }
+
+      // 3. Check Query Params (Legacy/External Links - less secure)
       if (!token && req.query.token) {
         token = req.query.token;
       }
@@ -48,17 +50,30 @@ const securePage = (allowedRoles = []) => {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
       
-      // Find user
-      const user = await User.findById(decoded.id).select('-password');
-      
-      if (!user) {
-        if (isBrowserRequest(req)) {
+      // --- SECURITY FIX: USER-AGENT FINGERPRINTING ---
+      // This prevents a stolen token from being used on a different browser/device.
+      if (decoded.userAgentHash) {
+        const currentUserAgent = req.headers['user-agent'] || '';
+        const currentHash = crypto.createHash('sha256').update(currentUserAgent).digest('hex');
+
+        if (currentHash !== decoded.userAgentHash) {
+          console.warn(`[Security Alert] User-Agent mismatch for User ${decoded.id}. Possible session hijacking attempt.`);
+          
+          // Clear the cookie to force re-login
           res.clearCookie('token');
-          return res.redirect('/login.html');
+          
+          if (isBrowserRequest(req)) {
+            return res.redirect('/login.html?error=session_invalid');
+          }
+          return res.status(401).json({ 
+            message: 'Session invalid',
+            reason: 'Security verification failed',
+            nextSteps: 'Please login again'
+          });
         }
-        return res.status(401).json({ message: 'User not found' });
       }
-      
+      // --- END SECURITY FIX ---
+
       // Check if user is in token blacklist (for logout)
       if (req.app.locals.tokenBlacklist && req.app.locals.tokenBlacklist.has(token)) {
         if (isBrowserRequest(req)) {
@@ -71,13 +86,22 @@ const securePage = (allowedRoles = []) => {
         });
       }
       
+      // Find user
+      const user = await User.findById(decoded.id).select('-password');
+      
+      if (!user) {
+        if (isBrowserRequest(req)) {
+          res.clearCookie('token');
+          return res.redirect('/login.html');
+        }
+        return res.status(401).json({ message: 'User not found' });
+      }
+      
       // Check if user is approved (for platform access)
       if (user.state === 'PENDING_APPROVAL' && req.path !== '/admin-dashboard.html') {
         if (isBrowserRequest(req)) {
-          return res.status(403).render('approval-pending', { 
-            message: 'Your account is pending admin approval',
-            email: user.email
-          });
+          // Ideally you would render a specific page, but for now we send status
+          return res.status(403).send('<h1>Access Denied</h1><p>Your account is pending admin approval.</p>');
         }
         return res.status(403).json({ 
           message: 'Access denied',
@@ -89,11 +113,7 @@ const securePage = (allowedRoles = []) => {
       // Check role-based access
       if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
         if (isBrowserRequest(req)) {
-          return res.status(403).render('access-denied', {
-            message: 'You do not have access to this page',
-            userRole: user.role,
-            requiredRoles: allowedRoles
-          });
+          return res.status(403).send(`<h1>Access Denied</h1><p>You do not have permission to view this page. <a href="/login.html">Go back</a></p>`);
         }
         return res.status(403).json({ 
           message: 'Access denied',

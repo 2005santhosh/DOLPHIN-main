@@ -8,6 +8,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const compression = require('compression');
+const cookieParser = require('cookie-parser'); // 1. IMPORT COOKIE PARSER
+
 const connectDB = require('./config/db');
 const { securePage } = require('./middleware/securePage');
 const { initializeSocket } = require('./services/socketService');
@@ -60,7 +62,7 @@ const corsOptions = {
   },
   methods: ["GET","POST","PUT","DELETE","OPTIONS"],
   allowedHeaders: ["Content-Type","Authorization"],
-  credentials: true
+  credentials: true // IMPORTANT: Allow cookies/authorization headers
 };
 
 // Initialize Socket.io WITH the CORS options
@@ -70,6 +72,9 @@ const io = initializeSocket(server, corsOptions);
 app.use(cors(corsOptions));
 app.use(compression());
 
+// 2. USE COOKIE PARSER (Enables reading HTTP-only cookies for security)
+app.use(cookieParser());
+
 app.post("/test-cors", (req, res) => {
   res.json({ message: "CORS working" });
 });
@@ -78,7 +83,7 @@ app.post("/test-cors", (req, res) => {
 app.set('socketio', io); 
 app.locals.tokenBlacklist = new Set();
 
-// 2. Apply Helmet with Cross-Origin Policy
+// 3. Apply Helmet with Cross-Origin Policy
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   contentSecurityPolicy: {
@@ -105,22 +110,29 @@ app.use(helmet({
 
 // Security middleware
 app.use(express.json()); 
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100
 });
 app.use('/api/', limiter);
+
+// --- API ROUTES ---
+// Consolidated API routes here
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/chat', chatRoutes);
 app.use('/api/investor', investorRoutes);
 app.use('/api/support', supportRoutes);
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use('/api/resources', require('./routes/resources'));
+app.use('/api/founder', require('./routes/founder'));
+app.use('/api/provider', require('./routes/provider'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/admin/admin-notifications', require('./routes/admin-notifications'));
 
-// Serve static frontend files
-app.use(express.static(path.join(__dirname, '../frontend')));
-
-// Public routes
+// --- PUBLIC HTML ROUTES ---
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
@@ -133,7 +145,9 @@ app.get('/register.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/register.html'));
 });
 
-// Protected HTML routes with role-based access
+// --- PROTECTED HTML ROUTES ---
+// SECURITY FIX: These must be defined BEFORE express.static
+// This forces the securePage middleware to run before the file is served
 app.get('/dashboard.html', securePage(['founder']), (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/dashboard.html'));
 });
@@ -154,15 +168,11 @@ app.get('/marketplace.html', securePage(['founder', 'investor', 'provider']), (r
   res.sendFile(path.join(__dirname, '../frontend/marketplace.html'));
 });
 
-// API Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/resources', require('./routes/resources'));
-app.use('/api/founder', require('./routes/founder'));
-app.use('/api/investor', require('./routes/investor'));
-app.use('/api/provider', require('./routes/provider'));
-app.use('/api/admin', require('./routes/admin'));
-app.use('/api/notifications', require('./routes/notifications'));
-app.use('/api/admin/admin-notifications', require('./routes/admin-notifications'));
+// --- STATIC FILES ---
+// SECURITY FIX: Moved to BOTTOM. 
+// If a user requests /dashboard.html, it hits the route above first.
+// If they request /images/logo.png, it hits this static handler.
+app.use(express.static(path.join(__dirname, '../frontend')));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
