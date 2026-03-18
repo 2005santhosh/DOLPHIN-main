@@ -31,7 +31,11 @@ const sendTokenResponse = (user, statusCode, req, res) => {
     // This forces the cookie to be set specifically on 'api.dolphinorg.in'
     // which is more stable for Safari/iOS.
   };
-
+  // --- DEBUGGING START ---
+  console.log('--- SENDING COOKIE ---');
+  console.log('Token Generated:', token ? 'Yes' : 'No');
+  console.log('Cookie Options:', options);
+  // --- DEBUGGING END ---
   res
     .status(statusCode)
     .cookie('token', token, options)

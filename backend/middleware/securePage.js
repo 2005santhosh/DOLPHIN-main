@@ -24,6 +24,11 @@ const clearCookieOptions = {
  */
 const securePage = (allowedRoles = []) => {
   return async (req, res, next) => {
+    console.log('--- SECURE PAGE CHECK ---');
+    console.log('Path:', req.path);
+    console.log('Cookies Received:', req.cookies);
+    console.log('Headers Cookie:', req.headers.cookie);
+    console.log('User-Agent:', req.headers['user-agent']);
     try {
       let token;
       
@@ -61,7 +66,10 @@ const securePage = (allowedRoles = []) => {
       if (decoded.userAgentHash) {
         const currentUserAgent = req.headers['user-agent'] || '';
         const currentHash = crypto.createHash('sha256').update(currentUserAgent).digest('hex');
-
+        // DEBUG: Log the mismatch
+        if (currentHash !== decoded.userAgentHash) {
+             console.warn(`[Security] UA Mismatch. Expected: ${decoded.userAgentHash}, Got: ${currentHash}`);
+        }
         if (currentHash !== decoded.userAgentHash) {
           console.warn(`[Security Alert] User-Agent mismatch for User ${decoded.id}. Possible session hijacking attempt.`);
           
