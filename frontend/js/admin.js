@@ -1,20 +1,81 @@
-const user = JSON.parse(localStorage.getItem('user') || '{}');
-const token = localStorage.getItem('token');
-// const API_URL = "https://dolphin-main-production.up.railway.app/api";
-// Check authentication 
-if (!token || (user.role !== 'admin' && user.role !== 'investor')) {
-  window.location.href = 'login.html';
-}
+// ==========================================
+// 1. CONFIGURATION & SETUP
+// ==========================================
+const API_URL = 'https://api.dolphinorg.in/api';
 
-// Update user info in header
-document.getElementById('user-name').textContent = user.name || 'Admin';
-const nameArray = (user.name || 'Admin').split(' ');
-const initials = nameArray.map(n => n.charAt(0).toUpperCase()).join('');
-document.querySelector('.user-avatar').textContent = initials || 'A';
-
-// Track selected users for notifications
+let user = {};
 let selectedUserIds = [];
 let allUsers = [];
+
+// ==========================================
+// 2. AUTH CHECK (COOKIE BASED)
+// ==========================================
+async function checkAuthStatus() {
+    try {
+        const res = await fetch(`${API_URL}/auth/profile`, { 
+            credentials: 'include' // IMPORTANT: Send the HttpOnly cookie
+        });
+
+        if (res.status === 401) {
+            // Not authenticated
+            localStorage.clear();
+            window.location.href = 'login.html';
+            return false;
+        }
+
+        const data = await res.json();
+        user = data.profile || data;
+
+        // Check Role
+        if (user.role !== 'admin' && user.role !== 'investor') {
+            alert('Access Denied.');
+            localStorage.clear();
+            window.location.href = 'login.html';
+            return false;
+        }
+
+        // Update UI immediately
+        document.getElementById('user-name').textContent = user.name || 'Admin';
+        const nameArray = (user.name || 'Admin').split(' ');
+        const initials = nameArray.map(n => n.charAt(0).toUpperCase()).join('');
+        document.querySelector('.user-avatar').textContent = initials || 'A';
+
+        return true;
+    } catch (error) {
+        console.error("Auth check failed:", error);
+        window.location.href = 'login.html';
+        return false;
+    }
+}
+
+// ==========================================
+// 3. API HELPER (FIXED FOR COOKIES)
+// ==========================================
+async function apiCall(endpoint, method = 'GET', body = null) {
+    const options = {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include' // FIX: Added credentials
+    };
+
+    if (body) options.body = JSON.stringify(body);
+
+    try {
+        const response = await fetch(`${API_URL}${endpoint}`, options);
+        
+        // Handle unauthorized requests immediately
+        if (response.status === 401) {
+            localStorage.clear();
+            window.location.href = 'login.html';
+            return;
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('API Error:', error);
+        throw error;
+    }
+}
 
 // ==========================================
 // MOBILE SIDEBAR LOGIC
@@ -92,21 +153,7 @@ function loadPageContent(page) {
 
 async function loadDashboard() {
   try {
-    const response = await fetch(`${API_URL}/admin/dashboard`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    // Handle unauthorized requests immediately
-    if (response.status === 401) {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      window.location.href = 'login.html';
-      return;
-    }
-
-    const data = await response.json();
+    const data = await apiCall('/admin/dashboard');
 
     // Check if data exists before updating DOM
     if (data && data.users) {
@@ -133,14 +180,11 @@ async function loadRecentActivity() {
   
   try {
     // Get recent users
-    const usersRes = await fetch(`${API_URL}/admin/pending-users`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const users = await usersRes.json();
+    const users = await apiCall('/admin/pending-users');
     
     container.innerHTML = '';
     
-    if (users.length === 0) {
+    if (!users || users.length === 0) {
       container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No recent activity</p>';
       return;
     }
@@ -170,15 +214,10 @@ async function loadRecentActivity() {
 // Load Users
 async function loadUsers() {
   try {
-    const response = await fetch(`${API_URL}/admin/users`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    allUsers = await response.json();
+    allUsers = await apiCall('/admin/users');
     displayUsers(allUsers);
     
-    // Setup filters (remove existing listeners to avoid duplicates if using arrow functions in global scope technically they are new instances, but safer to ensure)
-    // Note: In this specific snippet structure, we assume loadUsers is called once or listeners are okay.
+    // Setup filters
     document.getElementById('user-role-filter').addEventListener('change', filterUsers);
     document.getElementById('user-status-filter').addEventListener('change', filterUsers);
     document.getElementById('user-search').addEventListener('input', filterUsers);
@@ -193,7 +232,7 @@ function displayUsers(users) {
   const tbody = document.getElementById('users-table-body');
   tbody.innerHTML = '';
   
-  if (users.length === 0) {
+  if (!users || users.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No users found</td></tr>';
     return;
   }
@@ -284,15 +323,11 @@ function filterUsers() {
 // Load Startups
 async function loadStartups() {
   try {
-    const response = await fetch(`${API_URL}/admin/startups`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    const startups = await response.json();
+    const startups = await apiCall('/admin/startups');
     const tbody = document.getElementById('startups-table-body');
     tbody.innerHTML = '';
     
-    if (startups.length === 0) {
+    if (!startups || startups.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No startups found</td></tr>';
       return;
     }
@@ -334,15 +369,11 @@ async function loadStartups() {
 // Load Providers
 async function loadProviders() {
   try {
-    const response = await fetch(`${API_URL}/admin/providers`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    const providers = await response.json();
+    const providers = await apiCall('/admin/providers');
     const tbody = document.getElementById('providers-table-body');
     tbody.innerHTML = '';
     
-    if (providers.length === 0) {
+    if (!providers || providers.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No providers found</td></tr>';
       return;
     }
@@ -390,11 +421,7 @@ async function loadProviders() {
 async function loadNotificationPage() {
   // Load all users for selection
   try {
-    const response = await fetch(`${API_URL}/admin/admin-notifications/users`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    const data = await response.json();
+    const data = await apiCall('/admin/admin-notifications/users');
     if (data.success) {
       allUsers = data.users;
       displayUserSelection(allUsers);
@@ -492,31 +519,17 @@ function updateSelectedUsers() {
 document.getElementById('role-notification-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   
-  const role = document.getElementById('role-target').value;
-  const title = document.getElementById('role-title').value;
-  const message = document.getElementById('role-message').value;
-  const priority = document.getElementById('role-priority').value;
-  const actionUrl = document.getElementById('role-action-url').value;
-  const actionText = document.getElementById('role-action-text').value;
+  const payload = {
+    role: document.getElementById('role-target').value,
+    title: document.getElementById('role-title').value,
+    message: document.getElementById('role-message').value,
+    priority: document.getElementById('role-priority').value,
+    actionUrl: document.getElementById('role-action-url').value || null,
+    actionText: document.getElementById('role-action-text').value || null
+  };
   
   try {
-    const response = await fetch(`${API_URL}/admin/admin-notifications/send-by-role`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        role,
-        title,
-        message,
-        priority,
-        actionUrl: actionUrl || null,
-        actionText: actionText || null
-      })
-    });
-    
-    const data = await response.json();
+    const data = await apiCall('/admin/admin-notifications/send-by-role', 'POST', payload);
     
     if (data.success) {
       alert(`✅ ${data.message}`);
@@ -534,33 +547,20 @@ document.getElementById('role-notification-form').addEventListener('submit', asy
 document.getElementById('broadcast-notification-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   
-  const title = document.getElementById('broadcast-title').value;
-  const message = document.getElementById('broadcast-message').value;
-  const priority = document.getElementById('broadcast-priority').value;
-  const actionUrl = document.getElementById('broadcast-action-url').value;
-  const actionText = document.getElementById('broadcast-action-text').value;
+  const payload = {
+    title: document.getElementById('broadcast-title').value,
+    message: document.getElementById('broadcast-message').value,
+    priority: document.getElementById('broadcast-priority').value,
+    actionUrl: document.getElementById('broadcast-action-url').value || null,
+    actionText: document.getElementById('broadcast-action-text').value || null
+  };
   
   if (!confirm('Are you sure you want to send this notification to ALL users?')) {
     return;
   }
   
   try {
-    const response = await fetch(`${API_URL}/admin/admin-notifications/send-to-all`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        title,
-        message,
-        priority,
-        actionUrl: actionUrl || null,
-        actionText: actionText || null
-      })
-    });
-    
-    const data = await response.json();
+    const data = await apiCall('/admin/admin-notifications/send-to-all', 'POST', payload);
     
     if (data.success) {
       alert(`✅ ${data.message}`);
@@ -583,26 +583,15 @@ document.getElementById('users-notification-form').addEventListener('submit', as
     return;
   }
   
-  const title = document.getElementById('users-title').value;
-  const message = document.getElementById('users-message').value;
-  const priority = document.getElementById('users-priority').value;
+  const payload = {
+    userIds: selectedUserIds,
+    title: document.getElementById('users-title').value,
+    message: document.getElementById('users-message').value,
+    priority: document.getElementById('users-priority').value
+  };
   
   try {
-    const response = await fetch(`${API_URL}/admin/admin-notifications/send-to-users`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        userIds: selectedUserIds,
-        title,
-        message,
-        priority
-      })
-    });
-    
-    const data = await response.json();
+    const data = await apiCall('/admin/admin-notifications/send-to-users', 'POST', payload);
     
     if (data.success) {
       alert(`✅ ${data.message}`);
@@ -624,16 +613,7 @@ async function approveUser(userId) {
   if (!confirm('Approve this user?')) return;
   
   try {
-    const response = await fetch(`${API_URL}/admin/approve-user`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ userId })
-    });
-    
-    const data = await response.json();
+    const data = await apiCall('/admin/approve-user', 'POST', { userId });
     alert(data.message);
     loadUsers();
     loadDashboard();
@@ -646,16 +626,7 @@ async function rejectUser(userId) {
   if (!confirm('Reject this user?')) return;
   
   try {
-    const response = await fetch(`${API_URL}/admin/reject-user`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ userId })
-    });
-    
-    const data = await response.json();
+    const data = await apiCall('/admin/reject-user', 'POST', { userId });
     alert(data.message);
     loadUsers();
     loadDashboard();
@@ -668,16 +639,7 @@ async function blockUser(userId) {
   if (!confirm('Block this user?')) return;
   
   try {
-    const response = await fetch(`${API_URL}/admin/block-user`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ userId })
-    });
-    
-    const data = await response.json();
+    const data = await apiCall('/admin/block-user', 'POST', { userId });
     alert(data.message);
     loadUsers();
   } catch (error) {
@@ -689,16 +651,7 @@ async function moveUserStage(userId) {
   if (!confirm('Move this user to the next stage?')) return;
   
   try {
-    const response = await fetch(`${API_URL}/admin/move-stage`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ userId })
-    });
-    
-    const data = await response.json();
+    const data = await apiCall('/admin/move-stage', 'POST', { userId });
     alert(data.message);
     loadUsers();
   } catch (error) {
@@ -710,16 +663,7 @@ async function verifyProvider(providerId) {
   if (!confirm('Verify this provider?')) return;
   
   try {
-    const response = await fetch(`${API_URL}/admin/verify-provider`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ providerId })
-    });
-    
-    const data = await response.json();
+    const data = await apiCall('/admin/verify-provider', 'POST', { providerId });
     alert(data.message);
     loadProviders();
     loadDashboard();
@@ -732,16 +676,7 @@ async function rejectProvider(providerId) {
   if (!confirm('Reject this provider?')) return;
   
   try {
-    const response = await fetch(`${API_URL}/admin/reject-provider`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ providerId })
-    });
-    
-    const data = await response.json();
+    const data = await apiCall('/admin/reject-provider', 'POST', { providerId });
     alert(data.message);
     loadProviders();
   } catch (error) {
@@ -846,8 +781,17 @@ document.getElementById('update-profile-btn').addEventListener('click', () => {
   alert('Profile update feature coming soon');
 });
 
-document.getElementById('logout-btn').addEventListener('click', () => {
+// FIX: Logout now calls backend to clear cookie
+document.getElementById('logout-btn').addEventListener('click', async () => {
   if (confirm('Are you sure you want to logout?')) {
+    try {
+        await fetch(`${API_URL}/auth/logout`, { 
+            method: 'POST', 
+            credentials: 'include' 
+        });
+    } catch(e) {
+        console.warn("Backend logout failed", e);
+    }
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     window.location.href = 'login.html';
@@ -855,8 +799,11 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 });
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
-  loadDashboard();
+document.addEventListener('DOMContentLoaded', async () => {
+  const isAuthed = await checkAuthStatus();
+  if(isAuthed) {
+      loadDashboard();
+  }
 });
 
 // Close modal on outside click
