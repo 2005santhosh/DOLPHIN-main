@@ -60,7 +60,13 @@ const securePage = (allowedRoles = []) => {
           console.warn(`[Security Alert] User-Agent mismatch for User ${decoded.id}. Possible session hijacking attempt.`);
           
           // Clear the cookie to force re-login
-          res.clearCookie('token');
+          // Inside the error catch blocks in securePage.js
+res.clearCookie('token', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    domain: '.dolphinorg.in' // Must match the set cookie
+});
           
           if (isBrowserRequest(req)) {
             return res.redirect('/login.html?error=session_invalid');
@@ -75,7 +81,13 @@ const securePage = (allowedRoles = []) => {
         // STRICT MODE: If the token does NOT have a userAgentHash, it is an old token.
         // We reject it to force a fresh login with the new secure token format.
         console.warn(`[Security] Rejected old token without fingerprint for User: ${decoded.id}`);
-        res.clearCookie('token');
+        // Inside the error catch blocks in securePage.js
+res.clearCookie('token', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    domain: '.dolphinorg.in' // Must match the set cookie
+});
         
         if (isBrowserRequest(req)) {
           return res.redirect('/login.html?error=please_relogin');
@@ -91,7 +103,13 @@ const securePage = (allowedRoles = []) => {
       // Check if user is in token blacklist (for logout)
       if (req.app.locals.tokenBlacklist && req.app.locals.tokenBlacklist.has(token)) {
         if (isBrowserRequest(req)) {
-          res.clearCookie('token');
+          // Inside the error catch blocks in securePage.js
+res.clearCookie('token', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    domain: '.dolphinorg.in' // Must match the set cookie
+});
           return res.redirect('/login.html');
         }
         return res.status(401).json({ 
@@ -105,7 +123,13 @@ const securePage = (allowedRoles = []) => {
       
       if (!user) {
         if (isBrowserRequest(req)) {
-          res.clearCookie('token');
+// Inside the error catch blocks in securePage.js
+res.clearCookie('token', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    domain: '.dolphinorg.in' // Must match the set cookie
+});
           return res.redirect('/login.html');
         }
         return res.status(401).json({ message: 'User not found' });
@@ -144,7 +168,13 @@ const securePage = (allowedRoles = []) => {
       console.error('securePage middleware error:', error);
       
       if (isBrowserRequest(req)) {
-        res.clearCookie('token');
+        // Inside the error catch blocks in securePage.js
+res.clearCookie('token', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    domain: '.dolphinorg.in' // Must match the set cookie
+});
         return res.redirect('/login.html');
       }
       
