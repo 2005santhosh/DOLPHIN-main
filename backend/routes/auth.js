@@ -36,15 +36,12 @@ const sendTokenResponse = (user, statusCode, req, res) => {
   const isProduction = process.env.NODE_ENV === 'production';
   
   const options = {
-    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-    httpOnly: true,
-    secure: true,         // TRUE for HTTPS (Prod), FALSE for HTTP (Localhost)
-    sameSite: 'none',              // Allows subdomain sharing
-    // Only set domain in production. 
-    // On localhost, if domain is omitted, it defaults to 'localhost' which is what we want.
-    // domain:'.dolphinorg.in', 
-    path: '/'
-  };
+  expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  httpOnly: true,
+  secure: true,
+  sameSite: 'lax',   // 🔥 CHANGE THIS (MOST IMPORTANT)
+  path: '/'
+};
 
   res
     .status(statusCode)

@@ -22,13 +22,12 @@ const sendTokenResponse = (user, statusCode, req, res) => {
   const token = generateToken(user, req.headers['user-agent'] || '');
 
   const options = {
-    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-    httpOnly: true,
-    secure: true,               // REQUIRED for HTTPS
-    sameSite: 'lax',            // REQUIRED for Safari/iOS (Allows subdomain sharing)
-    //  REQUIRED to share cookie between www and api
-    path: '/'
-  };
+  expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  httpOnly: true,
+  secure: true,
+  sameSite: 'lax',   // 🔥 CHANGE THIS (MOST IMPORTANT)
+  path: '/'
+};
 
   res
     .status(statusCode)
