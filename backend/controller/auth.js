@@ -21,16 +21,18 @@ const generateToken = (user, userAgent) => {
 const sendTokenResponse = (user, statusCode, req, res) => {
   const token = generateToken(user, req.headers['user-agent'] || '');
 
+  // CRITICAL: These settings MUST match securePage.js
   const options = {
     expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-    httpOnly: true, // CRITICAL: JavaScript cannot access this
-    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-    sameSite: 'strict' // Protects against CSRF
+    httpOnly: true,
+    secure: true,             // REQUIRED for cross-origin
+    sameSite: 'none',         // REQUIRED for cross-origin
+    domain: '.dolphinorg.in'  // REQUIRED to share between www and api
   };
 
   res
     .status(statusCode)
-    .cookie('token', token, options) // Set the cookie
+    .cookie('token', token, options)
     .json({ 
       success: true, 
       user: { 
@@ -41,7 +43,6 @@ const sendTokenResponse = (user, statusCode, req, res) => {
       } 
     });
 };
-
 // @desc    Register User
 // @route   POST /api/auth/register
 // @access  Public
