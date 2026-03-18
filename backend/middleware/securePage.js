@@ -12,11 +12,13 @@ const isBrowserRequest = (req) => {
          req.headers['content-type'] === undefined;
 };
 // Standardized clear cookie options
+const isProduction = process.env.NODE_ENV === 'production';
+
 const clearCookieOptions = {
   httpOnly: true,
   sameSite: 'lax',
-  secure: true,
-  domain: '.dolphinorg.in',
+  secure: isProduction,
+  domain: isProduction ? '.dolphinorg.in' : undefined,
   path: '/'
 };
 /**

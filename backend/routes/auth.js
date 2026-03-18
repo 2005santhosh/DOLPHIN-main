@@ -18,7 +18,6 @@ const { upload, cloudinary } = require('../config/cloudinary');
 // ==========================================
 // HELPER FUNCTIONS FOR SECURITY
 // ==========================================
-
 // Helper to generate token with User-Agent Binding
 const generateToken = (user, userAgent) => {
   const userAgentHash = crypto.createHash('sha256').update(userAgent).digest('hex');
@@ -29,44 +28,38 @@ const generateToken = (user, userAgent) => {
   );
 };
 
-// Helper to send Cookie Response
+// Helper: Send Cookie Response (Environment Aware)
 const sendTokenResponse = (user, statusCode, req, res) => {
   const token = generateToken(user, req.headers['user-agent'] || '');
 
-  // ... existing imports ...
-
-// ==========================================
-// HELPER FUNCTIONS FOR SECURITY
-// ==========================================
-
-// Helper to generate token with User-Agent Binding
-const generateToken = (user, userAgent) => {
-  const userAgentHash = crypto.createHash('sha256').update(userAgent).digest('hex');
-  return jwt.sign(
-    { id: user._id, role: user.role, userAgentHash }, 
-    process.env.JWT_SECRET || 'mysecretkey', 
-    { expiresIn: '30d' }
-  );
-};
-
-// In routes/auth.js
-const sendTokenResponse = (user, statusCode, req, res) => {
-  const token = generateToken(user, req.headers['user-agent'] || '');
-
+  // FIX: Environment-aware Cookie Options
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   const options = {
-    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
     httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    domain: '.dolphinorg.in',
+    secure: isProduction,         // TRUE for HTTPS (Prod), FALSE for HTTP (Localhost)
+    sameSite: 'lax',              // Allows subdomain sharing
+    // Only set domain in production. 
+    // On localhost, if domain is omitted, it defaults to 'localhost' which is what we want.
+    domain: isProduction ? '.dolphinorg.in' : undefined, 
     path: '/'
   };
 
-  res.status(statusCode).cookie('token', token, options).json({ 
+  res
+    .status(statusCode)
+    .cookie('token', token, options)
+    .json({ 
       success: true, 
-      user: { _id: user._id, name: user.name, email: user.email, role: user.role } 
-  });
+      user: { 
+        _id: user._id, 
+        name: user.name, 
+        email: user.email, 
+        role: user.role 
+      } 
+    });
 };
+
 // ==========================================
 // AUTHENTICATION ROUTES
 // ==========================================
@@ -171,11 +164,19 @@ router.post('/login', async (req, res) => {
 // @access  Private
 router.post('/logout', protect, (req, res) => {
   try {
-    // Clear the HttpOnly cookie
-    res.cookie('token', 'none', {
+    // FIX: Use environment-aware options to clear cookie properly
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    const options = {
       expires: new Date(Date.now() + 10 * 1000),
-      httpOnly: true
-    });
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      domain: isProduction ? '.dolphinorg.in' : undefined,
+      path: '/'
+    };
+
+    res.cookie('token', 'none', options);
 
     res.status(200).json({
       success: true,
@@ -386,11 +387,19 @@ router.delete('/account', protect, async (req, res) => {
       if (token) req.app.locals.tokenBlacklist.add(token);
     }
     
-    // Clear cookie on deletion
-    res.cookie('token', 'none', {
+    // FIX: Use environment-aware options to clear cookie
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    const options = {
       expires: new Date(Date.now() + 10 * 1000),
-      httpOnly: true
-    });
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      domain: isProduction ? '.dolphinorg.in' : undefined,
+      path: '/'
+    };
+
+    res.cookie('token', 'none', options);
 
     res.status(200).json({
       message: 'Account deleted successfully',
