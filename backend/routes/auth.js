@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto'); // Needed for hashing
 const User = require('../models/User');
 const Provider = require('../models/Provider');
 const Startup = require('../models/Startup');
@@ -11,10 +12,59 @@ const Log = require('../models/Log');
 const { protect } = require('../middleware/authMiddleware');
 const { forgotPassword, resetPassword } = require('../controller/auth');
 
-// ✅ UPDATED: Import Cloudinary config instead of local multer
+// ✅ IMPORT CLOUDINARY CONFIG
 const { upload, cloudinary } = require('../config/cloudinary');
 
-// Register
+// ==========================================
+// HELPER FUNCTIONS FOR SECURITY
+// ==========================================
+
+// Helper to generate token with User-Agent Binding
+const generateToken = (user, userAgent) => {
+  // 1. Create a hash of the User-Agent to bind the session
+  const userAgentHash = crypto.createHash('sha256').update(userAgent).digest('hex');
+
+  // 2. Sign the token with the hash included
+  return jwt.sign(
+    { id: user._id, role: user.role, userAgentHash }, 
+    process.env.JWT_SECRET || 'mysecretkey', 
+    { expiresIn: '30d' }
+  );
+};
+
+// Helper to send Cookie Response
+const sendTokenResponse = (user, statusCode, req, res) => {
+  const token = generateToken(user, req.headers['user-agent'] || '');
+
+  const options = {
+    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    httpOnly: true, // CRITICAL: JavaScript cannot access this
+    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+    sameSite: 'strict' // Protects against CSRF
+  };
+
+  res
+    .status(statusCode)
+    .cookie('token', token, options) // Set the cookie
+    .json({ 
+      success: true, 
+      user: { 
+        _id: user._id, 
+        name: user.name, 
+        email: user.email, 
+        role: user.role,
+        state: user.state,
+        profilePicture: user.profilePicture || ""
+      } 
+    });
+};
+
+// ==========================================
+// AUTHENTICATION ROUTES
+// ==========================================
+
+// @route   POST /api/auth/register
+// @access  Public
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -64,24 +114,9 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role }, 
-      process.env.JWT_SECRET || 'mysecretkey',
-      { expiresIn: '7d' }
-    );
+    // Use secure helper to set cookie
+    sendTokenResponse(user, 201, req, res);
 
-    res.status(201).json({
-      message: 'Registration successful',
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        state: user.state,
-        nextSteps: 'Wait for admin approval to access the platform'
-      }
-    });
   } catch (error) {
     res.status(500).json({ 
       message: 'Server error during registration',
@@ -91,7 +126,8 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login
+// @route   POST /api/auth/login
+// @access  Public
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -114,24 +150,8 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET || 'mysecretkey',
-      { expiresIn: '7d' }
-    );
-
-    res.json({
-      success: true,
-      user: { 
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        state: user.state,
-        profilePicture: user.profilePicture || "" 
-      },
-      token
-    });
+    // Use secure helper to set cookie
+    sendTokenResponse(user, 200, req, res);
 
   } catch (error) {
     console.error('Login error:', error);
@@ -139,20 +159,18 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Logout
+// @route   POST /api/auth/logout
+// @access  Private
 router.post('/logout', protect, (req, res) => {
   try {
-    if (!req.app.locals.tokenBlacklist) {
-      req.app.locals.tokenBlacklist = new Set();
-    }
-    const token = req.headers.authorization?.split(' ')[1];
-    if (token) {
-      req.app.locals.tokenBlacklist.add(token);
-      setTimeout(() => {
-        req.app.locals.tokenBlacklist.delete(token);
-      }, 30 * 24 * 60 * 60 * 1000);
-    }
+    // Clear the HttpOnly cookie
+    res.cookie('token', 'none', {
+      expires: new Date(Date.now() + 10 * 1000),
+      httpOnly: true
+    });
+
     res.status(200).json({
+      success: true,
       message: 'Logged out successfully',
       nextSteps: 'You can now safely close the browser'
     });
@@ -164,7 +182,11 @@ router.post('/logout', protect, (req, res) => {
   }
 });
 
-// Email verification
+// ==========================================
+// EMAIL VERIFICATION ROUTES
+// ==========================================
+
+// @route   POST /api/auth/verify-email
 router.post('/verify-email', async (req, res) => {
   try {
     const { email, verificationCode } = req.body;
@@ -186,7 +208,7 @@ router.post('/verify-email', async (req, res) => {
   }
 });
 
-// Send verification email
+// @route   POST /api/auth/send-verification-email
 router.post('/send-verification-email', async (req, res) => {
   try {
     const { email } = req.body;
@@ -204,6 +226,16 @@ router.post('/send-verification-email', async (req, res) => {
     });
   }
 });
+
+// @route   POST /api/auth/forgot-password
+router.post('/forgot-password', forgotPassword);
+
+// @route   PUT /api/auth/reset-password/:token
+router.put('/reset-password/:token', resetPassword);
+
+// ==========================================
+// PROFILE MANAGEMENT ROUTES
+// ==========================================
 
 // @route   GET /api/auth/profile
 router.get('/profile', protect, async (req, res) => {
@@ -310,7 +342,11 @@ router.put('/password', protect, async (req, res) => {
   }
 });
 
-// Delete account
+// ==========================================
+// ACCOUNT DELETION
+// ==========================================
+
+// @route   DELETE /api/auth/account
 router.delete('/account', protect, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -341,6 +377,12 @@ router.delete('/account', protect, async (req, res) => {
       const token = req.headers.authorization?.split(' ')[1];
       if (token) req.app.locals.tokenBlacklist.add(token);
     }
+    
+    // Clear cookie on deletion
+    res.cookie('token', 'none', {
+      expires: new Date(Date.now() + 10 * 1000),
+      httpOnly: true
+    });
 
     res.status(200).json({
       message: 'Account deleted successfully',
@@ -355,22 +397,21 @@ router.delete('/account', protect, async (req, res) => {
   }
 });
 
+// ==========================================
+// PROFILE PICTURE UPLOAD
+// ==========================================
+
 // @route   POST /api/auth/upload-profile-picture
-// ✅ UPDATED: Now uploads to Cloudinary
 router.post('/upload-profile-picture', protect, (req, res) => {
-  // Use the imported upload middleware from cloudinary config
   upload.single('profilePicture')(req, res, function (err) {
     if (err) {
-      // Handle Multer or Cloudinary errors
       console.error('Upload Error:', err);
       return res.status(400).json({ message: err.message || 'Image upload failed' });
     }
-    // Proceed to handler
     handleUpload(req, res);
   });
 });
-router.post('/forgot-password', forgotPassword);
-router.put('/reset-password/:token', resetPassword);
+
 async function handleUpload(req, res) {
   try {
     if (!req.file) {
@@ -380,18 +421,13 @@ async function handleUpload(req, res) {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // ✅ UPDATED: 
-    // 1. 'req.file.path' contains the full Cloudinary URL.
-    // 2. We no longer need to construct a relative path like '/uploads/...'.
-    // 3. We can optionally delete the old image from Cloudinary if needed (omitted for simplicity here).
-    
     user.profilePicture = req.file.path; 
     await user.save();
 
     res.json({
       success: true,
       message: 'Profile picture uploaded',
-      profilePicture: user.profilePicture // Returns the full HTTPS URL
+      profilePicture: user.profilePicture
     });
   } catch (err) {
     console.error('Handle Upload Error:', err);
