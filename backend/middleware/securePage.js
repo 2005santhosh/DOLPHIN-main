@@ -6,7 +6,7 @@ const securePage = (roles = []) => {
   return async (req, res, next) => {
     // 1. Get token from HttpOnly Cookie
     const token = req.cookies.token;
-
+    console.log('Cookies received:', req.cookies);
     // 2. If no token, redirect to login immediately
     if (!token) {
       console.log('SecurePage: No token found in cookie. Redirecting to login.');

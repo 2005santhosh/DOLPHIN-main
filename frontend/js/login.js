@@ -71,7 +71,9 @@
                     data.user.role === 'provider' ? 'provider-dashboard.html' : 
                     'dashboard.html';
                 
-                window.location.href = redirectUrl;
+                setTimeout(() => {
+                    window.location.href = redirectUrl;
+                }, 500);
 
             } catch (error) {
                 console.error('❌ Login error:', error);
