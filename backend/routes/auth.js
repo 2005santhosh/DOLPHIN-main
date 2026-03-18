@@ -21,10 +21,7 @@ const { upload, cloudinary } = require('../config/cloudinary');
 
 // Helper to generate token with User-Agent Binding
 const generateToken = (user, userAgent) => {
-  // 1. Create a hash of the User-Agent to bind the session
   const userAgentHash = crypto.createHash('sha256').update(userAgent).digest('hex');
-
-  // 2. Sign the token with the hash included
   return jwt.sign(
     { id: user._id, role: user.role, userAgentHash }, 
     process.env.JWT_SECRET || 'mysecretkey', 
@@ -36,11 +33,33 @@ const generateToken = (user, userAgent) => {
 const sendTokenResponse = (user, statusCode, req, res) => {
   const token = generateToken(user, req.headers['user-agent'] || '');
 
+  // ... existing imports ...
+
+// ==========================================
+// HELPER FUNCTIONS FOR SECURITY
+// ==========================================
+
+// Helper to generate token with User-Agent Binding
+const generateToken = (user, userAgent) => {
+  const userAgentHash = crypto.createHash('sha256').update(userAgent).digest('hex');
+  return jwt.sign(
+    { id: user._id, role: user.role, userAgentHash }, 
+    process.env.JWT_SECRET || 'mysecretkey', 
+    { expiresIn: '30d' }
+  );
+};
+
+// Helper to send Cookie Response
+const sendTokenResponse = (user, statusCode, req, res) => {
+  const token = generateToken(user, req.headers['user-agent'] || '');
+
+  // ✅ CRITICAL FIX FOR CROSS-ORIGIN (api.dolphinorg.in <-> dolphinorg.in)
   const options = {
     expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-    httpOnly: true, // CRITICAL: JavaScript cannot access this
-    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-    sameSite: 'strict' // Protects against CSRF
+    httpOnly: true, // JavaScript cannot access this
+    secure: true,   // MUST be true for SameSite=None (HTTPS is enabled on your domain)
+    sameSite: 'none', // REQUIRED for cross-origin/subdomain requests
+    domain: '.dolphinorg.in' // Share cookie across dolphinorg.in and api.dolphinorg.in
   };
 
   res
@@ -58,6 +77,7 @@ const sendTokenResponse = (user, statusCode, req, res) => {
       } 
     });
 };
+
 
 // ==========================================
 // AUTHENTICATION ROUTES
