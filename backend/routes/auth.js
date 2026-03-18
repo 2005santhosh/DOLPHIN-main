@@ -53,13 +53,13 @@ const generateToken = (user, userAgent) => {
 const sendTokenResponse = (user, statusCode, req, res) => {
   const token = generateToken(user, req.headers['user-agent'] || '');
 
-  // CRITICAL: These settings MUST match securePage.js
+  // CRITICAL: Match the controller settings exactly
   const options = {
-    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     httpOnly: true,
-    secure: true,             // REQUIRED for cross-origin
-    sameSite: 'none',         // REQUIRED for cross-origin
-    domain: '.dolphinorg.in'  // REQUIRED to share between www and api
+    secure: true,
+    sameSite: 'lax',         // CHANGED from 'none' to 'lax'
+    domain: '.dolphinorg.in'
   };
 
   res

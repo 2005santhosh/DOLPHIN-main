@@ -21,13 +21,13 @@ const generateToken = (user, userAgent) => {
 const sendTokenResponse = (user, statusCode, req, res) => {
   const token = generateToken(user, req.headers['user-agent'] || '');
 
-  // CRITICAL: These settings MUST match securePage.js
+  // CRITICAL FIX: Use 'lax' for subdomains (Safari/iOS compatible)
   const options = {
     expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
     httpOnly: true,
-    secure: true,             // REQUIRED for cross-origin
-    sameSite: 'none',         // REQUIRED for cross-origin
-    domain: '.dolphinorg.in'  // REQUIRED to share between www and api
+    secure: true,             // REQUIRED for HTTPS
+    sameSite: 'lax',          // WORKS for subdomains (www <-> api)
+    domain: '.dolphinorg.in'  // Shares cookie across all subdomains
   };
 
   res

@@ -14,8 +14,9 @@ const isBrowserRequest = (req) => {
 // Standardized clear cookie options
 const clearCookieOptions = {
   httpOnly: true,
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  secure: process.env.NODE_ENV === 'production'
+  sameSite: 'lax',           // CHANGED to match
+  secure: true,              // CHANGED to match
+  domain: '.dolphinorg.in'   // ADDED domain
 };
 /**
  * Middleware to protect HTML pages with role-based access
