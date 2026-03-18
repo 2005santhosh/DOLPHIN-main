@@ -42,7 +42,7 @@ const sendTokenResponse = (user, statusCode, req, res) => {
     sameSite: 'none',              // Allows subdomain sharing
     // Only set domain in production. 
     // On localhost, if domain is omitted, it defaults to 'localhost' which is what we want.
-    domain:'.dolphinorg.in', 
+    // domain:'.dolphinorg.in', 
     path: '/'
   };
 

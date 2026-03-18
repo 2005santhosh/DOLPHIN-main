@@ -26,7 +26,7 @@ const sendTokenResponse = (user, statusCode, req, res) => {
     httpOnly: true,
     secure: true,               // REQUIRED for HTTPS
     sameSite: 'lax',            // REQUIRED for Safari/iOS (Allows subdomain sharing)
-    domain: '.dolphinorg.in',   // REQUIRED to share cookie between www and api
+    //  REQUIRED to share cookie between www and api
     path: '/'
   };
 
