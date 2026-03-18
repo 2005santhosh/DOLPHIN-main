@@ -34,7 +34,7 @@ connectDB();
 
 const app = express();
 const server = http.createServer(app);
-
+app.set('trust proxy', 1);
 // --- CORS SETUP (Defined BEFORE Socket Initialization) ---
 const corsOptions = {
   origin: function (origin, callback) {

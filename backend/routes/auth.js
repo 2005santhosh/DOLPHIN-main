@@ -49,17 +49,16 @@ const generateToken = (user, userAgent) => {
   );
 };
 
-// Helper to send Cookie Response
+// Helper: Send Cookie Response
 const sendTokenResponse = (user, statusCode, req, res) => {
   const token = generateToken(user, req.headers['user-agent'] || '');
 
-  // ✅ CRITICAL FIX FOR CROSS-ORIGIN (api.dolphinorg.in <-> dolphinorg.in)
   const options = {
     expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
     httpOnly: true, // JavaScript cannot access this
-    secure: true,   // MUST be true for SameSite=None (HTTPS is enabled on your domain)
-    sameSite: 'none', // REQUIRED for cross-origin/subdomain requests
-    domain: '.dolphinorg.in' // Share cookie across dolphinorg.in and api.dolphinorg.in
+    secure: true, // MUST be true for 'none' sameSite and production
+    sameSite: 'none', // ALLOWS cross-site requests (Frontend <-> API)
+    domain: '.dolphinorg.in' // Shares cookie across ALL subdomains
   };
 
   res
@@ -71,13 +70,10 @@ const sendTokenResponse = (user, statusCode, req, res) => {
         _id: user._id, 
         name: user.name, 
         email: user.email, 
-        role: user.role,
-        state: user.state,
-        profilePicture: user.profilePicture || ""
+        role: user.role 
       } 
     });
 };
-
 
 // ==========================================
 // AUTHENTICATION ROUTES
