@@ -14,8 +14,9 @@ const isBrowserRequest = (req) => {
 // Standardized clear cookie options
 const clearCookieOptions = {
   httpOnly: true,
-  sameSite: 'none',
+  sameSite: 'lax',
   secure: true,
+  domain: '.dolphinorg.in',
   path: '/'
 };
 /**

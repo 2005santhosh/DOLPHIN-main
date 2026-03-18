@@ -22,20 +22,14 @@ const sendTokenResponse = (user, statusCode, req, res) => {
   const token = generateToken(user, req.headers['user-agent'] || '');
 
   const options = {
-    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
     httpOnly: true,
-    secure: true,           // REQUIRED for 'none'
-    sameSite: 'none',       // REQUIRED for cross-origin (www -> api)
-    path: '/',
-    // REMOVED domain: '.dolphinorg.in' 
-    // This forces the cookie to be set specifically on 'api.dolphinorg.in'
-    // which is more stable for Safari/iOS.
+    secure: true,               // REQUIRED for HTTPS
+    sameSite: 'lax',            // REQUIRED for Safari/iOS (Allows subdomain sharing)
+    domain: '.dolphinorg.in',   // REQUIRED to share cookie between www and api
+    path: '/'
   };
-  // --- DEBUGGING START ---
-  console.log('--- SENDING COOKIE ---');
-  console.log('Token Generated:', token ? 'Yes' : 'No');
-  console.log('Cookie Options:', options);
-  // --- DEBUGGING END ---
+
   res
     .status(statusCode)
     .cookie('token', token, options)
