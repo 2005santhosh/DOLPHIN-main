@@ -4,43 +4,49 @@ const User = require('../models/User');
 const protect = async (req, res, next) => {
   let token;
 
-  // Check if authorization header exists and starts with 'Bearer'
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    try {
-      // Extract token from header
-      token = req.headers.authorization.split(' ')[1];
-      
-      // Check if token is in blacklist (logged out)
-      if (req.app.locals.tokenBlacklist && req.app.locals.tokenBlacklist.has(token)) {
-        return res.status(401).json({ 
-          message: 'Token has been revoked',
-          reason: 'You have been logged out',
-          nextSteps: 'Please login again'
-        });
-      }
-      
-           // Verify token
-      // MUST MATCH the secret in auth.js
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mysecretkey');
-      
-      // Find user by ID
-      // MUST MATCH the key 'id' used in auth.js
-      req.user = await User.findById(decoded.id).select('-password');      
-      // If user not found, return error
-      if (!req.user) {
-        return res.status(401).json({ message: 'User not found' });
-      }
-      
-      next();
-    } catch (error) {
-      console.error('Auth middleware error:', error);
-      return res.status(401).json({ message: 'Not authorized, token failed' });
-    }
+  // 1. Check for token in Cookies (Primary method for HttpOnly cookies)
+  if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+  }
+  // 2. Fallback: Check Authorization Header (for API clients)
+  else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
   }
 
-  // If no token found
+  // Debug log to verify token detection
+  console.log(`[Protect Middleware] Path: ${req.path} | Token Found: ${!!token}`);
+
   if (!token) {
-    return res.status(401).json({ message: 'Not authorized, no token' });
+    return res.status(401).json({ 
+      message: 'Not authorized, no token',
+      nextSteps: 'Please login again' 
+    });
+  }
+
+  try {
+    // Check if token is in blacklist (logged out)
+    if (req.app.locals.tokenBlacklist && req.app.locals.tokenBlacklist.has(token)) {
+      return res.status(401).json({ 
+        message: 'Token has been revoked',
+        reason: 'You have been logged out',
+        nextSteps: 'Please login again'
+      });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mysecretkey');
+    
+    // Find user by ID
+    req.user = await User.findById(decoded.id).select('-password');      
+    
+    if (!req.user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Auth middleware error:', error);
+    return res.status(401).json({ message: 'Not authorized, token failed' });
   }
 };
 
