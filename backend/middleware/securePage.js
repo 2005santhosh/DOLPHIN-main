@@ -11,7 +11,12 @@ const isBrowserRequest = (req) => {
          !acceptHeader.includes('application/json') ||
          req.headers['content-type'] === undefined;
 };
-
+// Standardized clear cookie options
+const clearCookieOptions = {
+  httpOnly: true,
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  secure: process.env.NODE_ENV === 'production'
+};
 /**
  * Middleware to protect HTML pages with role-based access
  * Includes User-Agent Fingerprinting to prevent Token Copy-Paste attacks
@@ -61,12 +66,7 @@ const securePage = (allowedRoles = []) => {
           
           // Clear the cookie to force re-login
           // Inside the error catch blocks in securePage.js
-res.clearCookie('token', {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none',
-    domain: '.dolphinorg.in' // Must match the set cookie
-});
+          res.clearCookie('token', clearCookieOptions);
           
           if (isBrowserRequest(req)) {
             return res.redirect('/login.html?error=session_invalid');
@@ -82,12 +82,7 @@ res.clearCookie('token', {
         // We reject it to force a fresh login with the new secure token format.
         console.warn(`[Security] Rejected old token without fingerprint for User: ${decoded.id}`);
         // Inside the error catch blocks in securePage.js
-res.clearCookie('token', {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none',
-    domain: '.dolphinorg.in' // Must match the set cookie
-});
+        res.clearCookie('token', clearCookieOptions);
         
         if (isBrowserRequest(req)) {
           return res.redirect('/login.html?error=please_relogin');
@@ -104,12 +99,7 @@ res.clearCookie('token', {
       if (req.app.locals.tokenBlacklist && req.app.locals.tokenBlacklist.has(token)) {
         if (isBrowserRequest(req)) {
           // Inside the error catch blocks in securePage.js
-res.clearCookie('token', {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none',
-    domain: '.dolphinorg.in' // Must match the set cookie
-});
+          res.clearCookie('token', clearCookieOptions);
           return res.redirect('/login.html');
         }
         return res.status(401).json({ 
@@ -124,12 +114,7 @@ res.clearCookie('token', {
       if (!user) {
         if (isBrowserRequest(req)) {
 // Inside the error catch blocks in securePage.js
-res.clearCookie('token', {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none',
-    domain: '.dolphinorg.in' // Must match the set cookie
-});
+          res.clearCookie('token', clearCookieOptions);
           return res.redirect('/login.html');
         }
         return res.status(401).json({ message: 'User not found' });
@@ -169,12 +154,7 @@ res.clearCookie('token', {
       
       if (isBrowserRequest(req)) {
         // Inside the error catch blocks in securePage.js
-res.clearCookie('token', {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none',
-    domain: '.dolphinorg.in' // Must match the set cookie
-});
+        res.clearCookie('token', clearCookieOptions);
         return res.redirect('/login.html');
       }
       

@@ -53,17 +53,22 @@ const generateToken = (user, userAgent) => {
 const sendTokenResponse = (user, statusCode, req, res) => {
   const token = generateToken(user, req.headers['user-agent'] || '');
 
+  // CRITICAL FIX: Dynamic cookie options for Cross-Origin support
   const options = {
     expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-    httpOnly: true, // JavaScript cannot access this
-    secure: true, // MUST be true for 'none' sameSite and production
-    sameSite: 'none', // ALLOWS cross-site requests (Frontend <-> API)
-    domain: '.dolphinorg.in' // Shares cookie across ALL subdomains
+    httpOnly: true,
+    // 1. Use 'none' for production (Cross-Site) and 'lax' for localhost (Same-Site)
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    // 2. Must be true for 'none' to work. On localhost, false is fine.
+    secure: process.env.NODE_ENV === 'production',
+    // 3. Remove 'domain' setting. 
+    // Let the browser default to the request host (api.dolphinorg.in).
+    // This prevents cookie rejection on Vercel preview URLs.
   };
 
   res
     .status(statusCode)
-    .cookie('token', token, options) // Set the cookie
+    .cookie('token', token, options) 
     .json({ 
       success: true, 
       user: { 
