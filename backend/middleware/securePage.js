@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const crypto = require('crypto'); // IMPORT CRYPTO for hashing
+const crypto = require('crypto');
 
 /**
  * Helper to detect if request is from a browser or API client
@@ -21,17 +21,17 @@ const securePage = (allowedRoles = []) => {
     try {
       let token;
       
-      // 1. Check for token in Cookies (Primary for HTML pages)
+      // 1. Check for token in Cookies (Primary method for HTML pages)
       if (req.cookies && req.cookies.token) {
         token = req.cookies.token;
       }
       
-      // 2. Check Authorization Header (Fallback for API/AJAX)
+      // 2. Check Authorization Header (Fallback for API clients)
       if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
       }
-
-      // 3. Check Query Params (Legacy/External Links - less secure)
+      
+      // 3. Check Query Params (Legacy support)
       if (!token && req.query.token) {
         token = req.query.token;
       }
@@ -47,7 +47,7 @@ const securePage = (allowedRoles = []) => {
         });
       }
       
-      // Verify token
+      // Verify token signature
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
       
       // --- SECURITY FIX: USER-AGENT FINGERPRINTING ---
@@ -71,9 +71,23 @@ const securePage = (allowedRoles = []) => {
             nextSteps: 'Please login again'
           });
         }
+      } else {
+        // STRICT MODE: If the token does NOT have a userAgentHash, it is an old token.
+        // We reject it to force a fresh login with the new secure token format.
+        console.warn(`[Security] Rejected old token without fingerprint for User: ${decoded.id}`);
+        res.clearCookie('token');
+        
+        if (isBrowserRequest(req)) {
+          return res.redirect('/login.html?error=please_relogin');
+        }
+        return res.status(401).json({ 
+          message: 'Session outdated',
+          reason: 'Token format outdated',
+          nextSteps: 'Please login again'
+        });
       }
       // --- END SECURITY FIX ---
-
+      
       // Check if user is in token blacklist (for logout)
       if (req.app.locals.tokenBlacklist && req.app.locals.tokenBlacklist.has(token)) {
         if (isBrowserRequest(req)) {
@@ -86,7 +100,7 @@ const securePage = (allowedRoles = []) => {
         });
       }
       
-      // Find user
+      // Find user in DB
       const user = await User.findById(decoded.id).select('-password');
       
       if (!user) {
@@ -100,8 +114,7 @@ const securePage = (allowedRoles = []) => {
       // Check if user is approved (for platform access)
       if (user.state === 'PENDING_APPROVAL' && req.path !== '/admin-dashboard.html') {
         if (isBrowserRequest(req)) {
-          // Ideally you would render a specific page, but for now we send status
-          return res.status(403).send('<h1>Access Denied</h1><p>Your account is pending admin approval.</p>');
+          return res.status(403).send('<h1>Approval Pending</h1><p>Your account is pending admin approval.</p>');
         }
         return res.status(403).json({ 
           message: 'Access denied',
@@ -113,7 +126,7 @@ const securePage = (allowedRoles = []) => {
       // Check role-based access
       if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
         if (isBrowserRequest(req)) {
-          return res.status(403).send(`<h1>Access Denied</h1><p>You do not have permission to view this page. <a href="/login.html">Go back</a></p>`);
+          return res.status(403).send(`<h1>Access Denied</h1><p>You do not have access to this page.</p>`);
         }
         return res.status(403).json({ 
           message: 'Access denied',
