@@ -49,31 +49,19 @@ const generateToken = (user, userAgent) => {
   );
 };
 
-// Helper: Send Cookie Response
+// In routes/auth.js
 const sendTokenResponse = (user, statusCode, req, res) => {
   const token = generateToken(user, req.headers['user-agent'] || '');
 
-  // CRITICAL: Match the controller settings exactly
   const options = {
     expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     httpOnly: true,
     secure: true,
-    sameSite: 'lax',         // CHANGED from 'none' to 'lax'
-    domain: '.dolphinorg.in'
+    sameSite: 'none',
+    path: '/'
   };
 
-  res
-    .status(statusCode)
-    .cookie('token', token, options)
-    .json({ 
-      success: true, 
-      user: { 
-        _id: user._id, 
-        name: user.name, 
-        email: user.email, 
-        role: user.role 
-      } 
-    });
+  res.status(statusCode).cookie('token', token, options).json({ success: true, user: { _id: user._id, name: user.name, email: user.email, role: user.role } });
 };
 // ==========================================
 // AUTHENTICATION ROUTES

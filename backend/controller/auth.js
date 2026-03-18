@@ -21,13 +21,15 @@ const generateToken = (user, userAgent) => {
 const sendTokenResponse = (user, statusCode, req, res) => {
   const token = generateToken(user, req.headers['user-agent'] || '');
 
-  // CRITICAL FIX: Use 'lax' for subdomains (Safari/iOS compatible)
   const options = {
-    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     httpOnly: true,
-    secure: true,             // REQUIRED for HTTPS
-    sameSite: 'lax',          // WORKS for subdomains (www <-> api)
-    domain: '.dolphinorg.in'  // Shares cookie across all subdomains
+    secure: true,           // REQUIRED for 'none'
+    sameSite: 'none',       // REQUIRED for cross-origin (www -> api)
+    path: '/',
+    // REMOVED domain: '.dolphinorg.in' 
+    // This forces the cookie to be set specifically on 'api.dolphinorg.in'
+    // which is more stable for Safari/iOS.
   };
 
   res
