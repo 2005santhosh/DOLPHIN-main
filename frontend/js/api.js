@@ -1,19 +1,15 @@
 const API_URL = 'https://api.dolphinorg.in/api';
 
 const api = {
-  // Helper to get auth header
-  getAuthHeader() {
-    const token = localStorage.getItem('token');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
-  },
-
   // Helper to make API requests with auth and error handling
+  // Updated to use 'credentials: include' for HttpOnly Cookie support
   async request(endpoint, options = {}) {
     const defaultOptions = {
       headers: {
-        'Content-Type': 'application/json',
-        ...this.getAuthHeader()
-      }
+        'Content-Type': 'application/json'
+      },
+      // CRITICAL: This allows HttpOnly cookies to be sent/received cross-origin
+      credentials: 'include' 
     };
 
     const mergedOptions = { ...defaultOptions, ...options };
@@ -33,7 +29,7 @@ const api = {
       if (res.status === 401) {
         // Clear auth data and redirect to login
         localStorage.removeItem('user');
-        localStorage.removeItem('token');
+        localStorage.removeItem('token'); // Clean up any old tokens
         window.location.href = 'login.html';
         return;
       }
@@ -50,14 +46,15 @@ const api = {
   },
 
   // Authentication
+  // SECURITY FIX: No longer storing token in localStorage. 
+  // The token is stored in an HttpOnly cookie automatically by the browser.
   async login(email, password) {
     const data = await this.request('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
 
-    if (data && data.token && data.user) {
-      localStorage.setItem('token', data.token);
+    if (data && data.user) {
       localStorage.setItem('user', JSON.stringify(data.user));
     }
     return data;
@@ -69,8 +66,7 @@ const api = {
       body: JSON.stringify({ name, email, password, role })
     });
 
-    if (data && data.token && data.user) {
-      localStorage.setItem('token', data.token);
+    if (data && data.user) {
       localStorage.setItem('user', JSON.stringify(data.user));
     }
     return data;
@@ -107,12 +103,14 @@ const api = {
       body: JSON.stringify({ milestoneId, isCompleted })
     });
   },
+  
   async updateStartup(startupData) {
     return this.request('/founder/my-startup', {
       method: 'PUT',
       body: JSON.stringify(startupData)
     });
   },
+
   async getValidatedStartups() {
     return this.request('/investor/validated-startups');
   },
@@ -121,20 +119,24 @@ const api = {
   async getEligibleFounders() {
     return this.request('/provider/eligible-founders');
   },
+  
   async getNotifications() {
     return this.request('/notifications');
   },
+  
   async markAllRead() {
     return this.request('/notifications/read-all', {
       method: 'PUT'
     });
   },
+  
   async clearNotifications() {
     return this.request('/notifications/clear', {
       method: 'DELETE'
     });
   },
-   async sendProviderRequest(startupId, message, servicesOffered) {
+  
+  async sendProviderRequest(startupId, message, servicesOffered) {
     return this.request('/provider/send-request', {
       method: 'POST',
       body: JSON.stringify({ 
@@ -144,16 +146,7 @@ const api = {
       })
     });
   },
- async sendProviderRequest(startupId, message, servicesOffered) {
-    return this.request('/provider/send-request', {
-      method: 'POST',
-      body: JSON.stringify({ 
-        startupId, 
-        message, 
-        servicesOffered 
-      })
-    });
-  },
+
   async updateIntroRequest(requestId, newStatus) {
     return this.request(`/provider/requests/${requestId}`, {
       method: 'PUT',
@@ -229,7 +222,6 @@ const api = {
   },
 
   // Delete account (all roles)
-    // Delete account (all roles)
   async deleteAccount() {
     return this.request('/auth/account', { method: 'DELETE' });
   },
@@ -242,7 +234,6 @@ const api = {
   async getResources() {
     return this.request('/resources');
   },
- // frontend/js/api.js
 
   // Get Roadmap Tasks
   async getRoadmap() {

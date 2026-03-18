@@ -22,7 +22,6 @@
         togglePasswordBtn.addEventListener('click', () => {
             const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
             passwordInput.setAttribute('type', type);
-            
             if (type === 'password') {
                 eyeIcon.style.display = 'block';
                 eyeSlashIcon.style.display = 'none';
@@ -59,10 +58,11 @@
             submitButton.disabled = true;
             
             try {
-                // Using fetch directly for standalone compatibility
                 const response = await fetch(`${API_URL}/auth/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    // CRITICAL: Allows browser to set HttpOnly Cookie
+                    credentials: 'include',
                     body: JSON.stringify({ name, email, password, role })
                 });
 
@@ -72,19 +72,15 @@
                     throw new Error(data.message || 'Registration failed');
                 }
 
-               console.log('✅ Registration Successful');
+                console.log('✅ Registration Successful');
 
-// --- ADD THIS: Save Token and User Data ---
-if (data.token) {
-    localStorage.setItem('token', data.token);
-}
-if (data.user) {
-    localStorage.setItem('user', JSON.stringify(data.user));
-}
-// -------------------------------------------
-
-// Redirect
-if (role === 'investor') window.location.href = 'investor-dashboard.html';
+                // SECURITY FIX: Save ONLY user info. Token handled via Cookie.
+                if (data.user) {
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                }
+                
+                // Redirect
+                if (role === 'investor') window.location.href = 'investor-dashboard.html';
                 else if (role === 'founder') window.location.href = 'dashboard.html';
                 else if (role === 'provider') window.location.href = 'provider-dashboard.html';
                 

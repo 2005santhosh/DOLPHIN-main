@@ -1,18 +1,14 @@
- // ==========================================
-        // 1. PASSWORD VISIBILITY TOGGLE (FIXED)
         // ==========================================
-        // const API_URL = "https://dolphin-main-production.up.railway.app/api";
+        // 1. PASSWORD VISIBILITY TOGGLE
+        // ==========================================
         const togglePassword = document.getElementById('toggle-password');
         const passwordInput = document.getElementById('password');
         const eyeIcon = togglePassword.querySelector('.eye-icon');
         const eyeSlashIcon = togglePassword.querySelector('.eye-slash-icon');
 
         togglePassword.addEventListener('click', function() {
-            // Toggle the type attribute
             const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
             passwordInput.setAttribute('type', type);
-
-            // Toggle the icon visibility
             if (type === 'password') {
                 eyeIcon.style.display = 'block';
                 eyeSlashIcon.style.display = 'none';
@@ -26,6 +22,7 @@
         // 2. FORM SUBMISSION HANDLER
         // ==========================================
         const loginForm = document.getElementById('login-form');
+        const API_URL = 'https://api.dolphinorg.in/api';
         
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -47,6 +44,8 @@
                 const response = await fetch(`${API_URL}/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    // CRITICAL: Allows the browser to set the HttpOnly Cookie
+                    credentials: 'include', 
                     body: JSON.stringify({ email, password })
                 });
 
@@ -56,12 +55,13 @@
                     throw new Error(data.message || `Server Error: ${response.status}`);
                 }
 
-                if (!data.user || !data.token) {
-                    throw new Error('Invalid server response: missing user data or token.');
+                if (!data.user) {
+                    throw new Error('Invalid server response: missing user data.');
                 }
 
                 console.log('✅ Login Successful! User Role:', data.user.role);
-                localStorage.setItem('token', data.token);
+                
+                // SECURITY FIX: Save ONLY user info. Token is handled via Cookie automatically.
                 localStorage.setItem('user', JSON.stringify(data.user));
                 
                 // Redirect based on role

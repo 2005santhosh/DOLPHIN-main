@@ -1,6 +1,7 @@
 // Main frontend application logic 
 // Handles authentication, role-based redirects, dashboard initialization, and event handlers
 const API_URL = 'https://api.dolphinorg.in/api';
+
 function getUser() {
   try {
     const user = localStorage.getItem('user');
@@ -14,27 +15,25 @@ function getUser() {
 
 async function logout() {
   try {
-    // Optional: notify server (good hygiene, future-proof for blacklisting)
-    const token = localStorage.getItem('token');
-    if (token) {
-      await fetch(`${API_URL}/auth/logout`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }).catch(err => {
-        // Ignore server error - client-side logout must succeed anyway
-        console.warn('Server logout failed, proceeding client-side:', err);
-      });
-    }
+    // SECURITY UPDATE: Call backend to clear HttpOnly cookie
+    // We no longer need to send Authorization header manually, cookies are sent automatically
+    await fetch(`${API_URL}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include', // Essential for sending/clearing cookies
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }).catch(err => {
+      // Ignore server error - client-side logout must succeed anyway
+      console.warn('Server logout failed, proceeding client-side:', err);
+    });
   } catch (err) {
     console.error('Logout process error:', err);
   }
 
   // Clear all client-side auth data
   localStorage.removeItem('user');
-  localStorage.removeItem('token');
+  localStorage.removeItem('token'); // Clean up any legacy token
   localStorage.clear();
 
   // Redirect to index.html (home/landing page)
@@ -139,9 +138,10 @@ if (window.location.pathname.includes('login.html')) {
 
     try {
       const data = await api.login(email, password);
-      if (data && data.token && data.user) {
+      // SECURITY FIX: We no longer check for data.token.
+      // Token is handled via HttpOnly Cookie. We only need user data.
+      if (data && data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
-        localStorage.setItem('token', data.token);
         
         // Redirect based on role
         switch (data.user.role) {
@@ -184,9 +184,9 @@ if (window.location.pathname.includes('register.html')) {
 
     try {
       const data = await api.register(name, email, password, role);
-      if (data && data.token && data.user) {
+      // SECURITY FIX: We no longer check for data.token.
+      if (data && data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
-        localStorage.setItem('token', data.token);
         alert('Account created successfully!');
 
         // Redirect based on role
