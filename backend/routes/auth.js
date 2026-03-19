@@ -38,7 +38,7 @@ const sendTokenResponse = (user, statusCode, req, res) => {
   sameSite: 'None',
   path: '/',
   // ← add this line (lowercase 'p')
-  // domain: '.dolphinorg.in'        // strongly recommended – see below
+  domain: '.dolphinorg.in'        // strongly recommended – see below
 };
 
   res
@@ -387,7 +387,7 @@ router.delete('/account', protect, async (req, res) => {
   sameSite: 'None',
   path: '/',
                    // ← add this line (lowercase 'p')
-  // domain: '.dolphinorg.in'        // strongly recommended – see below
+  domain: '.dolphinorg.in'        // strongly recommended – see below
 };
 
     res.cookie('token', 'none', options);
