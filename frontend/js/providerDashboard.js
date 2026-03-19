@@ -1,5 +1,5 @@
 // ==========================================
-// 1. CONFIGURATION & SETUP
+// 1. CONFIGURATION & SETUP 
 // ==========================================
 const API_URL = 'https://api.dolphinorg.in/api';
 const API_BASE = `${API_URL}/provider`;
@@ -747,7 +747,10 @@ window.viewFounderProfile = function(startupId) {
 
   profileModal.classList.add('active');
   const userRef = target.founderId || {};
-  const profileImg = userRef.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(userRef.name || 'User')}&background=random`;
+  // Checks if it exists AND is not just an empty string
+const profileImg = (userRef.profilePicture && userRef.profilePicture.trim() !== "") 
+    ? userRef.profilePicture 
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(founderName)}&background=random`;
 
   document.getElementById('detail-startup-name').innerHTML = `${target.startupName} ${getVerifiedBadgeHtml(userRef.state)}`;
   document.getElementById('detail-thesis').textContent = target.thesis || 'N/A';
@@ -795,9 +798,10 @@ window.closeLegalModal = function() {
 };
 
 // ==========================================
-// 11. EVENT LISTENERS & INITIALIZATION
+// 11. EVENT LISTENERS & INITIALIZATION profile
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
+  const currentPage = window.location.pathname;
   if (currentPage.includes('login.html')) {
     console.log("Login page - skipping auth check");
     return;
