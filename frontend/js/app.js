@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     logoutBtn.addEventListener('click', logout);
   }
   
-  const user = getUser();
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
   const currentPath = window.location.pathname.toLowerCase();
   
   // Extract the current page name without extension and path

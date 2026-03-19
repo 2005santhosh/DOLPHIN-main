@@ -46,7 +46,7 @@ const api = {
   },
 
   // Authentication
-  // SECURITY FIX: No longer storing token in localStorage. 
+  // SECURITY FIX: No longer storing token in localStorage. user
   // The token is stored in an HttpOnly cookie automatically by the browser.
   async login(email, password) {
     const data = await this.request('/auth/login', {

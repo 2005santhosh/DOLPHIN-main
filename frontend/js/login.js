@@ -23,7 +23,7 @@
         // ==========================================
         const loginForm = document.getElementById('login-form');
        
-        
+        if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -86,3 +86,4 @@
                 alert(`Login failed: ${error.message}`);
             }
         });
+    }
