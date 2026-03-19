@@ -1806,6 +1806,7 @@ if(confirmDeleteBtn) {
 // Init
 document.addEventListener('DOMContentLoaded', async () => {
   // CHECK AUTH FIRST
+  setTimeout(async () => {
   const isAuthed = await checkAuthStatus();
   
   if(isAuthed) {
@@ -1818,4 +1819,5 @@ document.addEventListener('DOMContentLoaded', async () => {
           deleteBtn.addEventListener('click', openDeleteModal);
       }
   }
+   }, 500);
 });
