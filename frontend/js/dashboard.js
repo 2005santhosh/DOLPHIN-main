@@ -1807,8 +1807,6 @@ if(confirmDeleteBtn) {
 document.addEventListener('DOMContentLoaded', async () => {
   const currentPage = window.location.pathname;
 
-  if (currentPage.includes('login.html')) return;
-
   const isAuthed = await checkAuthStatus();
 
   if (isAuthed) {

@@ -209,9 +209,6 @@ if (window.location.pathname.includes('register.html')) {
 // ────────────────────────────────────────────────
 if (window.location.pathname.includes('dashboard.html')) {
   const user = getUser();
-  if (!user || user.role !== 'founder') {
-    window.location.href = 'index.html';
-  }
 
   const initDashboard = async () => {
     let startup = await api.getStartup();
@@ -295,9 +292,7 @@ if (window.location.pathname.includes('dashboard.html')) {
 // ────────────────────────────────────────────────
 if (window.location.pathname.includes('investor-dashboard.html')) {
   const user = getUser();
-  if (!user || user.role !== 'investor') {
-    window.location.href = 'index.html';
-  }
+  
 
   async function loadInvestorDashboard() {
     try {
@@ -356,9 +351,6 @@ if (window.location.pathname.includes('investor-dashboard.html')) {
 // ────────────────────────────────────────────────
 if (window.location.pathname.includes('provider-dashboard.html')) {
   const user = getUser();
-  if (!user || user.role !== 'provider') {
-    window.location.href = 'index.html';
-  }
 
   async function loadProviderDashboard() {
     try {
