@@ -226,5 +226,5 @@ process.on('SIGTERM', () => {
     });
   });
 });
-
+console.log("🔥 NEW DEPLOY WORKING");
 module.exports = server;

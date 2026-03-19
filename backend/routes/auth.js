@@ -37,7 +37,7 @@ const sendTokenResponse = (user, statusCode, req, res) => {
   secure: true,                      // must stay true in prod
   sameSite: 'None',
   path: '/',
-  partitioned: true,                 // ← add this line (lowercase 'p')
+  // ← add this line (lowercase 'p')
   // domain: '.dolphinorg.in'        // strongly recommended – see below
 };
 
@@ -165,7 +165,7 @@ router.post('/logout', protect, (req, res) => {
   secure: true,                      // must stay true in prod
   sameSite: 'None',
   path: '/',
-  partitioned: true,                 // ← add this line (lowercase 'p')
+                   // ← add this line (lowercase 'p')
   // domain: '.dolphinorg.in'        // strongly recommended – see below
 };
 
@@ -386,7 +386,7 @@ router.delete('/account', protect, async (req, res) => {
   secure: true,                      // must stay true in prod
   sameSite: 'None',
   path: '/',
-  partitioned: true,                 // ← add this line (lowercase 'p')
+                   // ← add this line (lowercase 'p')
   // domain: '.dolphinorg.in'        // strongly recommended – see below
 };
 

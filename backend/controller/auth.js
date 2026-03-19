@@ -27,7 +27,6 @@ const sendTokenResponse = (user, statusCode, req, res) => {
   secure: true,                      // must stay true in prod
   sameSite: 'None',
   path: '/',
-  partitioned: true,                 // ← add this line (lowercase 'p')
   // domain: '.dolphinorg.in'        // strongly recommended – see below
 };
 
