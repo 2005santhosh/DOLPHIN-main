@@ -2,16 +2,16 @@
 // Handles authentication, role-based redirects, dashboard initialization, and event handlers
 const API_URL = 'https://api.dolphinorg.in/api';
 
-function getUser() {
-  try {
-    const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
-  } catch (error) {
-    console.error('Error parsing user data from localStorage:', error);
-    localStorage.removeItem('user');
-    return null;
-  }
-}
+// function getUser() {
+//   try {
+//     const user = localStorage.getItem('user');
+//     return user ? JSON.parse(user) : null;
+//   } catch (error) {
+//     console.error('Error parsing user data from localStorage:', error);
+//     localStorage.removeItem('user');
+//     return null;
+//   }
+// }
 
 async function logout() {
   try {
