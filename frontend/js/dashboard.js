@@ -32,11 +32,21 @@ async function checkAuthStatus() {
             credentials: 'include' // IMPORTANT: Send the HttpOnly cookie
         });
 
-        if (res.status === 401) {
-            // Not authenticated (cookie missing or invalid)
-            window.location.href = 'login.html';
-            return false;
-        }
+       if (res.status === 401) {
+    console.warn("Auth failed — retrying...");
+    
+    // retry once after delay
+    await new Promise(res => setTimeout(res, 300));
+
+    const retry = await fetch(`${API_URL}/auth/profile`, {
+        credentials: 'include'
+    });
+
+    if (retry.status === 401) {
+        window.location.href = 'login.html';
+        return false;
+    }
+}
 
         const data = await res.json();
         user = data.profile || data;
