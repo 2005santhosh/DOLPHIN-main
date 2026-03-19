@@ -43,7 +43,8 @@ async function checkAuthStatus() {
     });
 
     if (retry.status === 401) {
-        window.location.href = 'login.html';
+        //window.location.href = 'login.html';
+        console.error("🚨 AUTH FAILED — but NOT redirecting");
         return false;
     }
 }
