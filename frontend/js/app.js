@@ -290,126 +290,126 @@ if (window.location.pathname.includes('register.html')) {
 // ────────────────────────────────────────────────
 // Investor Dashboard Logic
 // ────────────────────────────────────────────────
-if (window.location.pathname.includes('investor-dashboard.html')) {
-  const user = getUser();
+// if (window.location.pathname.includes('investor-dashboard.html')) {
+//   const user = getUser();
   
 
-  async function loadInvestorDashboard() {
-    try {
-      const startups = await api.getValidatedStartups();
+//   async function loadInvestorDashboard() {
+//     try {
+//       const startups = await api.getValidatedStartups();
 
-      const container = document.getElementById('validated-startups');
-      if (!container) return;
+//       const container = document.getElementById('validated-startups');
+//       if (!container) return;
 
-      container.innerHTML = '';
+//       container.innerHTML = '';
 
-      if (!startups || startups.length === 0) {
-        container.innerHTML = '<p style="color:var(--text-secondary);">No validated startups available yet.</p>';
-        return;
-      }
+//       if (!startups || startups.length === 0) {
+//         container.innerHTML = '<p style="color:var(--text-secondary);">No validated startups available yet.</p>';
+//         return;
+//       }
 
-      startups.forEach(s => {
-        const card = document.createElement('div');
-        card.className = 'startup-card';
-        const scoreClass = s.validationScore >= 85 ? 'score-high' : s.validationScore >= 70 ? 'score-medium' : 'score-low';
+//       startups.forEach(s => {
+//         const card = document.createElement('div');
+//         card.className = 'startup-card';
+//         const scoreClass = s.validationScore >= 85 ? 'score-high' : s.validationScore >= 70 ? 'score-medium' : 'score-low';
 
-        card.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong style="font-size:1.1rem;">${s.name}</strong>
-            <span class="${scoreClass}">${s.validationScore}%</span>
-          </div>
-          <p style="margin:0.5rem 0; color:var(--text-secondary);">
-            ${s.thesis?.substring(0, 120)}${s.thesis?.length > 120 ? '...' : ''}
-          </p>
-          <small style="color:var(--text-secondary);">Industry: ${s.industry || 'Not specified'}</small>
-        `;
-        container.appendChild(card);
-      });
-    } catch (err) {
-      console.error('Failed to load validated startups:', err);
-      const container = document.getElementById('validated-startups');
-      if (container) {
-        container.innerHTML = '<p style="color:red;">Failed to load startups.</p>';
-      }
-    }
-  }
+//         card.innerHTML = `
+//           <div style="display:flex; justify-content:space-between; align-items:center;">
+//             <strong style="font-size:1.1rem;">${s.name}</strong>
+//             <span class="${scoreClass}">${s.validationScore}%</span>
+//           </div>
+//           <p style="margin:0.5rem 0; color:var(--text-secondary);">
+//             ${s.thesis?.substring(0, 120)}${s.thesis?.length > 120 ? '...' : ''}
+//           </p>
+//           <small style="color:var(--text-secondary);">Industry: ${s.industry || 'Not specified'}</small>
+//         `;
+//         container.appendChild(card);
+//       });
+//     } catch (err) {
+//       console.error('Failed to load validated startups:', err);
+//       const container = document.getElementById('validated-startups');
+//       if (container) {
+//         container.innerHTML = '<p style="color:red;">Failed to load startups.</p>';
+//       }
+//     }
+//   }
 
-  // Search filter
-  document.getElementById('search-startup')?.addEventListener('input', e => {
-    const term = e.target.value.toLowerCase();
-    document.querySelectorAll('.startup-card').forEach(card => {
-      const text = card.textContent.toLowerCase();
-      card.style.display = text.includes(term) ? '' : 'none';
-    });
-  });
+//   // Search filter
+//   document.getElementById('search-startup')?.addEventListener('input', e => {
+//     const term = e.target.value.toLowerCase();
+//     document.querySelectorAll('.startup-card').forEach(card => {
+//       const text = card.textContent.toLowerCase();
+//       card.style.display = text.includes(term) ? '' : 'none';
+//     });
+//   });
 
-  loadInvestorDashboard();
-}
+//   loadInvestorDashboard();
+// }
 
 // ────────────────────────────────────────────────
 // Provider Dashboard Logic samesite
 // ────────────────────────────────────────────────
-if (window.location.pathname.includes('provider-dashboard.html')) {
-  const user = getUser();
+// if (window.location.pathname.includes('provider-dashboard.html')) {
+//   const user = getUser();
 
-  async function loadProviderDashboard() {
-    try {
-      const requests = await api.getMyRequests();
+//   async function loadProviderDashboard() {
+//     try {
+//       const requests = await api.getMyRequests();
 
-      const pendingEl = document.getElementById('requests-pending');
-      const acceptedEl = document.getElementById('requests-accepted');
+//       const pendingEl = document.getElementById('requests-pending');
+//       const acceptedEl = document.getElementById('requests-accepted');
 
-      pendingEl.innerHTML = '';
-      acceptedEl.innerHTML = '';
+//       pendingEl.innerHTML = '';
+//       acceptedEl.innerHTML = '';
 
-      if (!requests || requests.length === 0) {
-        pendingEl.innerHTML = '<p style="color:var(--text-secondary);">No requests at the moment.</p>';
-        return;
-      }
+//       if (!requests || requests.length === 0) {
+//         pendingEl.innerHTML = '<p style="color:var(--text-secondary);">No requests at the moment.</p>';
+//         return;
+//       }
 
-      requests.forEach(r => {
-        const item = document.createElement('div');
-        item.className = 'request-item';
-        item.innerHTML = `
-          <div>
-            <strong>${r.startupId?.name || 'Unnamed Startup'}</strong><br>
-            <small style="color:var(--text-secondary);">
-              Validation: ${r.startupId?.validationScore || '?'}% • 
-              ${new Date(r.createdAt).toLocaleDateString()}
-            </small>
-          </div>
-          <div>
-            <span class="status-${r.status}">${r.status.toUpperCase()}</span>
-            ${r.status === 'pending' ? `
-              <button class="btn btn-accept" onclick="updateRequest('${r._id}', 'accepted')">Accept</button>
-              <button class="btn btn-reject"  onclick="updateRequest('${r._id}', 'rejected')">Reject</button>
-            ` : ''}
-          </div>
-        `;
+//       requests.forEach(r => {
+//         const item = document.createElement('div');
+//         item.className = 'request-item';
+//         item.innerHTML = `
+//           <div>
+//             <strong>${r.startupId?.name || 'Unnamed Startup'}</strong><br>
+//             <small style="color:var(--text-secondary);">
+//               Validation: ${r.startupId?.validationScore || '?'}% • 
+//               ${new Date(r.createdAt).toLocaleDateString()}
+//             </small>
+//           </div>
+//           <div>
+//             <span class="status-${r.status}">${r.status.toUpperCase()}</span>
+//             ${r.status === 'pending' ? `
+//               <button class="btn btn-accept" onclick="updateRequest('${r._id}', 'accepted')">Accept</button>
+//               <button class="btn btn-reject"  onclick="updateRequest('${r._id}', 'rejected')">Reject</button>
+//             ` : ''}
+//           </div>
+//         `;
 
-        if (r.status === 'pending') {
-          pendingEl.appendChild(item);
-        } else {
-          acceptedEl.appendChild(item);
-        }
-      });
-    } catch (err) {
-      console.error(err);
-      document.querySelector('.card').innerHTML += '<p style="color:red;">Failed to load requests.</p>';
-    }
-  }
+//         if (r.status === 'pending') {
+//           pendingEl.appendChild(item);
+//         } else {
+//           acceptedEl.appendChild(item);
+//         }
+//       });
+//     } catch (err) {
+//       console.error(err);
+//       document.querySelector('.card').innerHTML += '<p style="color:red;">Failed to load requests.</p>';
+//     }
+//   }
 
-  // Placeholder for accept/reject
-  window.updateRequest = async function(requestId, newStatus) {
-    if (!confirm(`Are you sure you want to ${newStatus} this request?`)) return;
-    try {
-      await api.updateIntroRequest(requestId, newStatus);
-      alert(`Request marked as ${newStatus}!`);
-      loadProviderDashboard(); // refresh
-    } catch (err) {
-      alert('Failed to update request: ' + err.message);
-    }
-  };
+//   // Placeholder for accept/reject
+//   window.updateRequest = async function(requestId, newStatus) {
+//     if (!confirm(`Are you sure you want to ${newStatus} this request?`)) return;
+//     try {
+//       await api.updateIntroRequest(requestId, newStatus);
+//       alert(`Request marked as ${newStatus}!`);
+//       loadProviderDashboard(); // refresh
+//     } catch (err) {
+//       alert('Failed to update request: ' + err.message);
+//     }
+//   };
 
-  loadProviderDashboard();
-}
+//   loadProviderDashboard();
+// }
