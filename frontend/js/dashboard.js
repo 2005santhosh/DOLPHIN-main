@@ -26,24 +26,67 @@ const VALIDATION_STAGES = [
 // ==========================================
 // AUTHENTICATION CHECK (COOKIE BASED)
 // ==========================================
+// async function checkAuthStatus() {
+//   try {
+//     const res = await fetch(`${API_URL}/auth/profile`, { credentials: 'include' });
+
+//     if (res.status === 401) {
+//       // Retry once after a brief delay (handles timing edge cases)
+//       await new Promise(resolve => setTimeout(resolve, 300));
+//       const retry = await fetch(`${API_URL}/auth/profile`, { credentials: 'include' });
+//       if (retry.status === 401) {
+//         window.location.href = 'login.html'; // Only redirect here, after retry
+//         return false;
+//       }
+//     }
+
+//     const data = await res.json();
+//     user = data.profile || data;
+//     userId = user._id || user.id;
+
+//     const userNameEl = document.getElementById('user-name');
+//     if (userNameEl) userNameEl.textContent = user.name || 'User';
+
+//     const nameArray = (user.name || 'User').split(' ');
+//     const initials = nameArray.map(n => n.charAt(0).toUpperCase()).join('');
+//     const avatarEl = document.querySelector('.user-avatar');
+//     if (avatarEl) avatarEl.textContent = initials || 'U';
+
+//     return true;
+//   } catch (error) {
+//     console.error('Auth check failed:', error);
+//     window.location.href = 'login.html';
+//     return false;
+//   }
+// }
 async function checkAuthStatus() {
   try {
+    // If we just logged in, give the cookie time to propagate
+    const justLoggedIn = sessionStorage.getItem('justLoggedIn');
+    if (justLoggedIn) {
+      sessionStorage.removeItem('justLoggedIn');
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
     const res = await fetch(`${API_URL}/auth/profile`, { credentials: 'include' });
 
     if (res.status === 401) {
-      // Retry once after a brief delay (handles timing edge cases)
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Retry with longer delay
+      await new Promise(resolve => setTimeout(resolve, 800));
       const retry = await fetch(`${API_URL}/auth/profile`, { credentials: 'include' });
       if (retry.status === 401) {
-        window.location.href = 'login.html'; // Only redirect here, after retry
+        window.location.href = 'login.html';
         return false;
       }
+      const data = await retry.json();
+      user = data.profile || data;
+      userId = user._id || user.id;
+      return true;
     }
 
     const data = await res.json();
     user = data.profile || data;
     userId = user._id || user.id;
-
     const userNameEl = document.getElementById('user-name');
     if (userNameEl) userNameEl.textContent = user.name || 'User';
 
@@ -51,8 +94,8 @@ async function checkAuthStatus() {
     const initials = nameArray.map(n => n.charAt(0).toUpperCase()).join('');
     const avatarEl = document.querySelector('.user-avatar');
     if (avatarEl) avatarEl.textContent = initials || 'U';
-
     return true;
+
   } catch (error) {
     console.error('Auth check failed:', error);
     window.location.href = 'login.html';
@@ -1804,13 +1847,42 @@ if(confirmDeleteBtn) {
 }
 
 // Init
-document.addEventListener('DOMContentLoaded', async () => {
-  const currentPage = window.location.pathname;
+// document.addEventListener('DOMContentLoaded', async () => {
+//   const currentPage = window.location.pathname;
 
+//   const isAuthed = await checkAuthStatus();
+
+//   if (isAuthed) {
+//     loadDashboard();
+//     loadFounderRequests();
+//     updateNotificationBadge();
+//     const deleteBtn = document.getElementById('delete-account-btn');
+//       if (deleteBtn) {
+//           deleteBtn.addEventListener('click', openDeleteModal);
+//       }
+//   }
+// });
+document.addEventListener('DOMContentLoaded', async () => {
+  // Fast path: trust localStorage for initial render
+  const cachedUser = localStorage.getItem('user');
+  if (!cachedUser) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  // Parse and use immediately - don't wait for network
+  user = JSON.parse(cachedUser);
+  userId = user._id || user.id;
+  
+  // Render UI immediately with cached data
+  loadDashboard();
+  
+  // Then verify with server in background (non-blocking)
+  verifySessionInBackground();
   const isAuthed = await checkAuthStatus();
 
   if (isAuthed) {
-    loadDashboard();
+    // loadDashboard();
     loadFounderRequests();
     updateNotificationBadge();
     const deleteBtn = document.getElementById('delete-account-btn');
@@ -1819,3 +1891,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
   }
 });
+
+async function verifySessionInBackground() {
+  try {
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s after page load
+    const res = await fetch(`${API_URL}/auth/profile`, { credentials: 'include' });
+    if (res.status === 401) {
+      // Session truly expired - clear and redirect
+      localStorage.clear();
+      window.location.href = 'login.html';
+    }
+    // If OK, optionally refresh user data silently
+  } catch (e) {
+    // Network error - don't redirect, user might be offline
+    console.warn('Background auth check failed', e);
+  }
+}
