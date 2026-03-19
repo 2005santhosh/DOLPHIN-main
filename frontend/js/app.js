@@ -78,26 +78,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Extract the current page name without extension and path
   const currentPage = currentPath.split('/').pop().replace('.html', '');
-
+  const selfManagedPages = ['dashboard', 'investor-dashboard', 'provider-dashboard'];
+  if (selfManagedPages.includes(currentPage)) return;
   // If no user is logged in → redirect from protected pages
   if (!user) {
-    if (currentPage === 'dashboard' || 
-        currentPage === 'investor-dashboard' || 
-        currentPage === 'provider-dashboard' || 
-        currentPage === 'marketplace') {
+    if (currentPage === 'marketplace') {
       window.location.href = 'index.html';
     }
     return;
   }
 
   // If logged in → ensure role matches the current page
-  if (currentPage === 'dashboard' && user.role !== 'founder') {
-    window.location.href = 'index.html';
-  }
-  if (currentPage === 'investor-dashboard' && user.role !== 'investor') {
-    window.location.href = 'index.html';
-  }
-  if (currentPage === 'provider-dashboard' && user.role !== 'provider') {
+  if (currentPage === 'marketplace' && !['founder','investor','provider'].includes(user.role)) {
     window.location.href = 'index.html';
   }
 

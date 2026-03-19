@@ -27,49 +27,38 @@ const VALIDATION_STAGES = [
 // AUTHENTICATION CHECK (COOKIE BASED)
 // ==========================================
 async function checkAuthStatus() {
-    try {
-        const res = await fetch(`${API_URL}/auth/profile`, { 
-            credentials: 'include' // IMPORTANT: Send the HttpOnly cookie
-        });
+  try {
+    const res = await fetch(`${API_URL}/auth/profile`, { credentials: 'include' });
 
-       if (res.status === 401) {
-    console.warn("Auth failed — retrying...");
-    
-    // retry once after delay
-    await new Promise(res => setTimeout(res, 300));
-
-    const retry = await fetch(`${API_URL}/auth/profile`, {
-        credentials: 'include'
-    });
-
-    if (retry.status === 401) {
-        //window.location.href = 'login.html';
-        console.error("🚨 AUTH FAILED — but NOT redirecting");
+    if (res.status === 401) {
+      // Retry once after a brief delay (handles timing edge cases)
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const retry = await fetch(`${API_URL}/auth/profile`, { credentials: 'include' });
+      if (retry.status === 401) {
+        window.location.href = 'login.html'; // Only redirect here, after retry
         return false;
+      }
     }
+
+    const data = await res.json();
+    user = data.profile || data;
+    userId = user._id || user.id;
+
+    const userNameEl = document.getElementById('user-name');
+    if (userNameEl) userNameEl.textContent = user.name || 'User';
+
+    const nameArray = (user.name || 'User').split(' ');
+    const initials = nameArray.map(n => n.charAt(0).toUpperCase()).join('');
+    const avatarEl = document.querySelector('.user-avatar');
+    if (avatarEl) avatarEl.textContent = initials || 'U';
+
+    return true;
+  } catch (error) {
+    console.error('Auth check failed:', error);
+    window.location.href = 'login.html';
+    return false;
+  }
 }
-
-        const data = await res.json();
-        user = data.profile || data;
-        userId = user._id || user.id;
-        
-        // Update UI immediately with user data
-        const userNameEl = document.getElementById('user-name');
-        if(userNameEl) userNameEl.textContent = user.name || 'User';
-        
-        const nameArray = (user.name || 'User').split(' ');
-        const initials = nameArray.map(n => n.charAt(0).toUpperCase()).join('');
-        const avatarEl = document.querySelector('.user-avatar');
-        if(avatarEl) avatarEl.textContent = initials || 'U';
-
-        return true;
-    } catch (error) {
-        console.error("Auth check failed:", error);
-        window.location.href = 'login.html';
-        return false;
-    }
-}
-
 // ==========================================
 // TOAST NOTIFICATION SYSTEM
 // ==========================================
@@ -1818,11 +1807,7 @@ if(confirmDeleteBtn) {
 document.addEventListener('DOMContentLoaded', async () => {
   const currentPage = window.location.pathname;
 
-  // ❌ Skip auth check on login page
-  if (currentPage.includes('login.html')) {
-    console.log("Login page - skipping auth check");
-    return;
-  }
+  if (currentPage.includes('login.html')) return;
 
   const isAuthed = await checkAuthStatus();
 
