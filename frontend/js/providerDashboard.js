@@ -423,7 +423,7 @@ function loadSettings() {
 }
 
 // ==========================================
-// 7. FOUNDERS PAGE LOGIC
+// 7. FOUNDERS PAGE LOGIC socket
 // ==========================================
 async function loadFounders() {
   const foundersList = document.getElementById('founders-list');
@@ -1097,7 +1097,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Socket.io Initialization
   if (typeof io === 'function' && userId) {
     const socket = io("https://api.dolphinorg.in", { 
-        withCredentials: true // FIX: Added for cookies samesite
+        withCredentials: true, // FIX: Added for cookies samesite
+        transports: ['websocket']
     });
     socket.emit('join', userId);
 

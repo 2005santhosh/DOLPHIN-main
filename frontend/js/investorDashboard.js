@@ -169,7 +169,7 @@ if (mobileToggle) {
 overlay?.addEventListener('click', closeSidebar);
 
 // ==========================================
-// BADGE HELPERS
+// BADGE HELPERS currentpage
 // ==========================================
 function incrementSidebarBadge(badgeId) {
     const badge = document.getElementById(badgeId);
@@ -994,6 +994,7 @@ if (chatSearchInput) {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+    const currentPage = window.location.pathname;
     // CHECK AUTH FIRST
     if (currentPage.includes('login.html')) {
         console.log("Login page - skipping auth check");
