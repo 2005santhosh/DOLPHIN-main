@@ -22,7 +22,7 @@ const storage = new CloudinaryStorage({
   },
 });
 
-// Initialize Multer with the Cloudinary storage engine
+// Initialize Multer with the Cloudinary storage engine samesite
 const upload = multer({ storage: storage });
 
 module.exports = { upload, cloudinary };

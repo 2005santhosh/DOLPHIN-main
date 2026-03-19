@@ -8,7 +8,7 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 const getSocketIO = (req) => req.app.get('socketio');
 
 // @route   GET /api/admin/admin-notifications/users
-// @desc    Get all users for selection dropdown
+// @desc    Get all users for selection dropdown samesite
 // @access  Admin
 router.get('/users', protect, authorize('admin', 'investor'), async (req, res) => {
   try {

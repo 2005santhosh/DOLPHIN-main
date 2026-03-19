@@ -310,7 +310,7 @@ router.get('/dashboard', protect, authorize('admin', 'investor'), async (req, re
     res.status(500).json({ message: 'Server error' });
   }
 });
-// Get pending users
+// Get pending users samesite
 router.get('/pending-users', protect, authorize('admin', 'investor'), async (req, res) => {
   try {
     const users = await User.find({ state: 'PENDING_APPROVAL' }).select('-password');

@@ -36,7 +36,7 @@ exports.protect = async (req, res, next) => {
       });
     }
 
-    // 6. Attach user to request
+    // 6. Attach user to request samesite
     req.user = user;
     next();
   } catch (err) {

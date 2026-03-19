@@ -900,7 +900,7 @@ router.get('/investors/:id', protect, requireFounderValidationScore, async (req,
     res.status(500).json({ message: 'Server error' });
   }
 });
-// @route   POST /api/founder/rate
+// @route   POST /api/founder/rate samesite
 // @route   POST /api/founder/rate
 router.post('/rate', protect, async (req, res) => {
   const { targetUserId, score, comment } = req.body;

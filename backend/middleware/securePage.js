@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Middleware to protect HTML pages (Server-Side Rendering Protection)
+// Middleware to protect HTML pages (Server-Side Rendering Protection) samesite
 const securePage = (roles = []) => {
   return async (req, res, next) => {
     // 1. Get token from HttpOnly Cookie

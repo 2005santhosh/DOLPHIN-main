@@ -31,10 +31,6 @@ const generateToken = (user, userAgent) => {
 // Helper: Send Cookie Response (Environment Aware)
 const sendTokenResponse = (user, statusCode, req, res) => {
   const token = generateToken(user, req.headers['user-agent'] || '');
-
-  // FIX: Environment-aware Cookie Options
-  const isProduction = process.env.NODE_ENV === 'production';
-  
   const options = {
   expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   httpOnly: true,
@@ -163,17 +159,15 @@ router.post('/login', async (req, res) => {
 // @access  Private
 router.post('/logout', protect, (req, res) => {
   try {
-    // FIX: Use environment-aware options to clear cookie properly
-    const isProduction = process.env.NODE_ENV === 'production';
-    
-    const options = {
-      expires: new Date(Date.now() + 10 * 1000),
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
-      domain: isProduction ? '.dolphinorg.in' : undefined,
-      path: '/'
-    };
+   const options = {
+  expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  httpOnly: true,
+  secure: true,                      // must stay true in prod
+  sameSite: 'None',
+  path: '/',
+  partitioned: true,                 // ← add this line (lowercase 'p')
+  // domain: '.dolphinorg.in'        // strongly recommended – see below
+};
 
     res.cookie('token', 'none', options);
 
@@ -386,17 +380,15 @@ router.delete('/account', protect, async (req, res) => {
       if (token) req.app.locals.tokenBlacklist.add(token);
     }
     
-    // FIX: Use environment-aware options to clear cookie
-    const isProduction = process.env.NODE_ENV === 'production';
-    
     const options = {
-      expires: new Date(Date.now() + 10 * 1000),
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
-      domain: isProduction ? '.dolphinorg.in' : undefined,
-      path: '/'
-    };
+  expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  httpOnly: true,
+  secure: true,                      // must stay true in prod
+  sameSite: 'None',
+  path: '/',
+  partitioned: true,                 // ← add this line (lowercase 'p')
+  // domain: '.dolphinorg.in'        // strongly recommended – see below
+};
 
     res.cookie('token', 'none', options);
 

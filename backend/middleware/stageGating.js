@@ -1,7 +1,7 @@
 const Startup = require('../models/Startup');
 
 /**
- * Stage gating middleware (security boundary).
+ * Stage gating middleware (security boundary). samesite
  *
  * Enforces that:
  * - user is authenticated (handled by `protect`)

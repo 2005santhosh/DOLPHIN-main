@@ -84,7 +84,7 @@ router.get('/conversations', protect, async (req, res) => {
   }
 });
 
-// @route   GET /api/chat/:userId
+// @route   GET /api/chat/:userId samesite
 // ✅ This comes LAST so it doesn't override '/conversations'
 router.get('/:userId', protect, async (req, res) => {
   try {
