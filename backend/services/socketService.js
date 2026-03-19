@@ -8,6 +8,23 @@ let io;
 const userSockets = new Map(); // userId -> Set of socket IDs
 
 /**
+ * Helper to parse cookies from the handshake headers
+ * (Required for HttpOnly Cookie support)
+ */
+const parseCookies = (cookieHeader) => {
+    const cookies = {};
+    if (!cookieHeader) return cookies;
+    cookieHeader.split(';').forEach(cookie => {
+        const [key, ...valParts] = cookie.split('=');
+        const value = valParts.join('=').trim(); // Handle values with = signs if any
+        if (key) {
+            cookies[key.trim()] = decodeURIComponent(value);
+        }
+    });
+    return cookies;
+};
+
+/**
  * Initialize Socket.io server
  * @param {Object} server - HTTP server instance
  * @param {Object} corsOptions - CORS configuration object (from server.js)
@@ -20,8 +37,15 @@ function initializeSocket(server, corsOptions) {
   // Authentication middleware
   io.use((socket, next) => {
     try {
-      const token = socket.handshake.auth.token;
+      // FIX: Check for token in Auth object (legacy) AND Cookies (HttpOnly)
+      let token = socket.handshake.auth.token;
       
+      // If no auth token, check cookies
+      if (!token && socket.handshake.headers.cookie) {
+          const cookies = parseCookies(socket.handshake.headers.cookie);
+          token = cookies.token; // 'token' is the name of the cookie set in authController
+      }
+
       if (!token) {
         return next(new Error('Authentication error: No token provided'));
       }
