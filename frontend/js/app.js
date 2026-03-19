@@ -117,92 +117,92 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ────────────────────────────────────────────────
 // Login Form Handler
 // ────────────────────────────────────────────────
-if (window.location.pathname.includes('login.html')) {
-  document.getElementById('login-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
+// if (window.location.pathname.includes('login.html')) {
+//   document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+//     e.preventDefault();
+//     const email = document.getElementById('email').value.trim();
+//     const password = document.getElementById('password').value;
 
-    if (!email || !password) {
-      alert('Email and password are required');
-      return;
-    }
+//     if (!email || !password) {
+//       alert('Email and password are required');
+//       return;
+//     }
 
-    try {
-      const data = await api.login(email, password);
-      // SECURITY FIX: We no longer check for data.token.
-      // Token is handled via HttpOnly Cookie. We only need user data.
-      if (data && data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
+//     try {
+//       const data = await api.login(email, password);
+//       // SECURITY FIX: We no longer check for data.token.
+//       // Token is handled via HttpOnly Cookie. We only need user data.
+//       if (data && data.user) {
+//         localStorage.setItem('user', JSON.stringify(data.user));
         
-        // Redirect based on role
-        switch (data.user.role) {
-          case 'founder':
-            window.location.href = 'dashboard.html';
-            break;
-          case 'provider':
-            window.location.href = 'provider-dashboard.html';
-            break;
-          case 'investor':
-            window.location.href = 'investor-dashboard.html';
-            break;
-          default:
-            window.location.href = 'index.html';
-        }
-      } else {
-        alert('Invalid login response');
-      }
-    } catch (err) {
-      alert(`Login Failed: ${err.message}`);
-    }
-  });
-}
+//         // Redirect based on role
+//         switch (data.user.role) {
+//           case 'founder':
+//             window.location.href = 'dashboard.html';
+//             break;
+//           case 'provider':
+//             window.location.href = 'provider-dashboard.html';
+//             break;
+//           case 'investor':
+//             window.location.href = 'investor-dashboard.html';
+//             break;
+//           default:
+//             window.location.href = 'index.html';
+//         }
+//       } else {
+//         alert('Invalid login response');
+//       }
+//     } catch (err) {
+//       alert(`Login Failed: ${err.message}`);
+//     }
+//   });
+// }
 
 // ────────────────────────────────────────────────
 // Register Form Handler
 // ────────────────────────────────────────────────
-if (window.location.pathname.includes('register.html')) {
-  document.getElementById('register-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = document.getElementById('name').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-    const role = document.querySelector('input[name="role"]:checked')?.value;
+// if (window.location.pathname.includes('register.html')) {
+//   document.getElementById('register-form')?.addEventListener('submit', async (e) => {
+//     e.preventDefault();
+//     const name = document.getElementById('name').value.trim();
+//     const email = document.getElementById('email').value.trim();
+//     const password = document.getElementById('password').value;
+//     const role = document.querySelector('input[name="role"]:checked')?.value;
 
-    if (!name || !email || !password || !role) {
-      alert('All fields are required');
-      return;
-    }
+//     if (!name || !email || !password || !role) {
+//       alert('All fields are required');
+//       return;
+//     }
 
-    try {
-      const data = await api.register(name, email, password, role);
-      // SECURITY FIX: We no longer check for data.token.
-      if (data && data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-        alert('Account created successfully!');
+//     try {
+//       const data = await api.register(name, email, password, role);
+//       // SECURITY FIX: We no longer check for data.token.
+//       if (data && data.user) {
+//         localStorage.setItem('user', JSON.stringify(data.user));
+//         alert('Account created successfully!');
 
-        // Redirect based on role
-        switch (data.user.role) {
-          case 'founder':
-            window.location.href = 'dashboard.html';
-            break;
-          case 'provider':
-            window.location.href = 'provider-dashboard.html';
-            break;
-          case 'investor':
-            window.location.href = 'investor-dashboard.html';
-            break;
-          default:
-            window.location.href = 'index.html';
-        }
-      } else {
-        alert('Invalid registration response');
-      }
-    } catch (err) {
-      alert(`Registration Failed: ${err.message}`);
-    }
-  });
-}
+//         // Redirect based on role
+//         switch (data.user.role) {
+//           case 'founder':
+//             window.location.href = 'dashboard.html';
+//             break;
+//           case 'provider':
+//             window.location.href = 'provider-dashboard.html';
+//             break;
+//           case 'investor':
+//             window.location.href = 'investor-dashboard.html';
+//             break;
+//           default:
+//             window.location.href = 'index.html';
+//         }
+//       } else {
+//         alert('Invalid registration response');
+//       }
+//     } catch (err) {
+//       alert(`Registration Failed: ${err.message}`);
+//     }
+//   });
+// }
 
 // // ────────────────────────────────────────────────
 // // Founder Dashboard Logic
