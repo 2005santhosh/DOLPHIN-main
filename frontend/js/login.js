@@ -72,8 +72,8 @@
                     'dashboard.html';
                 
                 setTimeout(() => {
-                    console.log("LOGIN SUCCESS — STOPPING REDIRECT");
-                    return;
+                   console.log("Redirecting to:", redirectUrl);
+                   window.location.href = redirectUrl;
                 }, 500);
 
             } catch (error) {
