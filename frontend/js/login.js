@@ -74,7 +74,7 @@
                 setTimeout(() => {
                     console.log("LOGIN SUCCESS");
                     console.log("Redirecting to:", redirectUrl);
-                    window.location.href = redirectUrl;
+                    window.location.href = redirectUrl + '?v=' + Date.now();
                     return;
 
                 }, 500);
