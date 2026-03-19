@@ -166,7 +166,7 @@ router.post('/logout', protect, (req, res) => {
   sameSite: 'None',
   path: '/',
                    // ← add this line (lowercase 'p')
-  // domain: '.dolphinorg.in'        // strongly recommended – see below
+  domain: '.dolphinorg.in'        // strongly recommended – see below
 };
 
     res.cookie('token', 'none', options);
