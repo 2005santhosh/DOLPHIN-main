@@ -97,6 +97,7 @@ async function chatApiCall(endpoint, method = 'GET', body = null) {
 const api = {
   getMyRequests: async () => {
     const data = await apiCall('/my-requests');
+
     if (Array.isArray(data)) return data;
     return data.requests || [];
   },
@@ -296,32 +297,44 @@ function loadPageContent(page) {
 }
 
 async function loadDashboard() {
+  // 1. Try loading the profile first to check if it exists
+  let profile;
   try {
-    const cachedProfile = localStorage.getItem('providerProfileCache');
-    if (cachedProfile) {
-        const profile = JSON.parse(cachedProfile);
-        renderDashboardUI(profile);
-        updateVerifiedBadges(profile.state);
+    // We use the raw apiCall to handle the 404 manually
+    const res = await fetch(`${API_BASE}/profile`, { credentials: 'include' });
+    if (res.status === 404) {
+        // HANDLE MISSING PROFILE: Redirect to Profile Page to create it
+        console.warn("Provider profile missing. Redirecting to create one.");
+        showToast("Please complete your profile to access the dashboard.", "info");
+        navigateToPage('profile');
+        return; 
     }
-  } catch(e) {}
+    if (!res.ok) throw new Error("Failed to fetch profile");
+    profile = await res.json();
+    
+    // Cache and update UI
+    localStorage.setItem('providerProfileCache', JSON.stringify(profile));
+    renderDashboardUI(profile);
+    updateVerifiedBadges(profile.state);
+    if (profile.profilePicture) updateProviderHeaderAvatar(profile.profilePicture);
 
+  } catch (error) {
+    console.error("Profile load failed:", error);
+    showToast("Error loading profile data.", "error");
+    return;
+  }
+
+  // 2. If profile exists, load the rest of the dashboard data
   try {
-    const [profile, requests, founders] = await Promise.all([
-        api.getProfile(),
+    const [requests, founders] = await Promise.all([
         api.getMyRequests(),
         api.getEligibleFounders()
     ]);
 
-    localStorage.setItem('providerProfileCache', JSON.stringify(profile));
-    renderDashboardUI(profile);
-    updateVerifiedBadges(profile.state);
-    
-    if (profile.profilePicture) updateProviderHeaderAvatar(profile.profilePicture);
-    else if (profile.userId?.profilePicture) updateProviderHeaderAvatar(profile.userId.profilePicture);
-
     document.getElementById('avg-rating').textContent = profile.avgRating || '0.0';
     const activeEngagements = requests.filter(r => r.status === 'accepted').length;
     document.getElementById('active-engagements').textContent = activeEngagements;
+    
     const acceptedRequests = requests.filter(r => r.status === 'accepted').length;
     const rejectedRequests = requests.filter(r => r.status === 'rejected').length;
     const totalClosed = acceptedRequests + rejectedRequests;
@@ -344,7 +357,9 @@ async function loadDashboard() {
         recentActivity.appendChild(item);
       });
     }
-  } catch (error) { console.error('Dashboard Error:', error); }
+  } catch (error) { 
+    console.error('Dashboard Data Error:', error); 
+  }
 }
 
 function renderDashboardUI(profile) {
@@ -357,8 +372,12 @@ function renderDashboardUI(profile) {
 }
 
 async function loadProfile() {
+  // Default values
+  document.getElementById('provider-name').value = user.name || '';
+  
   try {
     const profile = await api.getProfile();
+    // If found, populate the form
     if (profile) {
       document.getElementById('provider-name').value = profile.name || user.name || '';
       document.getElementById('service-category').value = profile.category || 'mentor';
@@ -368,7 +387,15 @@ async function loadProfile() {
       document.getElementById('availability').value = profile.availability || 'medium';
       document.getElementById('contact-method').value = profile.contactMethod || 'email';
     }
-  } catch (err) { console.error(err); }
+  } catch (err) {
+    // If 404 (Not Found), it means we need to create a profile.
+    // We leave the form empty/defaults so the user can click "Update Profile" to create it.
+    if (err.message.includes('not found')) {
+        console.log("No profile found yet. User needs to create one.");
+    } else {
+        console.error(err);
+    }
+  }
 }
 
 function loadSettings() {
