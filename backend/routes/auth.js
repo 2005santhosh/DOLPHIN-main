@@ -38,9 +38,11 @@ const sendTokenResponse = (user, statusCode, req, res) => {
   const options = {
   expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   httpOnly: true,
-  secure: true,
-  sameSite: 'lax',   // 🔥 CHANGE THIS (MOST IMPORTANT)
-  path: '/'
+  secure: true,                      // must stay true in prod
+  sameSite: 'None',
+  path: '/',
+  partitioned: true,                 // ← add this line (lowercase 'p')
+  // domain: '.dolphinorg.in'        // strongly recommended – see below
 };
 
   res
