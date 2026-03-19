@@ -31,8 +31,9 @@ process.on('unhandledRejection', (err) => {
 });
 
 connectDB();
-app.set('trust proxy', 1);
+
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 // --- CORS SETUP (Defined BEFORE Socket Initialization) --- samesite
