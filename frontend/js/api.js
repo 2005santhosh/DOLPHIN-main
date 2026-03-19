@@ -226,7 +226,7 @@ const api = {
     return this.request('/auth/account', { method: 'DELETE' });
   },
 
-  // Analytics endpoints
+  // Analytics endpoints samesite
   async getAnalytics() {
     return this.request('/founder/analytics');
   },

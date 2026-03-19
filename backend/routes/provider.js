@@ -131,7 +131,7 @@ router.get('/eligible-founders', protect, async (req, res) => {
           email: user.email,
           profilePicture: user.profilePicture,
           rewardPoints: user.rewardPoints || 0,
-          state: user.state // Ensure state is passed
+          state: user.state // Ensure state is passed samesite
         }
       };
     }).filter(f => f !== null);

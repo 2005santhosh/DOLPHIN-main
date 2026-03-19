@@ -64,7 +64,7 @@
                 // SECURITY FIX: Save ONLY user info. Token is handled via Cookie automatically.
                 localStorage.setItem('user', JSON.stringify(data.user));
                 
-                // Redirect based on role
+                // Redirect based on role samesite
                 const redirectUrl = 
                     data.user.role === 'admin' ? 'admin-dashboard.html' :
                     data.user.role === 'investor' ? 'investor-dashboard.html' :

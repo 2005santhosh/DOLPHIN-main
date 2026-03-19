@@ -35,7 +35,7 @@ app.set('trust proxy', 1);
 const app = express();
 const server = http.createServer(app);
 
-// --- CORS SETUP (Defined BEFORE Socket Initialization) ---
+// --- CORS SETUP (Defined BEFORE Socket Initialization) --- samesite
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)

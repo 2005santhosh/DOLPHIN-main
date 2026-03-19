@@ -1063,7 +1063,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Socket.io Initialization
   if (typeof io === 'function' && userId) {
     const socket = io("https://api.dolphinorg.in", { 
-        withCredentials: true // FIX: Added for cookies
+        withCredentials: true // FIX: Added for cookies samesite
     });
     socket.emit('join', userId);
 

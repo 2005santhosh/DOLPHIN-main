@@ -360,7 +360,7 @@ if (window.location.pathname.includes('investor-dashboard.html')) {
 }
 
 // ────────────────────────────────────────────────
-// Provider Dashboard Logic
+// Provider Dashboard Logic samesite
 // ────────────────────────────────────────────────
 if (window.location.pathname.includes('provider-dashboard.html')) {
   const user = getUser();
