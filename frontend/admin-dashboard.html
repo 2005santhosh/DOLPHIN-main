@@ -8,16 +8,6 @@
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐬</text></svg>">
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-  <script>
-    // Auth Guard: Run immediately before DOM renders
-    (function() {
-        const token = localStorage.getItem('token');
-        // If no token found, kick user to index immediately
-        if (!token) {
-            window.location.replace('index.html');
-        }
-    })();
-</script>
 </head>
 <body>
   <!-- Header -->
