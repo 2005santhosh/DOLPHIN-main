@@ -798,7 +798,10 @@ window.closeLegalModal = function() {
 // 11. EVENT LISTENERS & INITIALIZATION
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
-  
+  if (currentPage.includes('login.html')) {
+    console.log("Login page - skipping auth check");
+    return;
+  }
   // CHECK AUTH FIRST
   const isAuthed = await checkAuthStatus();
 

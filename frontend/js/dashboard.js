@@ -1815,19 +1815,23 @@ if(confirmDeleteBtn) {
 
 // Init
 document.addEventListener('DOMContentLoaded', async () => {
-  // CHECK AUTH FIRST
-  setTimeout(async () => {
+  const currentPage = window.location.pathname;
+
+  // ❌ Skip auth check on login page
+  if (currentPage.includes('login.html')) {
+    console.log("Login page - skipping auth check");
+    return;
+  }
+
   const isAuthed = await checkAuthStatus();
-  
-  if(isAuthed) {
-      loadDashboard();
-      loadFounderRequests();
-      updateNotificationBadge(); 
-      
-      const deleteBtn = document.getElementById('delete-account-btn');
+
+  if (isAuthed) {
+    loadDashboard();
+    loadFounderRequests();
+    updateNotificationBadge();
+    const deleteBtn = document.getElementById('delete-account-btn');
       if (deleteBtn) {
           deleteBtn.addEventListener('click', openDeleteModal);
       }
   }
-   }, 500);
 });

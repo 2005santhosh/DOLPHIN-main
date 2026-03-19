@@ -995,6 +995,10 @@ if (chatSearchInput) {
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     // CHECK AUTH FIRST
+    if (currentPage.includes('login.html')) {
+        console.log("Login page - skipping auth check");
+        return;
+    }
     const isAuthed = await checkAuthStatus();
     
     if(isAuthed) {
