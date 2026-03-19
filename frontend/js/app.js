@@ -204,88 +204,88 @@ if (window.location.pathname.includes('register.html')) {
   });
 }
 
-// ────────────────────────────────────────────────
-// Founder Dashboard Logic
-// ────────────────────────────────────────────────
-if (window.location.pathname.includes('dashboard.html')) {
-  const user = getUser();
+// // ────────────────────────────────────────────────
+// // Founder Dashboard Logic
+// // ────────────────────────────────────────────────
+// if (window.location.pathname.includes('dashboard.html')) {
+//   const user = getUser();
 
-  const initDashboard = async () => {
-    let startup = await api.getStartup();
-    if (!startup) {
-      document.getElementById('create-startup-section').style.display = 'block';
-      document.getElementById('dashboard-section').style.display = 'none';
+//   const initDashboard = async () => {
+//     let startup = await api.getStartup();
+//     if (!startup) {
+//       document.getElementById('create-startup-section').style.display = 'block';
+//       document.getElementById('dashboard-section').style.display = 'none';
 
-      document.getElementById('create-startup-btn').addEventListener('click', async () => {
-        const name = document.getElementById('s-name').value.trim();
-        const thesis = document.getElementById('s-thesis').value.trim();
-        if (!name || !thesis) return alert('Please fill all fields');
+//       document.getElementById('create-startup-btn').addEventListener('click', async () => {
+//         const name = document.getElementById('s-name').value.trim();
+//         const thesis = document.getElementById('s-thesis').value.trim();
+//         if (!name || !thesis) return alert('Please fill all fields');
 
-        try {
-          startup = await api.createStartup({ name, thesis, industry: 'Tech' });
-          renderDashboard(startup);
-        } catch (err) {
-          alert(`Failed to create startup: ${err.message}`);
-        }
-      });
-    } else {
-      renderDashboard(startup);
-    }
-  };
+//         try {
+//           startup = await api.createStartup({ name, thesis, industry: 'Tech' });
+//           renderDashboard(startup);
+//         } catch (err) {
+//           alert(`Failed to create startup: ${err.message}`);
+//         }
+//       });
+//     } else {
+//       renderDashboard(startup);
+//     }
+//   };
 
-  window.toggleMilestone = async (startupId, milestoneId) => {
-    const checkbox = document.getElementById(`check-${milestoneId}`);
-    try {
-      const updatedStartup = await api.updateMilestone(milestoneId, checkbox.checked);
-      renderDashboard(updatedStartup);
-    } catch (err) {
-      checkbox.checked = !checkbox.checked;
-      alert(err.message);
-    }
-  };
+//   window.toggleMilestone = async (startupId, milestoneId) => {
+//     const checkbox = document.getElementById(`check-${milestoneId}`);
+//     try {
+//       const updatedStartup = await api.updateMilestone(milestoneId, checkbox.checked);
+//       renderDashboard(updatedStartup);
+//     } catch (err) {
+//       checkbox.checked = !checkbox.checked;
+//       alert(err.message);
+//     }
+//   };
 
-  function renderDashboard(startup) {
-    document.getElementById('create-startup-section').style.display = 'none';
-    document.getElementById('dashboard-section').style.display = 'grid';
+//   function renderDashboard(startup) {
+//     document.getElementById('create-startup-section').style.display = 'none';
+//     document.getElementById('dashboard-section').style.display = 'grid';
 
-    document.getElementById('startup-name').textContent = startup.name;
-    document.getElementById('progress-fill').style.width = `${startup.validationScore}%`;
-    document.getElementById('score-text').textContent = `${startup.validationScore}% Validated`;
+//     document.getElementById('startup-name').textContent = startup.name;
+//     document.getElementById('progress-fill').style.width = `${startup.validationScore}%`;
+//     document.getElementById('score-text').textContent = `${startup.validationScore}% Validated`;
 
-    const list = document.getElementById('milestone-list');
-    list.innerHTML = '';
-    startup.milestones.sort((a, b) => a.order - b.order).forEach(m => {
-      const div = document.createElement('div');
-      div.className = `milestone-item ${m.isCompleted ? 'completed' : ''} ${m.verified ? 'verified' : ''}`;
-      const isDisabled = m.order > 1 && !startup.milestones.find(prev => prev.order === m.order - 1)?.verified;
-      div.innerHTML = `
-        <div>
-          <strong>${m.title}</strong>
-          <p style="font-size:0.8rem; color:#94a3b8; margin:0;">${m.description}</p>
-          ${m.verified ? '<span style="color:green;">(Verified)</span>' : (m.isCompleted ? '<span style="color:orange;">(Pending Verification)</span>' : '')}
-        </div>
-        <input type="checkbox" id="check-${m._id}"
-          ${m.isCompleted ? 'checked' : ''} ${isDisabled ? 'disabled' : ''}
-          onchange="toggleMilestone('${startup._id}', '${m._id}')">
-      `;
-      list.appendChild(div);
-    });
+//     const list = document.getElementById('milestone-list');
+//     list.innerHTML = '';
+//     startup.milestones.sort((a, b) => a.order - b.order).forEach(m => {
+//       const div = document.createElement('div');
+//       div.className = `milestone-item ${m.isCompleted ? 'completed' : ''} ${m.verified ? 'verified' : ''}`;
+//       const isDisabled = m.order > 1 && !startup.milestones.find(prev => prev.order === m.order - 1)?.verified;
+//       div.innerHTML = `
+//         <div>
+//           <strong>${m.title}</strong>
+//           <p style="font-size:0.8rem; color:#94a3b8; margin:0;">${m.description}</p>
+//           ${m.verified ? '<span style="color:green;">(Verified)</span>' : (m.isCompleted ? '<span style="color:orange;">(Pending Verification)</span>' : '')}
+//         </div>
+//         <input type="checkbox" id="check-${m._id}"
+//           ${m.isCompleted ? 'checked' : ''} ${isDisabled ? 'disabled' : ''}
+//           onchange="toggleMilestone('${startup._id}', '${m._id}')">
+//       `;
+//       list.appendChild(div);
+//     });
 
-    const auditList = document.getElementById('audit-list');
-    auditList.innerHTML = '';
-    startup.auditLogs.forEach(log => {
-      const li = document.createElement('li');
-      li.textContent = `${log.action} at ${new Date(log.timestamp).toLocaleString()}: ${JSON.stringify(log.details)}`;
-      auditList.appendChild(li);
-    });
+//     const auditList = document.getElementById('audit-list');
+//     auditList.innerHTML = '';
+//     startup.auditLogs.forEach(log => {
+//       const li = document.createElement('li');
+//       li.textContent = `${log.action} at ${new Date(log.timestamp).toLocaleString()}: ${JSON.stringify(log.details)}`;
+//       auditList.appendChild(li);
+//     });
 
-    const analytics = document.getElementById('analytics-section');
-    const incomplete = startup.milestones.filter(m => !m.verified).length;
-    analytics.innerHTML = `<p>Struggle Areas: ${incomplete} unverified milestones. Focus on next: ${startup.milestones.find(m => !m.verified)?.title || 'All verified!'}</p>`;
-  }
+//     const analytics = document.getElementById('analytics-section');
+//     const incomplete = startup.milestones.filter(m => !m.verified).length;
+//     analytics.innerHTML = `<p>Struggle Areas: ${incomplete} unverified milestones. Focus on next: ${startup.milestones.find(m => !m.verified)?.title || 'All verified!'}</p>`;
+//   }
 
-  initDashboard();
-}
+//   initDashboard();
+// }
 
 // ────────────────────────────────────────────────
 // Investor Dashboard Logic
