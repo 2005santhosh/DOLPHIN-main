@@ -1,7 +1,7 @@
 // ==========================================
-// INITIAL SETUP
+// 1. CONFIGURATION & SETUP
 // ==========================================
-// const API_URL = "https://api.dolphinorg.in/api";
+const API_URL = 'https://api.dolphinorg.in/api';
 
 // SAFETY CHECK: Prevent crashes if localStorage is blocked
 let user = {};
@@ -20,7 +20,7 @@ let watchlist = [];
 let myRequests = [];
 
 // ==========================================
-// AUTH CHECK (COOKIE BASED)
+// 2. AUTH CHECK (COOKIE BASED + ROLE PROTECTION)
 // ==========================================
 async function checkAuthStatus() {
     try {
@@ -38,6 +38,16 @@ async function checkAuthStatus() {
         user = data.profile || data;
         userId = user._id || user.id;
         
+        // CRITICAL FIX: Check if user is actually an Investor
+        if (user.role !== 'investor') {
+            console.warn(`Access Denied: User is a ${user.role}, not an investor.`);
+            // Redirect to their correct dashboard
+            if (user.role === 'founder') window.location.href = 'dashboard.html';
+            else if (user.role === 'provider') window.location.href = 'provider-dashboard.html';
+            else window.location.href = 'index.html';
+            return false;
+        }
+
         // Update UI instantly
         updateNavbar(user);
         updateVerifiedBadges(user.state || user.status);
@@ -51,7 +61,7 @@ async function checkAuthStatus() {
 }
 
 // ==========================================
-// UI UPDATE HELPER
+// 3. UI UPDATE HELPER
 // ==========================================
 
 // Helper to generate Verified Badge HTML
@@ -105,7 +115,7 @@ try {
 } catch(e) {}
 
 // ==========================================
-// MODAL LOGIC (LEGAL PAGES)
+// 4. MODAL LOGIC (LEGAL PAGES)
 // ==========================================
 function openLegalModal(type) {
     const modal = document.getElementById('legal-modal');
@@ -141,7 +151,7 @@ document.getElementById('legal-modal')?.addEventListener('click', function(e) {
 });
 
 // ==========================================
-// MOBILE MENU & OVERLAY LOGIC
+// 5. MOBILE MENU & OVERLAY LOGIC
 // ==========================================
 const mobileToggle = document.getElementById('mobile-menu-toggle');
 const sidebar = document.getElementById('sidebar');
@@ -169,7 +179,7 @@ if (mobileToggle) {
 overlay?.addEventListener('click', closeSidebar);
 
 // ==========================================
-// BADGE HELPERS currentpage
+// 6. BADGE HELPERS
 // ==========================================
 function incrementSidebarBadge(badgeId) {
     const badge = document.getElementById(badgeId);
@@ -189,18 +199,23 @@ function clearSidebarBadge(badgeId) {
 }
 
 // ==========================================
-// SOCKET.IO
+// 7. SOCKET.IO (FIXED FOR STABILITY)
 // ==========================================
 let socket;
 const SOCKET_URL = "https://api.dolphinorg.in";
 
 // Only connect if we have a userId (verified via checkAuthStatus)
 if (typeof io === 'function' && userId) {
-    // FIX: Connect with credentials to pass cookies if backend requires them
+    // FIX: Force WebSocket transport to avoid 400 Bad Request errors
     socket = io(SOCKET_URL, { 
-        withCredentials: true 
+        withCredentials: true,
+        transports: ['websocket'] 
     });
     socket.emit('join', userId);
+    
+    socket.on('connect_error', (err) => {
+        console.warn("Socket connection error:", err.message);
+    });
     
     socket.on('newNotification', (n) => {
         const badge = document.getElementById('notif-badge-count');
@@ -236,7 +251,7 @@ if (typeof io === 'function' && userId) {
 }
 
 // ==========================================
-// NAVIGATION LOGIC
+// 8. NAVIGATION LOGIC
 // ==========================================
 function switchPage(pageName) {
     // 1. Update Sidebar Active State
@@ -285,7 +300,7 @@ function loadPageContent(page) {
 }
 
 // ==========================================
-// NOTIFICATIONS
+// 9. NOTIFICATIONS
 // ==========================================
 const notifBtn = document.getElementById('notification-btn');
 const notifDropdown = document.getElementById('notification-dropdown');
@@ -310,7 +325,6 @@ async function loadNotificationList() {
     if(!list) return;
     list.innerHTML = '<p style="padding:1rem; text-align:center;">Loading...</p>';
     try {
-        // FIX: Added credentials
         const res = await fetch(`${API_URL}/notifications`, { credentials: 'include' });
         const data = await res.json();
         const notifications = data.notifications || [];
@@ -327,14 +341,12 @@ async function loadNotificationList() {
 
 window.handleNotifClick = async (id) => { 
     closeNotifDropdown(); 
-    // FIX: Added credentials
     await fetch(`${API_URL}/notifications/${id}/read`, { method: 'PUT', credentials: 'include' }); 
     updateNotificationBadge(); 
 };
 
 async function updateNotificationBadge() {
     try {
-        // FIX: Added credentials
         const res = await fetch(`${API_URL}/notifications`, { credentials: 'include' });
         const data = await res.json();
         const unread = (data.notifications || []).filter(n => !n.read).length;
@@ -349,7 +361,6 @@ updateNotificationBadge();
 
 window.markAllRead = async () => {
     try {
-        // FIX: Added credentials
         await fetch(`${API_URL}/notifications/read-all`, { method: 'PUT', credentials: 'include' });
         document.querySelectorAll('.notif-item.unread').forEach(i => i.classList.remove('unread'));
         const badge = document.getElementById('notif-badge-count');
@@ -360,7 +371,6 @@ window.markAllRead = async () => {
 window.clearNotifications = async () => {
     if(!confirm('Clear all?')) return;
     try {
-        // FIX: Added credentials
         await fetch(`${API_URL}/notifications/clear`, { method: 'DELETE', credentials: 'include' });
         document.getElementById('notif-list').innerHTML = '<p style="padding:1rem; text-align:center;">No notifications</p>';
         const badge = document.getElementById('notif-badge-count');
@@ -369,9 +379,11 @@ window.clearNotifications = async () => {
 };
 
 // ==========================================
-// DATA LOADING (OPTIMIZED)
+// 10. DATA LOADING (ROBUST ERROR HANDLING)
 // ==========================================
 async function loadDashboard() {
+  const container = document.getElementById('validated-startups');
+  
   try {
     // PARALLEL FETCHING
     const [startupRes, reqRes, watchlistRes, profileRes] = await Promise.all([
@@ -381,14 +393,38 @@ async function loadDashboard() {
         fetch(`${API_URL}/auth/profile`, { credentials: 'include' })
     ]);
 
+    // 1. Handle Startup Data
+    if (!startupRes.ok) {
+        const errData = await startupRes.json().catch(() => ({}));
+        throw new Error(errData.message || `Startups Error: ${startupRes.status}`);
+    }
     const startupData = await startupRes.json();
+
+    // 2. Handle Requests Data
+    if (!reqRes.ok) throw new Error("Failed to load requests");
     const reqData = await reqRes.json();
-    const watchlistData = await watchlistRes.json();
+
+    // 3. Handle Watchlist Data (FIX FOR CRASH)
+    if (!watchlistRes.ok) {
+        console.warn("Watchlist API failed, defaulting to empty array.");
+        watchlist = []; // Default to empty on error
+    } else {
+        const watchlistData = await watchlistRes.json();
+        // FIX: Check if data is array before mapping
+        if (Array.isArray(watchlistData)) {
+            watchlist = watchlistData.map(s => s._id);
+        } else {
+            watchlist = []; 
+        }
+    }
+
+    // 4. Handle Profile Data
+    if (!profileRes.ok) throw new Error("Failed to load profile");
     const profileData = await profileRes.json();
 
+    // RENDER DATA
     const startups = startupData.startups || [];
     myRequests = reqData.requests || [];
-    watchlist = watchlistData.map(s => s._id);
     
     const profile = profileData.profile || profileData;
     user = { ...user, ...profile };
@@ -403,7 +439,6 @@ async function loadDashboard() {
     document.getElementById('highest-score').textContent = highest + '%';
     document.getElementById('watchlist-count').textContent = watchlist.length;
 
-    const container = document.getElementById('validated-startups');
     container.innerHTML = '';
     if(startups.length === 0) container.innerHTML = '<p style="text-align:center; padding:2rem; color:#666;">No validated startups found.</p>';
     else startups.forEach(s => container.appendChild(createStartupCard(s)));
@@ -417,7 +452,7 @@ async function loadDashboard() {
     loadSettings(); 
   } catch(e) { 
     console.error("Dashboard Error:", e); 
-    document.getElementById('validated-startups').innerHTML = `<p style="color:red; text-align:center;">${e.message}</p>`;
+    container.innerHTML = `<p style="color:red; text-align:center; padding:2rem;">Error: ${e.message}</p>`;
   }
 }
 
@@ -447,15 +482,20 @@ async function loadWatchlist() {
     container.innerHTML = '<p style="text-align:center;">Loading...</p>';
     try {
         const res = await fetch(`${API_URL}/investor/watchlist`, { credentials: 'include' });
+        
+        if (!res.ok) throw new Error("Failed to load watchlist");
+        
         const list = await res.json();
         container.innerHTML = '';
-        if(list.length === 0) return container.innerHTML = '<p style="text-align:center;">Empty.</p>';
+        
+        if (!Array.isArray(list) || list.length === 0) return container.innerHTML = '<p style="text-align:center;">Empty.</p>';
+        
         list.forEach(s => container.appendChild(createStartupCard(s)));
     } catch(e) { container.innerHTML = '<p style="color:red; text-align:center;">Error</p>'; }
 }
 
 // ==========================================
-// UI GENERATORS
+// 11. UI GENERATORS
 // ==========================================
 function createStartupCard(startup) {
     const card = document.createElement('div');
@@ -516,7 +556,7 @@ function createStartupCard(startup) {
 }
 
 // ==========================================
-// ACTIONS
+// 12. ACTIONS
 // ==========================================
 window.toggleWatchlist = async (id) => {
     try {
@@ -559,7 +599,7 @@ window.expressInterest = async (startupId) => {
 };
 
 // ==========================================
-// REQUESTS LOGIC
+// 13. REQUESTS LOGIC
 // ==========================================
 async function loadRequests() {
     const incomingList = document.getElementById('incoming-requests-list');
@@ -676,7 +716,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 });
 
 // ==========================================
-// SETTINGS LOGIC
+// 14. SETTINGS LOGIC
 // ==========================================
 function loadSettings() {
     document.getElementById('settings-full-name').value = user.name || '';
@@ -725,7 +765,6 @@ document.getElementById('upload-picture-btn')?.addEventListener('click', async (
     btn.disabled = true;
 
     try {
-        // FIX: Added credentials, removed auth header
         const res = await fetch(`${API_URL}/auth/upload-profile-picture`, { 
             method: 'POST', 
             credentials: 'include',
@@ -752,7 +791,6 @@ document.getElementById('upload-picture-btn')?.addEventListener('click', async (
 document.getElementById('update-profile-btn')?.addEventListener('click', async () => {
     const name = document.getElementById('settings-full-name').value;
     try {
-        // FIX: Added credentials
         const res = await fetch(`${API_URL}/auth/profile`, { 
             method: 'PUT', 
             headers: { 'Content-Type':'application/json' },
@@ -790,7 +828,6 @@ document.getElementById('update-password-btn')?.addEventListener('click', async 
     if(newP !== conf) return alert('Passwords do not match');
     if(newP.length < 8) return alert('Min 8 chars');
     try {
-        // FIX: Added credentials
         const res = await fetch(`${API_URL}/auth/password`, { 
             method: 'PUT', 
             headers: { 'Content-Type': 'application/json' },
@@ -814,7 +851,6 @@ document.getElementById('delete-account-btn')?.addEventListener('click', async (
     if(confirmation !== 'DELETE') return;
 
     try {
-        // FIX: Added credentials
         await fetch(`${API_URL}/auth/account`, { 
             method: 'DELETE', 
             credentials: 'include'
@@ -829,7 +865,7 @@ document.getElementById('delete-account-btn')?.addEventListener('click', async (
 // Logout
 document.getElementById('logout-btn')?.addEventListener('click', async () => { 
     try {
-        // FIX: Call backend to clear cookie
+        // Call backend to clear cookie
         await fetch(`${API_URL}/auth/logout`, { 
             method: 'POST', 
             credentials: 'include' 
@@ -842,7 +878,7 @@ document.getElementById('logout-btn')?.addEventListener('click', async () => {
 });
 
 // ==========================================
-// CHAT LOGIC
+// 15. CHAT LOGIC
 // ==========================================
 let currentChatPartnerId = null;
 
@@ -850,7 +886,7 @@ async function chatApiCall(endpoint, method = 'GET', body = null) {
   const config = { 
       method, 
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include' // FIX: Added credentials
+      credentials: 'include'
   };
   if (body) config.body = JSON.stringify(body);
   const res = await fetch(`${API_URL}/chat${endpoint}`, config);
@@ -932,7 +968,7 @@ async function loadConversations() {
     const list = document.getElementById('conversations-container');
     if(!list) return;
     
-    // Clear previous list items (but keep the search bar)
+    // Clear previous list items (but keep the search bar if it's outside)
     list.innerHTML = '';
 
     try {
@@ -992,7 +1028,9 @@ if (chatSearchInput) {
     });
 }
 
-// Initialize
+// ==========================================
+// 16. INITIALIZATION
+// ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
     const currentPage = window.location.pathname;
     // CHECK AUTH FIRST
