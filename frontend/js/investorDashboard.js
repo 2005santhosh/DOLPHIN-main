@@ -2,6 +2,25 @@
 // 1. CONFIGURATION & SETUP
 // ==========================================
 // const API_URL = 'https://api.dolphinorg.in/api';
+// ==========================================
+// 0. ROLE GUARD (PREVENT CACHE CONFUSION)
+// ==========================================
+(function() {
+    try {
+        const u = JSON.parse(localStorage.getItem('user'));
+        // If we have user data, and the role is NOT investor...
+        if (u && u.role !== 'investor') {
+            console.warn(`Wrong Role Detected: ${u.role}. Clearing cache.`);
+            // Clear the bad data immediately
+            localStorage.clear();
+            // Reload the page or redirect to login
+            window.location.href = 'login.html';
+        }
+    } catch(e) {
+        // Corrupt data
+        localStorage.clear();
+    }
+})();
 
 // SAFETY CHECK: Prevent crashes if localStorage is blocked
 let user = {};

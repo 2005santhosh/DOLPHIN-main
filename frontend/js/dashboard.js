@@ -2,7 +2,26 @@
 // CORE INIT & HELPERS
 // ==========================================
 // const API_URL = 'https://api.dolphinorg.in/api'; samesite
-
+// ==========================================
+// 0. ROLE GUARD
+// ==========================================
+(function() {
+    try {
+        const u = JSON.parse(localStorage.getItem('user'));
+        // If user exists AND is not a founder/admin
+        if (u && u.role !== 'founder' && u.role !== 'admin') {
+            console.warn(`Wrong Role Detected: ${u.role}. Redirecting...`);
+            localStorage.clear();
+            
+            // Redirect them to THEIR correct dashboard
+            if(u.role === 'investor') window.location.href = 'investor-dashboard.html';
+            else if(u.role === 'provider') window.location.href = 'provider-dashboard.html';
+            else window.location.href = 'login.html';
+        }
+    } catch(e) {
+        localStorage.clear();
+    }
+})();
 // SAFETY CHECK: Prevent crashes if localStorage is blocked
 let user = {};
 let userId = null;

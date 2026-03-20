@@ -18,11 +18,15 @@
             }
         });
 
-        // ==========================================
-        // 2. FORM SUBMISSION HANDLER
-        // ==========================================
-        // ==========================================
-// 2. FORM SUBMISSION HANDLER (FIXED)
+       // login.html <script>
+
+// ==========================================
+// 1. PASSWORD VISIBILITY TOGGLE (Keep your existing code)
+// ==========================================
+// ... (your existing toggle code) ...
+
+// ==========================================
+// 2. FORM SUBMISSION HANDLER (FIXED FOR MOBILE)
 // ==========================================
 const loginForm = document.getElementById('login-form');
 
@@ -64,27 +68,30 @@ if (loginForm) {
 
             console.log('✅ Login Successful! User Role:', data.user.role);
             
-            // CRITICAL FIX: Clear old session data completely before setting new
+            // =======================================================
+            // CRITICAL FIX FOR MOBILE CACHING ISSUES
+            // =======================================================
+            
+            // 1. Nuclear clear of all storage
             localStorage.clear();
-
-            // Save ONLY user info. Token is handled via Cookie automatically.
+            sessionStorage.clear();
+            
+            // 2. Set the fresh user data
             localStorage.setItem('user', JSON.stringify(data.user));
             
-            // Redirect based on the FRESH role from server response
+            // 3. Determine Redirect
             const role = data.user.role;
-            let redirectUrl = 'dashboard.html'; // Default fallback
+            let redirectUrl = 'dashboard.html'; // Default
 
             if (role === 'admin') redirectUrl = 'admin-dashboard.html';
             else if (role === 'investor') redirectUrl = 'investor-dashboard.html';
             else if (role === 'provider') redirectUrl = 'provider-dashboard.html';
-            else redirectUrl = 'dashboard.html'; // Founder
+            // Founder is default
             
-            console.log("Redirecting to:", redirectUrl);
-
-            // Use replace to prevent "Back" button issues
-            setTimeout(() => {
-                window.location.replace(redirectUrl);
-            }, 500);
+            // 4. Force Redirect with Cache Busting
+            // Using 'replace' prevents the user from going back to the login page
+            // The timestamp forces the browser to treat it as a new URL, bypassing cache
+            window.location.replace(redirectUrl + '?t=' + Date.now());
 
         } catch (error) {
             console.error('❌ Login error:', error);

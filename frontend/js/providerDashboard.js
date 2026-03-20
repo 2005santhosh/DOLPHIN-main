@@ -4,7 +4,21 @@
 const API_URL = 'https://api.dolphinorg.in/api';
 const API_BASE = `${API_URL}/provider`;
 const AUTH_BASE = `${API_URL}/auth`;
-
+// ==========================================
+// 0. ROLE GUARD
+// ==========================================
+(function() {
+    try {
+        const u = JSON.parse(localStorage.getItem('user'));
+        if (u && u.role !== 'provider') {
+            console.warn(`Wrong Role Detected: ${u.role}. Clearing cache.`);
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+    } catch(e) {
+        localStorage.clear();
+    }
+})();
 // We no longer store the token in a JS variable. It is in an HttpOnly Cookie.
 let user = {};
 let userId = null;
