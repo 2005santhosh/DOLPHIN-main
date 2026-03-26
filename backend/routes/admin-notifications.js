@@ -78,8 +78,16 @@ router.post('/send-to-all', protect, authorize('admin', 'investor'), async (req,
   const { title, message, priority, actionUrl, actionText } = req.body;
 
   try {
+    // 1. Fetch all users
     const users = await User.find();
     
+    console.log(`Broadcasting to ${users.length} users...`); // Debug: Check if users are found
+
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'No users found' });
+    }
+
+    // 2. Save Notifications to DB
     const notifications = users.map(user => ({
       userId: user._id,
       title,
@@ -92,17 +100,20 @@ router.post('/send-to-all', protect, authorize('admin', 'investor'), async (req,
 
     await Notification.insertMany(notifications);
 
-    // Send Emails
-    users.forEach(user => {
+    // 3. Send Emails (Sequentially for better debugging/reliability)
+    for (const user of users) {
+      console.log(`Sending email to: ${user.email}`); // Debug: Check loop progress
+      
       const emailTemplate = getAdminNotificationEmail(title, message);
-      sendEmail({
+      
+      await sendEmail({
         email: user.email,
         subject: emailTemplate.subject,
         message: emailTemplate.html
       }).catch(err => console.error(`Email failed for ${user.email}:`, err));
-    });
+    }
 
-    // Real-time emission
+    // 4. Real-time emission
     const io = getSocketIO(req);
     if (io) {
       io.emit('new-notification', { title, message, priority });
