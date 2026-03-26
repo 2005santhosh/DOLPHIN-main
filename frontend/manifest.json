@@ -1,0 +1,22 @@
+{
+  "name": "Dolphin",
+  "short_name": "Dolphin",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://res.cloudinary.com/dgtblk9dx/image/upload/v1774520784/dolphin_d1mzaz.jpg",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://res.cloudinary.com/dgtblk9dx/image/upload/v1774520784/dolphin_d1mzaz.jpg",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
