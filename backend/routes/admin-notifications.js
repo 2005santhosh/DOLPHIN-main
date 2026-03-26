@@ -6,9 +6,24 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 const sendEmail = require('../utils/sendEmail');
 const { getAdminNotificationEmail } = require('../utils/emailTemplates');
 
+// Helper to get Socket.IO instance
 const getSocketIO = (req) => req.app.get('socketio');
 
+// @route   GET /api/admin/admin-notifications/users
+// @desc    Get all users for selection dropdown
+// @access  Admin
+router.get('/users', protect, authorize('admin', 'investor'), async (req, res) => {
+  try {
+    const users = await User.find().select('name email role');
+    res.json({ success: true, users });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // @route   POST /api/admin/admin-notifications/send-by-role
+// @desc    Send notification to all users of a specific role
+// @access  Admin
 router.post('/send-by-role', protect, authorize('admin', 'investor'), async (req, res) => {
   const { role, title, message, priority, actionUrl, actionText } = req.body;
 
@@ -57,6 +72,8 @@ router.post('/send-by-role', protect, authorize('admin', 'investor'), async (req
 });
 
 // @route   POST /api/admin/admin-notifications/send-to-all
+// @desc    Broadcast notification to all users
+// @access  Admin
 router.post('/send-to-all', protect, authorize('admin', 'investor'), async (req, res) => {
   const { title, message, priority, actionUrl, actionText } = req.body;
 
@@ -99,6 +116,8 @@ router.post('/send-to-all', protect, authorize('admin', 'investor'), async (req,
 });
 
 // @route   POST /api/admin/admin-notifications/send-to-users
+// @desc    Send notification to specific users
+// @access  Admin
 router.post('/send-to-users', protect, authorize('admin', 'investor'), async (req, res) => {
   const { userIds, title, message, priority } = req.body;
 
@@ -107,6 +126,7 @@ router.post('/send-to-users', protect, authorize('admin', 'investor'), async (re
   }
 
   try {
+    // Fetch actual users to get their email addresses
     const users = await User.find({ _id: { $in: userIds } });
 
     const notifications = users.map(user => ({
