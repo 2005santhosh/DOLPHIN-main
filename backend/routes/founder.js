@@ -18,7 +18,8 @@ const {
   notifyTaskApproved,
   notifyMilestoneVerified
 } = require('../services/notificationService');
-
+const sendEmail = require('../utils/sendEmail');
+const { getNewRequestEmail } = require('../utils/emailTemplates');
 // Get founder's startup
 router.get('/my-startup', protect, async (req, res) => {
   try {
@@ -143,6 +144,7 @@ router.put('/my-startup', protect, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+// @route   POST /api/founder/send-request
 router.post('/send-request', protect, async (req, res) => {
   const { providerId, message, servicesOffered } = req.body;
 
@@ -179,13 +181,22 @@ router.post('/send-request', protect, async (req, res) => {
 
     const io = req.app.get('socketio');
     if (io) {
-      // 1. Update Notification Bell
       io.to(providerId.toString()).emit('newNotification', notification);
-      // 2. Update Requests Sidebar Badge
       io.to(providerId.toString()).emit('newRequest', { 
         message: 'You have a new request!',
         request: newRequest 
       });
+    }
+
+    // ✅ SEND EMAIL TO PROVIDER
+    const providerUser = await User.findById(providerId);
+    if (providerUser && providerUser.email) {
+        const emailTemplate = getNewRequestEmail(req.user.name, 'Connection');
+        sendEmail({
+            email: providerUser.email,
+            subject: emailTemplate.subject,
+            message: emailTemplate.html
+        }).catch(err => console.error("Founder Request Email Error:", err));
     }
 
     res.json({ success: true, request: newRequest });

@@ -11,12 +11,13 @@ const Notification = require('../models/Notification');
 const Log = require('../models/Log');
 const { protect } = require('../middleware/authMiddleware');
 const { forgotPassword, resetPassword } = require('../controller/auth');
-
+const sendEmail = require('../utils/sendEmail');
+const { getWelcomeEmail } = require('../utils/emailTemplates');
 // ✅ IMPORT CLOUDINARY CONFIG
 const { upload, cloudinary } = require('../config/cloudinary');
 
 // ==========================================
-// HELPER FUNCTIONS FOR SECURITY
+// HELPER FUNCTIONS FOR SECURITY await
 // ==========================================
 // Helper to generate token with User-Agent Binding
 const generateToken = (user, userAgent) => {
@@ -34,11 +35,14 @@ const sendTokenResponse = (user, statusCode, req, res) => {
   const options = {
   expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   httpOnly: true,
+  // secure: false,
   secure: true,                      // must stay true in prod
   sameSite: 'None',
+  // sameSite: 'Lax',
   path: '/',
   // ← add this line (lowercase 'p')
-  domain: '.dolphinorg.in'        // strongly recommended – see below
+  // domain: 'localhost'
+  domain: '.dolphinorg.in'        //strongly recommended – see below
 };
 
   res
@@ -112,6 +116,18 @@ router.post('/register', async (req, res) => {
 
     // Use secure helper to set cookie
     sendTokenResponse(user, 201, req, res);
+          // Send Welcome Email
+    try {
+        const welcomeTemplate = getWelcomeEmail(user.name);
+        await sendEmail({
+          email: user.email,
+          subject: welcomeTemplate.subject,
+          message: welcomeTemplate.html
+        });
+    } catch (emailError) {
+        console.error("Failed to send welcome email:", emailError);
+  // Do not block registration if email fails
+    }
 
   } catch (error) {
     res.status(500).json({ 
@@ -185,7 +201,7 @@ router.post('/logout', protect, (req, res) => {
 });
 
 // ==========================================
-// EMAIL VERIFICATION ROUTES
+// EMAIL VERIFICATION ROUTES register
 // ==========================================
 
 // @route   POST /api/auth/verify-email

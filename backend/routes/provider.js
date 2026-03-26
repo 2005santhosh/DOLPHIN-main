@@ -350,18 +350,15 @@ router.post('/send-request', protect, async (req, res) => {
       return res.status(400).json({ message: 'Startup ID and Message are required' });
     }
 
-    // 1. Find the Provider Profile
     const provider = await Provider.findOne({ userId: req.user.id });
     if (!provider) return res.status(404).json({ message: 'Provider profile not found' });
 
-    // 2. Find the Startup and Founder
     const startup = await Startup.findById(startupId).populate('founderId', 'name email');
     if (!startup) return res.status(404).json({ message: 'Startup not found' });
     
     const founder = startup.founderId;
     if (!founder) return res.status(404).json({ message: 'Founder not found' });
 
-    // 3. Check for existing pending request
     const existingRequest = await IntroRequest.findOne({
       providerId: req.user.id,
       founderId: founder._id,
@@ -373,7 +370,6 @@ router.post('/send-request', protect, async (req, res) => {
       return res.status(400).json({ message: 'You already have a pending request with this founder' });
     }
 
-    // 4. Create the Request
     const newRequest = await IntroRequest.create({
       providerId: req.user.id,
       founderId: founder._id,
@@ -381,10 +377,9 @@ router.post('/send-request', protect, async (req, res) => {
       status: 'pending',
       message: message,
       servicesOffered: servicesOffered,
-      initiator: 'provider' // ✅ FIX: Set initiator
+      initiator: 'provider'
     });
 
-    // 5. REAL-TIME: Notify the Founder
     const notification = await Notification.create({
       userId: founder._id,
       title: 'New Connection Request',
@@ -393,10 +388,19 @@ router.post('/send-request', protect, async (req, res) => {
       read: false
     });
 
-    // Emit socket event to the specific founder
     const io = req.app.get('socketio');
     if (io) {
       io.to(founder._id.toString()).emit('newNotification', notification);
+    }
+
+    // ✅ SEND EMAIL TO FOUNDER
+    if (founder.email) {
+        const emailTemplate = getNewRequestEmail(provider.name, 'Service Provider');
+        sendEmail({
+            email: founder.email,
+            subject: emailTemplate.subject,
+            message: emailTemplate.html
+        }).catch(err => console.error("Provider Request Email Error:", err));
     }
 
     res.status(201).json({

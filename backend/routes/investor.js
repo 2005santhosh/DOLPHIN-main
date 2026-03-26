@@ -155,8 +155,6 @@ router.delete('/watchlist/:startupId', protect, authorize('investor'), async (re
 // ==========================================
 
 // @route   POST api/investor/express-interest
-// @desc    Investor expresses interest in a startup (Creates IntroRequest)
-// @access  Private
 router.post('/express-interest', protect, authorize('investor'), async (req, res) => {
   const { startupId } = req.body;
 
@@ -165,8 +163,7 @@ router.post('/express-interest', protect, authorize('investor'), async (req, res
   }
 
   try {
-    // 1. Find the Startup
-    const startup = await Startup.findById(startupId).populate('founderId', 'name _id');
+    const startup = await Startup.findById(startupId).populate('founderId', 'name email _id');
 
     if (!startup) {
       return res.status(404).json({ message: 'Startup not found' });
@@ -176,8 +173,6 @@ router.post('/express-interest', protect, authorize('investor'), async (req, res
       return res.status(400).json({ message: 'Startup has no valid founder.' });
     }
 
-    // 2. Check for existing request to prevent duplicates
-    // NOTE: In your schema, 'providerId' is used for the Investor/Provider role
     const existingRequest = await IntroRequest.findOne({
       providerId: req.user.id, 
       startupId: startup._id
@@ -187,16 +182,14 @@ router.post('/express-interest', protect, authorize('investor'), async (req, res
       return res.status(400).json({ message: 'Request already sent.' });
     }
 
-    // 3. Create the request
     const newRequest = await IntroRequest.create({
-      providerId: req.user.id,      // Maps Investor ID to 'providerId' (required by schema)
+      providerId: req.user.id,
       founderId: startup.founderId._id,
       startupId: startup._id,
       status: 'pending',
-      initiator: 'investor'         // Track who sent it
+      initiator: 'investor'
     });
 
-    // 4. Create Notification for the Founder
     await Notification.create({
       userId: startup.founderId._id,
       title: 'New Connection Request',
@@ -204,10 +197,20 @@ router.post('/express-interest', protect, authorize('investor'), async (req, res
       type: 'request'
     });
 
-    // 5. Real-time Socket notification
     const io = req.app.get('socketio');
     if (io) {
       io.to(startup.founderId._id.toString()).emit('newRequest', newRequest);
+    }
+
+    // ✅ SEND EMAIL TO FOUNDER
+    const investor = await User.findById(req.user.id);
+    if (investor && startup.founderId.email) {
+        const emailTemplate = getNewRequestEmail(investor.name, 'Investor Interest');
+        sendEmail({
+            email: startup.founderId.email,
+            subject: emailTemplate.subject,
+            message: emailTemplate.html
+        }).catch(err => console.error("Investor Interest Email Error:", err));
     }
 
     res.json({ message: 'Request sent successfully!', request: newRequest });

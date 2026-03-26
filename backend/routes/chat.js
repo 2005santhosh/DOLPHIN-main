@@ -3,7 +3,8 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const Message = require('../models/Message');
 const User = require('../models/User');
-
+const sendEmail = require('../utils/sendEmail');
+const { getNewMessageEmail } = require('../utils/emailTemplates');
 // @route   POST /api/chat/send
 router.post('/send', protect, async (req, res) => {
   const { receiverId, content } = req.body;
@@ -30,6 +31,24 @@ router.post('/send', protect, async (req, res) => {
     }
 
     res.json(populatedMsg);
+    // Fetch sender and recipient details
+    const sender = await User.findById(req.user.id); // or req.user._id depending on your auth middleware
+    const recipient = await User.findById(receiverId);
+
+    if (recipient && recipient.email) {
+      try {
+        const msgTemplate = getNewMessageEmail(sender.name, content);
+        await sendEmail({
+            email: recipient.email,
+            subject: msgTemplate.subject,
+            message: msgTemplate.html
+        });
+      } catch (err) {
+        console.error("Chat email notification failed:", err);
+      }
+    }
+
+    return res.status(201).json(newMessage);
   } catch (err) {
     console.error('Chat Send Error:', err);
     res.status(500).json({ message: 'Server Error' });

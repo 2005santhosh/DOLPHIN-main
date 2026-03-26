@@ -3,25 +3,12 @@ const router = express.Router();
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { protect, authorize } = require('../middleware/authMiddleware');
+const sendEmail = require('../utils/sendEmail');
+const { getAdminNotificationEmail } = require('../utils/emailTemplates');
 
-// Helper to get Socket.IO instance
 const getSocketIO = (req) => req.app.get('socketio');
 
-// @route   GET /api/admin/admin-notifications/users
-// @desc    Get all users for selection dropdown samesite
-// @access  Admin
-router.get('/users', protect, authorize('admin', 'investor'), async (req, res) => {
-  try {
-    const users = await User.find().select('name email role');
-    res.json({ success: true, users });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
 // @route   POST /api/admin/admin-notifications/send-by-role
-// @desc    Send notification to all users of a specific role
-// @access  Admin
 router.post('/send-by-role', protect, authorize('admin', 'investor'), async (req, res) => {
   const { role, title, message, priority, actionUrl, actionText } = req.body;
 
@@ -32,6 +19,7 @@ router.post('/send-by-role', protect, authorize('admin', 'investor'), async (req
       return res.status(404).json({ success: false, message: 'No users found with this role' });
     }
 
+    // 1. Save Notifications to DB
     const notifications = users.map(user => ({
       userId: user._id,
       title,
@@ -41,10 +29,19 @@ router.post('/send-by-role', protect, authorize('admin', 'investor'), async (req
       actionText,
       type: 'system'
     }));
-
     await Notification.insertMany(notifications);
 
-    // Real-time emission via Socket.io
+    // 2. Send Emails (Run in background to avoid delay)
+    users.forEach(user => {
+      const emailTemplate = getAdminNotificationEmail(title, message);
+      sendEmail({
+        email: user.email,
+        subject: emailTemplate.subject,
+        message: emailTemplate.html
+      }).catch(err => console.error(`Email failed for ${user.email}:`, err));
+    });
+
+    // 3. Real-time Socket emission
     const io = getSocketIO(req);
     if (io) {
       users.forEach(user => {
@@ -60,8 +57,6 @@ router.post('/send-by-role', protect, authorize('admin', 'investor'), async (req
 });
 
 // @route   POST /api/admin/admin-notifications/send-to-all
-// @desc    Broadcast notification to all users
-// @access  Admin
 router.post('/send-to-all', protect, authorize('admin', 'investor'), async (req, res) => {
   const { title, message, priority, actionUrl, actionText } = req.body;
 
@@ -80,6 +75,16 @@ router.post('/send-to-all', protect, authorize('admin', 'investor'), async (req,
 
     await Notification.insertMany(notifications);
 
+    // Send Emails
+    users.forEach(user => {
+      const emailTemplate = getAdminNotificationEmail(title, message);
+      sendEmail({
+        email: user.email,
+        subject: emailTemplate.subject,
+        message: emailTemplate.html
+      }).catch(err => console.error(`Email failed for ${user.email}:`, err));
+    });
+
     // Real-time emission
     const io = getSocketIO(req);
     if (io) {
@@ -94,8 +99,6 @@ router.post('/send-to-all', protect, authorize('admin', 'investor'), async (req,
 });
 
 // @route   POST /api/admin/admin-notifications/send-to-users
-// @desc    Send notification to specific users
-// @access  Admin
 router.post('/send-to-users', protect, authorize('admin', 'investor'), async (req, res) => {
   const { userIds, title, message, priority } = req.body;
 
@@ -104,8 +107,10 @@ router.post('/send-to-users', protect, authorize('admin', 'investor'), async (re
   }
 
   try {
-    const notifications = userIds.map(userId => ({
-      userId,
+    const users = await User.find({ _id: { $in: userIds } });
+
+    const notifications = users.map(user => ({
+      userId: user._id,
       title,
       message,
       priority,
@@ -113,6 +118,16 @@ router.post('/send-to-users', protect, authorize('admin', 'investor'), async (re
     }));
 
     await Notification.insertMany(notifications);
+
+    // Send Emails
+    users.forEach(user => {
+      const emailTemplate = getAdminNotificationEmail(title, message);
+      sendEmail({
+        email: user.email,
+        subject: emailTemplate.subject,
+        message: emailTemplate.html
+      }).catch(err => console.error(`Email failed for ${user.email}:`, err));
+    });
 
     // Real-time emission
     const io = getSocketIO(req);
