@@ -2,8 +2,8 @@ const CACHE_NAME = 'dolphin-v1';
 const urlsToCache = [
   '/',
   '/login.html',
-  '/styles.css', // Replace with your actual CSS path
-  '/js/main.js'  // Replace with your actual JS path
+  '/css/index.css', // Replace with your actual CSS path
+  '/js/index.js'  // Replace with your actual JS path
 ];
 
 // Install event
