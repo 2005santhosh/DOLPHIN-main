@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dolphin-v1';
+const CACHE_NAME = 'dolphin-pwa-v2';
 const urlsToCache = [
   '/',
   '/login.html',
