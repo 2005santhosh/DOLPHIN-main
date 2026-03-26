@@ -5,23 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dolphin | Startup OS - Validate. Build. Scale.</title>
     <!-- PWA Meta Tags -->
-<meta name="theme-color" content="#2563eb" />
-<!-- FIX: Add this standard tag to remove the warning -->
-<meta name="mobile-web-app-capable" content="yes"> 
+    <meta name="theme-color" content="#2563eb" />
+    <!-- FIX: Add this standard tag to remove the warning -->
+    <meta name="mobile-web-app-capable" content="yes"> 
 
-<!-- iOS Specific (Keep these! Safari still needs them) -->
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Dolphin">
+    <!-- iOS Specific (Keep these! Safari still needs them) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Dolphin">
 
-<!-- Manifest Link -->
-<link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="https://res.cloudinary.com/dgtblk9dx/image/upload/v1774520784/dolphin_d1mzaz.jpg">
+    <!-- Manifest Link -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="https://res.cloudinary.com/dgtblk9dx/image/upload/w_192,h_192,c_fill/v1774520784/dolphin_d1mzaz.jpg">
     <link rel="stylesheet" href="./css/index.css">
     <!-- Favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐬</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐬</text></svg>">
 
     <meta name="google-site-verification" content="EoE1ICl53yuEcoC7Htj9w_PidmnEPPV2arCzdu1XKNs" />
+    
+    <style>
+        /* Style for the install button */
+        #install-btn {
+            background: transparent;
+            border: 1px solid #2563eb;
+            color: #2563eb;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            display: none; /* Hidden by default */
+            align-items: center;
+            gap: 5px;
+            transition: 0.3s;
+        }
+        #install-btn:hover {
+            background: #2563eb;
+            color: white;
+        }
+        /* Mobile styling for install button */
+        @media (max-width: 768px) {
+            #install-btn {
+                width: 100%;
+                justify-content: center;
+                margin-top: 10px;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- HEADER -->
@@ -32,6 +61,15 @@
         <nav class="desktop-nav">
             <a href="#features" class="nav-link">Features</a>
             <a href="#how-it-works" class="nav-link">How It Works</a>
+            <!-- INSTALL BUTTON ADDED HERE -->
+            <button id="install-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Install App
+            </button>
             <a href="login.html" class="btn btn-primary">Launch Platform</a>
         </nav>
 
@@ -42,7 +80,7 @@
         </button>
     </header>
 
-    <!-- MOBILE NAVIGATION (Sits outside header for proper layering) -->
+    <!-- MOBILE NAVIGATION -->
     <nav class="mobile-nav" id="mobile-nav">
         <div class="mobile-nav-header">
             <div class="logo">🐬 Dolphin</div>
@@ -58,15 +96,18 @@
         </div>
 
         <div class="mobile-nav-actions">
+            <!-- INSTALL BUTTON ALSO ADDED HERE FOR MOBILE -->
+            <button id="install-btn-mobile" class="btn btn-secondary btn-block" style="display:none;">📲 Install App</button>
+            
             <a href="login.html" class="btn btn-primary btn-block">Launch Platform</a>
             <a href="register.html" class="btn btn-secondary btn-block">Get Started Free</a>
         </div>
     </nav>
 
-    <!-- OVERLAY (Dark background when menu is open) -->
+    <!-- OVERLAY -->
     <div class="overlay" id="overlay"></div>
 
-    <!-- CONTENT -->
+    <!-- CONTENT (Your existing content remains the same) -->
     <section class="hero">
         <div class="hero-content">
             <div class="hero-badge">
@@ -102,27 +143,6 @@
             </div>
         </div>
     </section>
-
-    <!-- <section class="stats-section">
-        <div class="stats-container">
-            <div class="stat-item">
-                <div class="stat-number">1,000+</div>
-                <div class="stat-label">Active Founders</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">$50M+</div>
-                <div class="stat-label">Capital Raised</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">200+</div>
-                <div class="stat-label">Validated Startups</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">85%</div>
-                <div class="stat-label">Success Rate</div>
-            </div>
-        </div>
-    </section> -->
 
     <section class="section">
         <div class="section-header">
@@ -202,11 +222,6 @@
             <div class="footer-column brand-col">
                 <h3>🐬 Dolphin</h3>
                 <p>The Operating System for modern entrepreneurship. Validate, build, and scale with confidence.</p>
-                <!-- <div class="social-links">
-                    <a href="#" class="social-link">📘</a>
-                    <a href="#" class="social-link">🐦</a>
-                    <a href="#" class="social-link">💼</a>
-                </div> -->
             </div>
             
             <div class="footer-column">
@@ -215,23 +230,17 @@
                     <li><a href="register.html">For Founders</a></li>
                     <li><a href="register.html">For Investors</a></li>
                     <li><a href="register.html">For Providers</a></li>
-                    <!-- <li><a href="#">Pricing</a></li> -->
                 </ul>
             </div>
             <div class="footer-column">
                 <h3>Resources</h3>
                 <ul>
-                    <!-- <li><a href="#">Methodology</a></li>
-                    <li><a href="#">Success Stories</a></li>
-                    <li><a href="#">Blog</a></li> -->
                     <li><a href="./support.html">Support</a></li>
                 </ul>
             </div>
             <div class="footer-column">
                 <h3>Company</h3>
                 <ul>
-                    <!-- <li><a href="#">About Us</a></li>
-                    <li><a href="#">Careers</a></li> -->
                     <li><a href="./privacy.html">Privacy</a></li>
                     <li><a href="./termsofservice.html">Terms</a></li>
                 </ul>
@@ -241,15 +250,63 @@
             <p>&copy; 2026 Dolphin. All rights reserved.</p>
         </div>
     </footer>
+
+    <!-- SCRIPTS -->
     <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => console.log('Service Worker Registered'))
-        .catch(err => console.log('Service Worker Failed', err));
-    });
-  }
-</script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('Service Worker Registered'))
+            .catch(err => console.log('Service Worker Failed', err));
+        });
+      }
+    </script>
+
+    <!-- PWA INSTALL LOGIC -->
+    <script>
+      let deferredPrompt;
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent Chrome 67 and earlier from automatically showing the prompt
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        deferredPrompt = e;
+        
+        // Show both desktop and mobile install buttons
+        const installBtn = document.getElementById('install-btn');
+        const installBtnMobile = document.getElementById('install-btn-mobile');
+        
+        if (installBtn) installBtn.style.display = 'flex';
+        if (installBtnMobile) installBtnMobile.style.display = 'block';
+      });
+
+      // Function to handle the click
+      const handleInstallClick = () => {
+        if (!deferredPrompt) return;
+        
+        // Show the prompt
+        deferredPrompt.prompt();
+        
+        // Wait for the user to respond to the prompt
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('User accepted the A2HS prompt');
+          }
+          deferredPrompt = null;
+          
+          // Hide buttons after prompt
+          const installBtn = document.getElementById('install-btn');
+          const installBtnMobile = document.getElementById('install-btn-mobile');
+          if (installBtn) installBtn.style.display = 'none';
+          if (installBtnMobile) installBtnMobile.style.display = 'none';
+        });
+      };
+
+      // Attach click listeners to buttons
+      document.getElementById('install-btn')?.addEventListener('click', handleInstallClick);
+      document.getElementById('install-btn-mobile')?.addEventListener('click', handleInstallClick);
+    </script>
+
     <script src="./js/index.js"></script>
 </body>
 </html>
