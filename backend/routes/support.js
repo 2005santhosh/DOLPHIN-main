@@ -9,22 +9,25 @@ router.post('/contact', async (req, res) => {
         return res.status(400).json({ success: false, message: 'Please fill all required fields' });
     }
 
+    // Respond immediately to the user
     res.status(200).json({ success: true, message: 'Message received! We will get back to you soon.' });
 
     try {
         const emailOptions = {
-            // FIX 1: Do NOT use 'support@pacificdev.in' as the FROM address if sending TO the same address.
-            // Use a generic "noreply" address or the address verified in your Brevo sender.
-            // If you don't have a noreply address, keep the verified one, but see the recommendation below.
-            email: 'support@pacificdev.in', // The recipient (Your support team)
+            // 1. WHO IS THE RECIPIENT? (Your support team)
+            email: 'support@pacificdev.in', 
+            
+            // 2. WHO IS THE SENDER? (The new address you verified in Step 1)
+            // This PREVENTS the "Soft Bounce" because Sender != Recipient.
+            senderEmail: 'noreply@pacificdev.in', 
+            
+            // 3. DISPLAY NAME (Shows who actually submitted the form)
+            senderName: `${name} (via Dolphin Form)`, 
             
             subject: `[Dolphin Support - ${category?.toUpperCase() || 'N/A'}] ${subject}`,
             
-            // FIX 2: Pass 'replyTo' as a direct property, not inside 'headers'
+            // 4. REPLY-TO (The actual user's email)
             replyTo: email, 
-
-            // FIX 3: Update the name so the inbox shows who actually sent it
-            name: `${name} (via Dolphin Form)`, 
             
             message: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -39,7 +42,7 @@ router.post('/contact', async (req, res) => {
         };
 
         await sendEmail(emailOptions);
-        console.log(`✅ [Support] Email successfully sent from ${email}`);
+        console.log(`✅ [Support] Ticket sent from ${email}`);
 
     } catch (error) {
         console.error('❌ [Support] Email Send Error:', error.message);

@@ -6,21 +6,18 @@ const sendEmail = async (options) => {
     throw new Error("Email service not configured");
   }
 
-  // Prepare the payload for Brevo API
   const data = {
     sender: {
-      email: process.env.SMTP_USER || 'support@pacificdev.in', 
-      name: options.name || 'Dolphin Support'
+      // USE SPECIFIC SENDER IF PROVIDED, OTHERWISE DEFAULT TO ENV VARIABLE
+      email: options.senderEmail || process.env.SMTP_USER || 'support@pacificdev.in', 
+      name: options.senderName || options.name || 'Dolphin Support'
     },
     to: [{ email: options.email }],
     subject: options.subject,
     htmlContent: options.message,
-    // Add ReplyTo functionality
+    // Handle Reply-To
     replyTo: options.replyTo ? { email: options.replyTo } : undefined
   };
-
-  // If you pass a specific 'replyTo' in options (for contact forms), use it.
-  // Otherwise, it defaults to replying to the sender.
 
   try {
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
