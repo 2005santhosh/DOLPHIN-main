@@ -8,6 +8,8 @@ const Provider = require('../models/Provider');
 const IntroRequest = require('../models/IntroRequest');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const { sendEmail } = require('../utils/emailService');
+const { getNewRequestEmail } = require('../utils/emailTemplates');
 // ==========================================
 // 1. Get or create provider profile
 // ==========================================

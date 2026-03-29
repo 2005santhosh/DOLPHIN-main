@@ -788,11 +788,12 @@ window.viewFounderProfile = function(startupId) {
 
   profileModal.classList.add('active');
   const userRef = target.founderId || {};
+  const founderName = userRef.name || 'Unknown';  // ✅ ADD THIS LINE - Define founderName FIRST
+  
   // Checks if it exists AND is not just an empty string
-const profileImg = (userRef.profilePicture && userRef.profilePicture.trim() !== "") 
+  const profileImg = (userRef.profilePicture && userRef.profilePicture.trim() !== "") 
     ? userRef.profilePicture 
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(founderName)}&background=random`;
-
   document.getElementById('detail-startup-name').innerHTML = `${target.startupName} ${getVerifiedBadgeHtml(userRef.state)}`;
   document.getElementById('detail-thesis').textContent = target.thesis || 'N/A';
   document.getElementById('detail-industry').textContent = target.industry || 'N/A';
