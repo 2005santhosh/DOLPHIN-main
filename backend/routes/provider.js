@@ -8,8 +8,6 @@ const Provider = require('../models/Provider');
 const IntroRequest = require('../models/IntroRequest');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
-const { sendEmail } = require('../utils/emailService');
-const { getNewRequestEmail } = require('../utils/emailTemplates');
 // ==========================================
 // 1. Get or create provider profile
 // ==========================================
@@ -342,7 +340,7 @@ router.get('/search', protect, async (req, res) => {
 });
 
 // ==========================================
-// NEW: Provider Sends Request to Founder
+// Provider Sends Request to Founder (BULLETPROOF)
 // ==========================================
 router.post('/send-request', protect, async (req, res) => {
   try {
@@ -353,13 +351,16 @@ router.post('/send-request', protect, async (req, res) => {
     }
 
     const provider = await Provider.findOne({ userId: req.user.id });
-    if (!provider) return res.status(404).json({ message: 'Provider profile not found' });
+    if (!provider) {
+      return res.status(404).json({ message: 'Provider profile not found' });
+    }
 
     const startup = await Startup.findById(startupId).populate('founderId', 'name email');
-    if (!startup) return res.status(404).json({ message: 'Startup not found' });
+    if (!startup || !startup.founderId) {
+      return res.status(404).json({ message: 'Startup or Founder not found' });
+    }
     
     const founder = startup.founderId;
-    if (!founder) return res.status(404).json({ message: 'Founder not found' });
 
     const existingRequest = await IntroRequest.findOne({
       providerId: req.user.id,
@@ -372,6 +373,7 @@ router.post('/send-request', protect, async (req, res) => {
       return res.status(400).json({ message: 'You already have a pending request with this founder' });
     }
 
+    // ✅ 1. Create Request (MAIN PRIORITY - Don't let anything stop this)
     const newRequest = await IntroRequest.create({
       providerId: req.user.id,
       founderId: founder._id,
@@ -382,38 +384,69 @@ router.post('/send-request', protect, async (req, res) => {
       initiator: 'provider'
     });
 
-    const notification = await Notification.create({
-      userId: founder._id,
-      title: 'New Connection Request',
-      message: `${provider.name} wants to connect with you!`,
-      type: 'INTRO_REQUEST',
-      read: false
-    });
-
-    const io = req.app.get('socketio');
-    if (io) {
-      io.to(founder._id.toString()).emit('newNotification', notification);
-    }
-
-    // ✅ SEND EMAIL TO FOUNDER
-    if (founder.email) {
-        const emailTemplate = getNewRequestEmail(provider.name, 'Service Provider');
-        sendEmail({
-            email: founder.email,
-            subject: emailTemplate.subject,
-            message: emailTemplate.html
-        }).catch(err => console.error("Provider Request Email Error:", err));
-    }
-
+    // ✅ 2. Return Success IMMEDIATELY
+    // We do this before emails/notifications so the user gets instant feedback
     res.status(201).json({
       success: true,
       message: 'Request sent successfully!',
       request: newRequest
     });
 
+    // ==========================================
+    // EVERYTHING BELOW RUNS IN THE BACKGROUND
+    // If it fails, the user already got the success message
+    // ==========================================
+
+    // 3. Notification (Fire and forget)
+    (async () => {
+      try {
+        if (typeof Notification !== 'undefined' && Notification.create) {
+          const notification = await Notification.create({
+            userId: founder._id,
+            title: 'New Connection Request',
+            message: `${provider.name || 'A provider'} wants to connect with you!`,
+            type: 'INTRO_REQUEST',
+            read: false
+          });
+          
+          const io = req.app.get('socketio');
+          if (io && notification) {
+            io.to(founder._id.toString()).emit('newNotification', notification);
+          }
+        }
+      } catch (e) {
+        console.error('BG: Notification failed:', e.message);
+      }
+    })();
+
+    // 4. Email (Fire and forget)
+    (async () => {
+      try {
+        // Dynamically import to prevent crash if file doesn't exist
+        const sendEmail = require('../utils/emailService');
+        const templates = require('../utils/emailTemplates');
+        const getNewRequestEmail = templates.getNewRequestEmail;
+
+        if (founder.email && typeof sendEmail === 'function' && typeof getNewRequestEmail === 'function') {
+          const emailTemplate = getNewRequestEmail(provider.name || 'A Provider', 'Service Provider');
+          await sendEmail({
+            email: founder.email,
+            subject: emailTemplate.subject,
+            message: emailTemplate.html
+          });
+          console.log(`✅ Email sent to ${founder.email}`);
+        }
+      } catch (e) {
+        console.error('BG: Email failed:', e.message);
+      }
+    })();
+
   } catch (error) {
-    console.error('Send Request Error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('❌ Send Request FATAL Error:', error);
+    // Only send 500 if we haven't already sent a response
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Server error' });
+    }
   }
 });
 // TEMPORARY FIX ROUTE - DELETE AFTER USE

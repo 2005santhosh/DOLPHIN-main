@@ -840,7 +840,7 @@ window.closeLegalModal = function() {
 };
 
 // ==========================================
-// 11. EVENT LISTENERS & INITIALIZATION profile
+// 11. EVENT LISTENERS & INITIALIZATION profile sendprovider
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
   const currentPage = window.location.pathname;
