@@ -17,7 +17,6 @@ togglePassword.addEventListener('click', function() {
 // 2. CLICKJACKING PROTECTION (Enhanced)
 // ==========================================
 (function enforceFrameProtection() {
-    // Double-check frame busting on interval (catches late injections)
     let frameCheckInterval = setInterval(function() {
         if (window.top !== window.self) {
             try {
@@ -28,22 +27,9 @@ togglePassword.addEventListener('click', function() {
         }
     }, 100);
     
-    // Stop checking after 10 seconds to save resources
     setTimeout(function() {
         clearInterval(frameCheckInterval);
     }, 10000);
-    
-    // Block window.open from external sources
-    const originalOpen = window.open;
-    window.open = function() {
-        const caller = new Error().stack;
-        // Simple heuristic - if called from external script, block
-        if (!caller.includes('login.js') && !caller.includes('api.js')) {
-            console.warn('Blocked potentially malicious window.open call');
-            return null;
-        }
-        return originalOpen.apply(this, arguments);
-    };
 })();
 
 // ==========================================
@@ -60,26 +46,22 @@ if (loginForm) {
         const password = document.getElementById('password').value;
         const originalButtonText = loginBtn.textContent;
         
-        // Input validation
         if (!email || !password) {
             showError('Please enter both email and password');
             return;
         }
         
-        // Basic email format validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             showError('Please enter a valid email address');
             return;
         }
         
-        // Security: Check if we're in an unexpected context
         if (window.top !== window.self) {
             showError('Security error: Cannot submit from embedded context');
             return;
         }
         
-        // Disable button and show loading
         loginBtn.textContent = 'Signing In...';
         loginBtn.disabled = true;
         loginBtn.style.opacity = '0.7';
@@ -88,8 +70,8 @@ if (loginForm) {
             const response = await fetch(`${API_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest' // CSRF indicator
+                    'Content-Type': 'application/json'
+                    // Removed 'X-Requested-With' - was causing CORS preflight failure
                 },
                 credentials: 'include',
                 body: JSON.stringify({ email, password })
@@ -107,12 +89,10 @@ if (loginForm) {
 
             console.log('✅ Login Successful! User Role:', data.user.role);
             
-            // Clear storage and set fresh user data
             localStorage.clear();
             sessionStorage.clear();
             localStorage.setItem('user', JSON.stringify(data.user));
             
-            // Role-based redirect
             const role = data.user.role;
             let redirectUrl = 'dashboard.html';
 
@@ -120,7 +100,6 @@ if (loginForm) {
             else if (role === 'investor') redirectUrl = 'investor-dashboard.html';
             else if (role === 'provider') redirectUrl = 'provider-dashboard.html';
             
-            // Force redirect with cache busting
             window.location.replace(redirectUrl + '?t=' + Date.now());
 
         } catch (error) {
@@ -138,11 +117,9 @@ function resetButton() {
 }
 
 function showError(message) {
-    // Remove existing error if any
     const existingError = document.querySelector('.form-error');
     if (existingError) existingError.remove();
     
-    // Create error element
     const errorDiv = document.createElement('div');
     errorDiv.className = 'form-error';
     errorDiv.style.cssText = `
@@ -158,7 +135,5 @@ function showError(message) {
     errorDiv.textContent = message;
     
     loginForm.querySelector('.btn').after(errorDiv);
-    
-    // Auto-remove after 5 seconds
     setTimeout(() => errorDiv.remove(), 5000);
 }
