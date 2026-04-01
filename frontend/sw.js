@@ -15,33 +15,28 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
-    // IGNORE external requests (CDNs, APIs, Fonts)
-    // Let the browser handle them normally using their own cache
-    const url = new URL(event.request.url);
-    if (url.origin !== self.location.origin && !url.pathname.startsWith('/api/')) {
-        return; 
-    }
+    // Only intercept GET requests
+    if (event.request.method !== 'GET') return;
 
-    // ONLY cache your own local files (HTML, CSS, local JS)
     event.respondWith(
-        caches.match(event.request)
+        fetch(event.request)
             .then(response => {
-                if (response) {
+                // If it's an API call or failed, don't cache it
+                const url = new URL(event.request.url);
+                if (url.pathname.includes('/api/') || response.status !== 200) {
                     return response;
                 }
-                return fetch(event.request).then(fetchResponse => {
-                    return caches.open('dolphin-cache-v1').then(cache => {
-                        // Don't cache API calls
-                        if (!event.request.url.includes('/api/')) {
-                            cache.put(event.request, fetchResponse.clone());
-                        }
-                        return fetchResponse;
-                    });
+
+                // Cache EVERYTHING else (Cloudinary, Avatars, Fonts, Local files)
+                const responseClone = response.clone();
+                caches.open('dolphin-cache-v2').then(cache => {
+                    cache.put(event.request, responseClone);
                 });
+                return response;
             })
             .catch(() => {
-                // Fallback if offline
-                return caches.match('/offline.html');
+                // If offline, serve from cache
+                return caches.match(event.request);
             })
     );
 });

@@ -1896,7 +1896,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Render UI immediately with cached data
   loadDashboard();
   
-  // Then verify with server in background (non-blocking)
+  // Then verify with server in background (non-blocking) contentload
   verifySessionInBackground();
   const isAuthed = await checkAuthStatus();
 

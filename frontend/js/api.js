@@ -251,3 +251,14 @@ const api = {
 
 // Expose globally
 window.api = api;
+// ==========================================
+// MOBILE IMAGE OPTIMIZER
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('img[src*="res.cloudinary.com"]').forEach(img => {
+        let src = img.getAttribute('src');
+        if (!src.includes('f_auto') && !src.includes('q_auto')) {
+            img.src = src.replace('/upload/', '/upload/f_auto,q_auto,w_400/');
+        }
+    });
+});
