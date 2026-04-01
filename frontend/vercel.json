@@ -9,7 +9,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'none'; default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.socket.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://ui-avatars.com https://res.cloudinary.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.dolphinorg.in wss://api.dolphinorg.in https://cdn.jsdelivr.net https://cdn.socket.io"
+          "value": "frame-ancestors 'none'; default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.socket.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://ui-avatars.com https://*.cloudinary.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.dolphinorg.in wss://api.dolphinorg.in https://cdn.jsdelivr.net https://cdn.socket.io"
         },
         {
           "key": "X-Content-Type-Options",
