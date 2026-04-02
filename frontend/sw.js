@@ -15,7 +15,7 @@ self.addEventListener('activate', event => {
             );
         })
     );
-    self.clients.claim(); // Take control of all pages immediately
+    self.clients.claim(); // Take control of all pages immediatelyy
 });
 
 // Fetch event
