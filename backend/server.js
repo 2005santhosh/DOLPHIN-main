@@ -81,7 +81,11 @@ app.use(cookieParser());
 app.post("/test-cors", (req, res) => {
   res.json({ message: "CORS working" });
 });
-
+// TEMPORARY TEST ROUTE - DELETE AFTER TESTING
+app.get('/api/posts/test-bypass', (req, res) => {
+  res.json({ message: 'Posts routing is working!' });
+});
+// TEMPORARY TEST ROUTE END
 // Make io accessible to routes (CRITICAL)
 app.set('socketio', io); 
 app.locals.tokenBlacklist = new Set();
