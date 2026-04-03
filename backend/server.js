@@ -16,7 +16,9 @@ const { initializeSocket } = require('./services/socketService');
 const chatRoutes = require('./routes/chat');
 const investorRoutes = require('./routes/investor'); 
 const supportRoutes = require('./routes/support');
-
+// Add these lines near your other routes
+const postRoutes = require('./routes/posts');
+const connectionRoutes = require('./routes/connections');
 dotenv.config();
 
 // --- CRITICAL FIX: GLOBAL ERROR HANDLERS ---
@@ -132,7 +134,8 @@ app.use('/api/provider', require('./routes/provider'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/admin/admin-notifications', require('./routes/admin-notifications'));
-
+app.use('/api/posts', postRoutes);
+app.use('/api/connections', connectionRoutes);
 // --- PUBLIC HTML ROUTES ---
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));

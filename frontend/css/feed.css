@@ -1,0 +1,27 @@
+/* feed.css */
+.feed-container { max-width: 600px; margin: 0 auto; padding-bottom: 2rem; }
+.create-post-card { background: #fff; padding: 1.25rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 1.5rem; border: 1px solid #e5e7eb; }
+.create-post-card textarea { width: 100%; border: none; outline: none; resize: none; font-size: 0.95rem; min-height: 50px; font-family: inherit; }
+.create-post-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; border-top: 1px solid #f3f4f6; padding-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem; }
+.create-post-actions select, .create-post-actions input { padding: 0.4rem 0.75rem; border-radius: 6px; border: 1px solid #d1d5db; font-size: 0.85rem; background: #fff; }
+.create-post-actions input { flex: 1; min-width: 120px; }
+.btn-post { background: #2563eb; color: white; padding: 0.5rem 1.25rem; border-radius: 20px; border: none; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: background 0.2s; }
+.btn-post:hover { background: #1d4ed8; }
+.btn-post:disabled { background: #93c5fd; cursor: not-allowed; }
+
+.post-card { background: #fff; padding: 1.25rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 1rem; border: 1px solid #f3f4f6; }
+.post-header { display: flex; align-items: center; margin-bottom: 0.75rem; }
+.post-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; margin-right: 0.75rem; background: #f3f4f6; }
+.post-author-info { flex: 1; }
+.post-author-name { font-weight: 600; font-size: 0.95rem; color: #111827; }
+.post-role-badge { font-size: 0.7rem; font-weight: 500; color: #6b7280; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; text-transform: capitalize; margin-left: 6px; }
+.post-time { font-size: 0.75rem; color: #9ca3af; display: block; margin-top: 2px; }
+.post-content { margin: 0 0 0.75rem 0; font-size: 0.9rem; line-height: 1.5; color: #374151; word-wrap: break-word; white-space: pre-wrap; }
+.post-tags { margin-bottom: 0.75rem; display: flex; flex-wrap: wrap; gap: 4px; }
+.post-tag { background: #eff6ff; color: #2563eb; font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; }
+.post-actions { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f3f4f6; padding-top: 0.75rem; margin-top: 0.5rem; }
+.like-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; color: #6b7280; font-weight: 500; padding: 4px; font-size: 0.9rem; }
+.like-btn.liked { color: #ef4444; }
+.btn-connect { background: #2563eb; color: #fff; padding: 0.4rem 1.2rem; border-radius: 20px; border: none; font-weight: 600; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
+.btn-connect:hover { background: #1d4ed8; }
+.btn-connect:disabled, .btn-connect.pending { background: #f3f4f6; color: #6b7280; cursor: not-allowed; }

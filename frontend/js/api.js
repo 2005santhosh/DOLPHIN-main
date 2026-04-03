@@ -247,6 +247,37 @@ const api = {
       body: JSON.stringify({ taskKey })
     });
   },
+    // ===== POSTS ENDPOINTS =====
+  async createPost(content, postType, tags) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try {
+      return await this.request('/posts', {
+        method: 'POST',
+        body: JSON.stringify({ content, postType, tags }),
+        signal: controller.signal
+      });
+    } finally { clearTimeout(timeout); }
+  },
+
+  async getFeed() {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      return await this.request('/posts/feed', { signal: controller.signal });
+    } finally { clearTimeout(timeout); }
+  },
+
+  async toggleLike(postId) {
+    return this.request(`/posts/${postId}/like`, { method: 'POST' });
+  },
+
+  async sendConnectionRequest(toUserId) {
+    return this.request('/connections/request', {
+      method: 'POST',
+      body: JSON.stringify({ toUserId })
+    });
+  },
 };
 
 // Expose globally

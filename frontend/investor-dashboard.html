@@ -6,7 +6,7 @@
   <title>Dolphin • Investor Dashboard</title>
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐬</text></svg>">
-
+  <link rel="stylesheet" href="./css/feed.css">
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐬</text></svg>">
   
@@ -106,6 +106,7 @@
           <li><a href="#" class="nav-item active" data-page="dashboard">Dashboard</a></li>
           <li><a href="#" class="nav-item" data-page="startups">Startups</a></li>
           <li><a href="#" class="nav-item" data-page="watchlist">Watchlist</a></li>
+          <li><a href="#" class="nav-item" data-page="posts">Posts</a></li>
           <li><a href="#" class="nav-item" data-page="requests">
             Requests
             <span class="sidebar-badge" id="sidebar-req-badge">0</span>
@@ -164,6 +165,36 @@
         <div class="card"><div style="padding: 1.5rem;" id="watchlist-startups"><p style="text-align: center;">Loading...</p></div></div>
       </div>
 
+       <!-- Posts Page -->
+      <div id="posts-page" class="page">
+        <div class="page-header">
+          <h1 class="page-title">Community Posts</h1>
+          <p class="page-subtitle">See what founders are looking for and share your investment interests</p>
+        </div>
+        
+        <div class="feed-container">
+          <!-- Create Post Box -->
+          <div class="create-post-card">
+        <textarea id="post-content" placeholder="What are you looking for today?" maxlength="500"></textarea>
+        <div class="create-post-actions">
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <select id="post-type">
+                    <option value="service_needed">Need a Service</option>
+                    <option value="funding_needed">Need Investment</option>
+                    <option value="offering_service">Offering a Service</option>
+                    <option value="offering_funding">Looking to Invest</option>
+                </select>
+                <input type="text" id="post-tags" placeholder="Tags (e.g., Legal, SaaS)">
+            </div>
+            <button id="submit-post-btn" class="btn-post">Post</button>
+        </div>
+    </div>
+    </div>
+    <!-- Feed Container -->
+    <div id="posts-feed">
+        <div style="text-align: center; color: #6b7280; padding: 2rem;">Loading posts...</div>
+    </div>
+</div>
       <!-- Requests Page -->
       <div id="requests-page" class="page">
         <div class="page-header">
@@ -361,5 +392,6 @@
 
   <script src="./js/api.js"></script>
   <script src="./js/investorDashboard.js"></script>
+  <script src="./js/posts.js"></script>
 </body>
 </html>
