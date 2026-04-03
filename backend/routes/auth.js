@@ -20,11 +20,11 @@ const { upload, cloudinary } = require('../config/cloudinary');
 // HELPER FUNCTIONS FOR SECURITY await
 // ==========================================
 // Helper to generate token with User-Agent Binding
-const generateToken = (user, userAgent) => {
-  const userAgentHash = crypto.createHash('sha256').update(userAgent).digest('hex');
+// Simplified generateToken
+const generateToken = (user) => {
   return jwt.sign(
-    { id: user._id, role: user.role, userAgentHash }, 
-    process.env.JWT_SECRET || 'mysecretkey', 
+    { id: user._id, role: user.role }, 
+    process.env.JWT_SECRET, 
     { expiresIn: '30d' }
   );
 };
@@ -204,25 +204,33 @@ router.post('/logout', protect, (req, res) => {
 // EMAIL VERIFICATION ROUTES register
 // ==========================================
 
-// @route   POST /api/auth/verify-email
+// In routes/auth.js - FIX THE VERIFY ENDPOINT
 router.post('/verify-email', async (req, res) => {
   try {
     const { email, verificationCode } = req.body;
     if (!email || !verificationCode) {
       return res.status(400).json({ message: 'Email and verification code required' });
     }
-    const user = await User.findOne({ email });
+    
+    const user = await User.findOne({
+      email,
+      // Assuming you add a verificationToken field to your User model
+      verificationToken: crypto.createHash('sha256').update(verificationCode).digest('hex'),
+      verificationExpire: { $gt: Date.now() } // Ensure code hasn't expired
+    });
+
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(400).json({ message: 'Invalid or expired verification code' });
     }
+
     user.emailVerified = true;
+    user.verificationToken = undefined; // Clear the token
+    user.verificationExpire = undefined;
     await user.save();
+    
     res.status(200).json({ message: 'Email verified successfully' });
   } catch (error) {
-    res.status(500).json({
-      message: 'Server error during email verification',
-      reason: error.message
-    });
+    res.status(500).json({ message: 'Server error during email verification', reason: error.message });
   }
 });
 

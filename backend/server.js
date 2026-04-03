@@ -9,7 +9,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const compression = require('compression');
 const cookieParser = require('cookie-parser'); // 1. IMPORT COOKIE PARSER
-
+const mongoSanitize = require('express-mongo-sanitize');
 const connectDB = require('./config/db');
 const { securePage } = require('./middleware/securePage');
 const { initializeSocket } = require('./services/socketService');
@@ -20,7 +20,10 @@ const supportRoutes = require('./routes/support');
 const postRoutes = require('./routes/posts');
 const connectionRoutes = require('./routes/connections');
 dotenv.config();
-
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL ERROR: JWT_SECRET is not defined in environment variables.');
+  process.exit(1); // Hard crash the server
+}
 // --- CRITICAL FIX: GLOBAL ERROR HANDLERS ---
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION! 💥');
@@ -41,36 +44,23 @@ const server = http.createServer(app);
 // --- CORS SETUP (Defined BEFORE Socket Initialization) --- samesite
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) return callback(null, true); // Allow server-to-server/curl
     
-    // Allow any Vercel preview or production URL
-    if (origin.includes('.vercel.app')) {
+    // STRICT CHECK: Allows dolphinorg.in AND exact subdomains like api.dolphinorg.in
+    const allowedRegex = /^https:\/\/([a-zA-Z0-9-]+\.)?dolphinorg\.in$/;
+    
+    if (allowedRegex.test(origin) || origin.startsWith('http://localhost')) {
       return callback(null, true);
     }
     
-    // Allow localhost for local development
-    if (origin.startsWith('http://localhost')) {
-       return callback(null, true);
-    }
-
-    // FIX: Allow your new custom domain (checks string presence)
-    if (origin.includes('dolphinorg.in')) {
-       return callback(null, true);
-    }
-
-    // Reject other origins
-    const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-    return callback(new Error(msg), false);
+    return callback(new Error('CORS blocked'), false);
   },
-  methods: ["GET","POST","PUT","DELETE","OPTIONS"],
-  allowedHeaders: ["Content-Type","Authorization"],
-  credentials: true // IMPORTANT: Allow cookies/authorization headers
+  credentials: true
 };
 
 // Initialize Socket.io WITH the CORS options
 const io = initializeSocket(server, corsOptions); 
-
+app.use(mongoSanitize({ replaceWith: '_' }));
 // Apply CORS to Express
 app.use(cors(corsOptions));
 app.use(compression());
@@ -100,7 +90,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.socket.io", "https://cdn.jsdelivr.net"],
       imgSrc: ["'self'", "data:", "https:"],
       fontSrc: ["'self'", "https:", "data:"],
-      connectSrc: ["*"], // Ensure this is open for Socket connections
+      connectSrc: ["'self'", "https://api.dolphinorg.in", "wss://api.dolphinorg.in", "https://cdn.socket.io"], // Ensure this is open for Socket connections
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],

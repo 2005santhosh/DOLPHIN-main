@@ -3,15 +3,28 @@ const jwt = require('jsonwebtoken'); // Needed for generating token
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
 const bcrypt = require('bcryptjs');
+// At the top of controller/auth.js
+const COOKIE_OPTIONS = {
+  expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  httpOnly: true,
+  secure: true,
+  sameSite: 'None',
+  path: '/',
+  domain: '.dolphinorg.in'
+};
 
+exports.logout = async (req, res, next) => {
+  res.cookie('token', 'none', {
+    ...COOKIE_OPTIONS,
+    expires: new Date(Date.now() - 1000) // Set to past date to delete
+  });
+  res.status(200).json({ success: true, message: 'Logged out successfully' });
+};
 // Helper: Generate Token with User-Agent Binding
-const generateToken = (user, userAgent) => {
-  // 1. Create a hash of the User-Agent to bind the session
-  const userAgentHash = crypto.createHash('sha256').update(userAgent).digest('hex');
-
-  // 2. Sign the token with the hash included
+// Simplified generateToken
+const generateToken = (user) => {
   return jwt.sign(
-    { id: user._id, role: user.role, userAgentHash }, 
+    { id: user._id, role: user.role }, 
     process.env.JWT_SECRET, 
     { expiresIn: '30d' }
   );
