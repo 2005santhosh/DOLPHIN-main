@@ -260,14 +260,13 @@ const api = {
     } finally { clearTimeout(timeout); }
   },
 
-  async getFeed() {
+  async getFeed(filter = 'all') {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
     try {
-      return await this.request('/posts/feed', { signal: controller.signal });
+      return await this.request(`/posts/feed?filter=${filter}`, { signal: controller.signal });
     } finally { clearTimeout(timeout); }
   },
-
   async toggleLike(postId) {
     return this.request(`/posts/${postId}/like`, { method: 'POST' });
   },

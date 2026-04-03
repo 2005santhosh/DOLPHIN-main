@@ -18,7 +18,7 @@ router.post('/', protect, createLimiter, async (req, res) => {
             authorId: user._id,
             authorName: user.name,
             authorRole: user.role,
-            authorImage: user.profileImage || '',
+            authorImage: user.profilePicture || '',
             content,
             postType,
             tags: tags || []
@@ -31,37 +31,24 @@ router.post('/', protect, createLimiter, async (req, res) => {
 });
 
 // GET /api/posts/feed
-// GET /api/posts/feed
 router.get('/feed', protect, feedLimiter, async (req, res) => {
     try {
         const userRole = req.user.role;
+        const filterType = req.query.filter; // 'all' or 'mine'
         let filter = {};
 
-        // TARGETED FEED LOGIC based on postType
-        if (userRole === 'founder') {
-            // Founders see: offerings from providers/investors + their own posts
-            filter = { 
-                $or: [ 
-                    { authorId: req.user._id }, 
-                    { postType: { $in: ['offering_service', 'offering_funding'] } } 
-                ] 
-            };
-        } else if (userRole === 'provider') {
-            // Providers see: requests from founders + their own posts
-            filter = { 
-                $or: [ 
-                    { authorId: req.user._id }, 
-                    { postType: 'service_needed' } 
-                ] 
-            };
-        } else if (userRole === 'investor') {
-            // Investors see: requests from founders + their own posts
-            filter = { 
-                $or: [ 
-                    { authorId: req.user._id }, 
-                    { postType: 'funding_needed' } 
-                ] 
-            };
+        if (filterType === 'mine') {
+            // MY POSTS: Only return posts by this user
+            filter = { authorId: req.user._id };
+        } else {
+            // ALL POSTS: Targeted feed logic based on role
+            if (userRole === 'founder') {
+                filter = { $or: [ { authorId: req.user._id }, { postType: { $in: ['offering_service', 'offering_funding'] } } ] };
+            } else if (userRole === 'provider') {
+                filter = { $or: [ { authorId: req.user._id }, { postType: 'service_needed' } ] };
+            } else if (userRole === 'investor') {
+                filter = { $or: [ { authorId: req.user._id }, { postType: 'funding_needed' } ] };
+            }
         }
 
         const posts = await Post.find(filter)
@@ -74,13 +61,13 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
             authorId: post.authorId,
             authorName: post.authorName,
             authorRole: post.authorRole,
-            authorImage: post.authorImage, // Ensure image is sent
+            authorImage: post.authorPicture || post.authorImage || '',
             content: post.content,
             postType: post.postType,
             tags: post.tags,
             createdAt: post.createdAt,
-            likeCount: post.likes.length, // Real number of likes
-            isLikedByMe: post.likes.includes(req.user._id) // Exact boolean for toggle
+            likeCount: post.likes.length,
+            isLikedByMe: post.likes.includes(req.user._id)
         }));
 
         res.json(formattedPosts);

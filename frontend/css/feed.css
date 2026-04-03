@@ -25,3 +25,33 @@
 .btn-connect { background: #2563eb; color: #fff; padding: 0.4rem 1.2rem; border-radius: 20px; border: none; font-weight: 600; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
 .btn-connect:hover { background: #1d4ed8; }
 .btn-connect:disabled, .btn-connect.pending { background: #f3f4f6; color: #6b7280; cursor: not-allowed; }
+.feed-tabs {
+    display: flex;
+    gap: 1rem; /* The gap between them */
+    margin-bottom: 1.5rem;
+}
+
+.feed-tab {
+    flex: 1; /* Makes them equal width side-by-side */
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    background: white;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.feed-tab.active {
+    background: #3b82f6; /* Blue background when selected */
+    color: white;
+    border-color: #3b82f6;
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1);
+}
+
+.feed-tab:hover:not(.active) {
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
