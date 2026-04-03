@@ -234,5 +234,5 @@ process.on('SIGTERM', () => {
     });
   });
 });
-console.log("🔥 POSTS ROUTE ADDED SUCCESSFULLY");
+console.log("🔥SUCCESSFULLY");
 module.exports = server;
