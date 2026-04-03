@@ -61,7 +61,7 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
             authorId: post.authorId,
             authorName: post.authorName,
             authorRole: post.authorRole,
-            authorImage: post.authorPicture || post.authorImage || '',
+            authorImage: post.authorImage || '',
             content: post.content,
             postType: post.postType,
             tags: post.tags,
