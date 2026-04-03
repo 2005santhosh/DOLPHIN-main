@@ -17,10 +17,9 @@ const postSchema = new mongoose.Schema({
         enum: ['service_needed', 'funding_needed', 'offering_service', 'offering_funding'] 
     },
     tags: [{ type: String, trim: true, maxlength: 20 }],
-    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] // Array of User IDs
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
 }, { timestamps: true });
 
-// Index for sorting feed by newest (Makes DB queries lightning fast)
 postSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('Post', postSchema);

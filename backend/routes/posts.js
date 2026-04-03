@@ -1,16 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const Post = require('../models/Post');
-const User = require('../models/User'); // Adjust path if needed
-const auth = require('../middleware/auth'); // Your existing auth middleware
+const auth = require('../middleware/auth'); // Use your existing auth middleware
 const rateLimit = require('express-rate-limit');
 
-// SECURITY: Prevent spamming the feed
 const feedLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 30 });
-const createLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5 }); // 5 posts per hour
-const likeLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 30 }); // 30 likes per min
+const createLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5 });
+const likeLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 30 });
 
-// POST /api/posts - Create Post
+// POST /api/posts
 router.post('/', auth, createLimiter, async (req, res) => {
     try {
         const { content, postType, tags } = req.body;
@@ -26,37 +24,27 @@ router.post('/', auth, createLimiter, async (req, res) => {
             tags: tags || []
         });
 
-        // ==========================================
-        // SMART EMAIL/NOTIFICATION TRIGGER LOGIC
-        // ==========================================
-        // NOTE: Implement your sendEmail() function and Notification.create() here based on postType and tags.
-        // Example: if(user.role === 'founder' && postType === 'service_needed') { ... find matching providers ... sendEmail() ... }
-
         res.status(201).json(newPost);
     } catch (error) {
         res.status(500).json({ message: 'Server error creating post' });
     }
 });
 
-// GET /api/posts/feed - Get Smart Feed
+// GET /api/posts/feed
 router.get('/feed', auth, feedLimiter, async (req, res) => {
     try {
         const userRole = req.user.role;
         let filter = {};
 
-        // Smart Filtering
         if (userRole === 'founder') filter = { authorRole: { $in: ['provider', 'investor'] } };
         else if (userRole === 'provider') filter = { authorRole: 'founder' };
         else if (userRole === 'investor') filter = { authorRole: 'founder' };
 
-        // PERFORMANCE: .lean() converts to plain JS objects (much faster JSON serialization)
-        // .select() prevents sending unnecessary data
         const posts = await Post.find(filter)
             .sort({ createdAt: -1 })
-            .limit(50) // Never send infinite data to mobile
+            .limit(50)
             .lean();
 
-        // Map likes securely on the backend to save mobile CPU
         const formattedPosts = posts.map(post => ({
             _id: post._id,
             authorId: post.authorId,
@@ -68,7 +56,7 @@ router.get('/feed', auth, feedLimiter, async (req, res) => {
             tags: post.tags,
             createdAt: post.createdAt,
             likeCount: post.likes.length,
-            isLikedByMe: post.likes.includes(req.user._id) // O(1) lookup on backend
+            isLikedByMe: post.likes.includes(req.user._id)
         }));
 
         res.json(formattedPosts);
@@ -77,7 +65,7 @@ router.get('/feed', auth, feedLimiter, async (req, res) => {
     }
 });
 
-// POST /api/posts/:id/like - Toggle Like
+// POST /api/posts/:id/like
 router.post('/:id/like', auth, likeLimiter, async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);
@@ -86,9 +74,9 @@ router.post('/:id/like', auth, likeLimiter, async (req, res) => {
         const isLiked = post.likes.includes(req.user._id);
         
         if (isLiked) {
-            post.likes.pull(req.user._id); // Remove like
+            post.likes.pull(req.user._id);
         } else {
-            post.likes.addToSet(req.user._id); // Add like (prevents duplicates securely)
+            post.likes.addToSet(req.user._id);
         }
 
         await post.save();
