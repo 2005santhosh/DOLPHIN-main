@@ -1,10 +1,45 @@
-// Track which tab is active globally
-let currentPostTab = 'all';
+// ==========================================
+// 1. SECURITY & HELPERS
+// ==========================================
+
+// Security: Escapes HTML to prevent XSS
+function escapeXSS(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// Relative Time Formatter
+function getTimeAgo(date) {
+    const s = Math.floor((new Date() - new Date(date)) / 1000);
+    if (s < 60) return 'Just now';
+    const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
+    const d = Math.floor(h / 24); if (d < 30) return `${d}d ago`;
+    return `${Math.floor(d / 30)}mo ago`;
+}
+
+// Badge colors based on post type
+function getPostTypeBadge(postType) {
+    const styles = {
+        'service_needed': { bg: '#fef2f2', color: '#dc2626', border: '#fecaca', text: 'Needs Service' },
+        'funding_needed': { bg: '#fffbeb', color: '#d97706', border: '#fde68a', text: 'Needs Investment' },
+        'offering_service': { bg: '#ecfdf5', color: '#059669', border: '#a7f3d0', text: 'Offering Service' },
+        'offering_funding': { bg: '#f5f3ff', color: '#7c3aed', border: '#c4b5fd', text: 'Looking to Invest' }
+    };
+    const s = styles[postType] || { bg: '#f3f4f6', color: '#6b7280', border: '#e5e7eb', text: postType };
+    return `<span class="post-type-badge" style="background:${s.bg}; color:${s.color}; border:1px solid ${s.border}; padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; white-space:nowrap;">${s.text}</span>`;
+}
+
+
+// ==========================================
+// 2. RENDER FEED (Performance Optimized)
+// ==========================================
 
 function renderFeed(posts, activeTab = 'all') {
     const feed = document.getElementById('posts-feed');
     if (!feed) return;
-    feed.innerHTML = ''; 
+    feed.innerHTML = ''; // Clear safely
 
     if (!posts || posts.length === 0) {
         const msg = activeTab === 'mine' ? "You haven't posted anything yet." : "No posts yet. Be the first to post!";
@@ -91,9 +126,11 @@ function renderFeed(posts, activeTab = 'all') {
 
 
 // ==========================================
-// INIT & EVENT LISTENERS
+// 3. INIT & EVENT LISTENERS
 // ==========================================
 
+// Track which tab is active globally
+let currentPostTab = 'all';
 const stateLocks = {};
 
 function initPostsSystem() {
@@ -214,4 +251,5 @@ function initPostsSystem() {
     });
 }
 
+// Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', initPostsSystem);
