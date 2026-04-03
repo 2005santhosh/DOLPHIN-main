@@ -267,8 +267,13 @@ const api = {
       return await this.request(`/posts/feed?filter=${filter}`, { signal: controller.signal });
     } finally { clearTimeout(timeout); }
   },
-  async toggleLike(postId) {
+    async toggleLike(postId) {
     return this.request(`/posts/${postId}/like`, { method: 'POST' });
+  },
+
+  // ADD THIS EXACTLY HERE:
+  async deletePost(postId) {
+    return this.request(`/posts/${postId}`, { method: 'DELETE' });
   },
 
   async sendConnectionRequest(toUserId) {
