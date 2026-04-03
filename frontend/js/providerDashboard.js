@@ -108,7 +108,7 @@ async function chatApiCall(endpoint, method = 'GET', body = null) {
   return response.json();
 }
 
-const api = {
+const providerapi = {
   getMyRequests: async () => {
     const data = await apiCall('/my-requests');
 
@@ -341,8 +341,8 @@ async function loadDashboard() {
   // 2. If profile exists, load the rest of the dashboard data
   try {
     const [requests, founders] = await Promise.all([
-        api.getMyRequests(),
-        api.getEligibleFounders()
+        providerapi.getMyRequests(),
+        providerapi.getEligibleFounders()
     ]);
 
     document.getElementById('avg-rating').textContent = profile.avgRating || '0.0';
@@ -390,7 +390,7 @@ async function loadProfile() {
   document.getElementById('provider-name').value = user.name || '';
   
   try {
-    const profile = await api.getProfile();
+    const profile = await providerapi.getProfile();
     // If found, populate the form
     if (profile) {
       document.getElementById('provider-name').value = profile.name || user.name || '';
@@ -428,7 +428,7 @@ function loadSettings() {
       updateVerifiedBadges(p.state);
   }
 
-  api.getProfile().then(profile => {
+  providerapi.getProfile().then(profile => {
       updateVerifiedBadges(profile.state);
       if (profile.profilePicture && previewImg) {
           previewImg.src = profile.profilePicture.startsWith('http') ? profile.profilePicture : window.location.origin + profile.profilePicture;
@@ -445,8 +445,8 @@ async function loadFounders() {
 
   try {
     const [founders, requests] = await Promise.all([
-        api.getEligibleFounders(),
-        api.getMyRequests()
+        providerapi.getEligibleFounders(),
+        providerapi.getMyRequests()
     ]);
     
     const sentRequestsMap = {};
@@ -563,7 +563,7 @@ function createFounderCard(founder, sentRequestsMap = {}, incomingRequestsMap = 
 // ==========================================
 async function loadRequests() {
   try {
-    const requests = await api.getMyRequests();
+    const requests = await providerapi.getMyRequests();
     const incomingContainer = document.getElementById('incoming-requests-list');
     const sentContainer = document.getElementById('sent-requests-list');
     incomingContainer.innerHTML = '';
@@ -625,7 +625,7 @@ function createRequestItem(request, type) {
 window.updateRequest = async function(id, status) {
   showConfirm(`${status} this request?`, async () => {
     try {
-      await api.updateIntroRequest(id, status);
+      await providerapi.updateIntroRequest(id, status);
       showToast(`Request ${status}!`, 'success');
       loadRequests();
       loadDashboard();
@@ -912,7 +912,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       contactMethod: document.getElementById('contact-method').value
     };
     try { 
-        await api.updateProfile(profileData); 
+        await providerapi.updateProfile(profileData); 
         showToast('Profile updated!', 'success'); 
         localStorage.setItem('providerProfileCache', JSON.stringify(profileData));
     } catch (e) { showToast(e.message, 'error'); }
@@ -928,7 +928,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.disabled = true; btn.textContent = 'Sending...';
 
     try {
-      const result = await api.sendProviderRequest(currentStartupId, message, services);
+      const result = await providerapi.sendProviderRequest(currentStartupId, message, services);
       if (result.success) {
         showToast('Request sent!', 'success');
         document.getElementById('request-modal').classList.remove('active');
@@ -974,7 +974,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           credentials: 'include',
           body: JSON.stringify({ name })
         });
-        if (res.status === 404) res = await api.updateProfile({ name });
+        if (res.status === 404) res = await providerapi.updateProfile({ name });
         
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Update failed');
@@ -1074,7 +1074,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('delete-account-btn')?.addEventListener('click', async () => {
       showConfirm('Delete account permanently?', async () => {
         try {
-          await api.deleteAccount();
+          await providerapi.deleteAccount();
           localStorage.clear();
           window.location.href = 'login.html';
         } catch(e) { showToast(e.message, 'error'); }

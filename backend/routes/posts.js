@@ -31,23 +31,38 @@ router.post('/', protect, createLimiter, async (req, res) => {
 });
 
 // GET /api/posts/feed
+// GET /api/posts/feed
 router.get('/feed', protect, feedLimiter, async (req, res) => {
     try {
         const userRole = req.user.role;
-        
-        // 1. Define who else the user should see based on their role
-        let roleFilter = {};
-        if (userRole === 'founder') roleFilter = { authorRole: { $in: ['provider', 'investor'] } };
-        else if (userRole === 'provider') roleFilter = { authorRole: 'founder' };
-        else if (userRole === 'investor') roleFilter = { authorRole: 'founder' };
+        let filter = {};
 
-        // 2. Combine it: "Show me MY posts, OR posts matching the role filter"
-        const filter = {
-            $or: [
-                { authorId: req.user._id }, // Always show the user's own posts
-                roleFilter                  // Show posts from the target audience
-            ]
-        };
+        // TARGETED FEED LOGIC based on postType
+        if (userRole === 'founder') {
+            // Founders see: offerings from providers/investors + their own posts
+            filter = { 
+                $or: [ 
+                    { authorId: req.user._id }, 
+                    { postType: { $in: ['offering_service', 'offering_funding'] } } 
+                ] 
+            };
+        } else if (userRole === 'provider') {
+            // Providers see: requests from founders + their own posts
+            filter = { 
+                $or: [ 
+                    { authorId: req.user._id }, 
+                    { postType: 'service_needed' } 
+                ] 
+            };
+        } else if (userRole === 'investor') {
+            // Investors see: requests from founders + their own posts
+            filter = { 
+                $or: [ 
+                    { authorId: req.user._id }, 
+                    { postType: 'funding_needed' } 
+                ] 
+            };
+        }
 
         const posts = await Post.find(filter)
             .sort({ createdAt: -1 })
@@ -59,13 +74,13 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
             authorId: post.authorId,
             authorName: post.authorName,
             authorRole: post.authorRole,
-            authorImage: post.authorImage,
+            authorImage: post.authorImage, // Ensure image is sent
             content: post.content,
             postType: post.postType,
             tags: post.tags,
             createdAt: post.createdAt,
-            likeCount: post.likes.length,
-            isLikedByMe: post.likes.includes(req.user._id)
+            likeCount: post.likes.length, // Real number of likes
+            isLikedByMe: post.likes.includes(req.user._id) // Exact boolean for toggle
         }));
 
         res.json(formattedPosts);
