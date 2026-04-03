@@ -101,5 +101,26 @@ router.post('/:id/like', protect, likeLimiter, async (req, res) => {
         res.status(500).json({ message: 'Error liking post' });
     }
 });
+// DELETE /api/posts/:id - Delete own post
+router.delete('/:id', protect, async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+
+        // Security: Ensure only the author can delete their post
+        if (post.authorId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized to delete this post' });
+        }
+
+        await Post.findByIdAndDelete(req.params.id);
+
+        res.json({ message: 'Post deleted successfully' });
+    } catch (error) {
+        console.error('Delete error:', error);
+        res.status(500).json({ message: 'Error deleting post' });
+    }
+});
 
 module.exports = router;
