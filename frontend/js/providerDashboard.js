@@ -1,7 +1,7 @@
 // ==========================================
 // 1. CONFIGURATION & SETUP 
 // ==========================================
-const API_URL = 'https://api.dolphinorg.in/api';
+// const API_URL = 'https://api.dolphinorg.in/api';
 const API_BASE = `${API_URL}/provider`;
 const AUTH_BASE = `${API_URL}/auth`;
 // ==========================================
