@@ -234,5 +234,5 @@ process.on('SIGTERM', () => {
     });
   });
 });
-console.log("🔥 NEW DEPLOY WORKING");
+console.log("🔥 POSTS ROUTE ADDED SUCCESSFULLY");
 module.exports = server;
