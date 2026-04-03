@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Post = require('../models/Post');
-const auth = require('../middleware/auth'); // Use your existing auth middleware
+const auth = require('../middleware/authMiddleware'); // Use your existing auth middleware
 const rateLimit = require('express-rate-limit');
 
 const feedLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 30 });

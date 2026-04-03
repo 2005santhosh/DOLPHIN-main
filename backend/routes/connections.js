@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+const auth = require('../middleware/authMiddleware');
 const rateLimit = require('express-rate-limit');
 const Connection = require('../models/Connection');
 
