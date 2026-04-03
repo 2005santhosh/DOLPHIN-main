@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware');
 const rateLimit = require('express-rate-limit');
 const Connection = require('../models/Connection');
 
 const connectLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 20 });
 
 // POST /api/connections/request - Send a request
-router.post('/request', auth, connectLimiter, async (req, res) => {
+router.post('/request', protect, connectLimiter, async (req, res) => {
     try {
         const { toUserId } = req.body;
         if (!toUserId) return res.status(400).json({ message: 'Invalid user' });
@@ -43,7 +43,7 @@ router.post('/request', auth, connectLimiter, async (req, res) => {
 });
 
 // GET /api/connections - Get all requests for the Requests page
-router.get('/', auth, async (req, res) => {
+router.get('/', protect, async (req, res) => {
     try {
         // Get Incoming (sent TO me)
         const incoming = await Connection.find({ to: req.user._id, status: 'pending' })
@@ -62,7 +62,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // PUT /api/connections/:id - Accept or Reject
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', protect, async (req, res) => {
     try {
         const { status } = req.body; // 'accepted' or 'rejected'
         if (!['accepted', 'rejected'].includes(status)) {

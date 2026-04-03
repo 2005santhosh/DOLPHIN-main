@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Post = require('../models/Post');
-const auth = require('../middleware/authMiddleware'); // Use your existing auth middleware
+const { protect } = require('../middleware/authMiddleware');// Use your existing auth middleware
 const rateLimit = require('express-rate-limit');
 
 const feedLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 30 });
@@ -9,7 +9,7 @@ const createLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5 });
 const likeLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 30 });
 
 // POST /api/posts
-router.post('/', auth, createLimiter, async (req, res) => {
+router.post('/', protect, createLimiter, async (req, res) => {
     try {
         const { content, postType, tags } = req.body;
         const user = req.user;
@@ -31,14 +31,23 @@ router.post('/', auth, createLimiter, async (req, res) => {
 });
 
 // GET /api/posts/feed
-router.get('/feed', auth, feedLimiter, async (req, res) => {
+router.get('/feed', protect, feedLimiter, async (req, res) => {
     try {
         const userRole = req.user.role;
-        let filter = {};
+        
+        // 1. Define who else the user should see based on their role
+        let roleFilter = {};
+        if (userRole === 'founder') roleFilter = { authorRole: { $in: ['provider', 'investor'] } };
+        else if (userRole === 'provider') roleFilter = { authorRole: 'founder' };
+        else if (userRole === 'investor') roleFilter = { authorRole: 'founder' };
 
-        if (userRole === 'founder') filter = { authorRole: { $in: ['provider', 'investor'] } };
-        else if (userRole === 'provider') filter = { authorRole: 'founder' };
-        else if (userRole === 'investor') filter = { authorRole: 'founder' };
+        // 2. Combine it: "Show me MY posts, OR posts matching the role filter"
+        const filter = {
+            $or: [
+                { authorId: req.user._id }, // Always show the user's own posts
+                roleFilter                  // Show posts from the target audience
+            ]
+        };
 
         const posts = await Post.find(filter)
             .sort({ createdAt: -1 })
@@ -61,12 +70,13 @@ router.get('/feed', auth, feedLimiter, async (req, res) => {
 
         res.json(formattedPosts);
     } catch (error) {
+        console.error('Feed error:', error);
         res.status(500).json({ message: 'Error fetching feed' });
     }
 });
 
 // POST /api/posts/:id/like
-router.post('/:id/like', auth, likeLimiter, async (req, res) => {
+router.post('/:id/like', protect, likeLimiter, async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);
         if (!post) return res.status(404).json({ message: 'Post not found' });
