@@ -13,7 +13,7 @@
 </head>
 <body>
   
-  <!-- MOBILE SIDEBAR OVERLAY -->
+  <!-- MOBILE SIDEBAR OVERLAY style="background:#f1f5f9;" -->
   <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
   <!-- Header -->
@@ -523,11 +523,11 @@
       </div>
   </div>
           <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="settings-full-name"></div>
-          <div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" id="settings-email" readonly style="background:#f1f5f9;"></div>
+          <div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" id="settings-email" readonly style="background:rgba(255,255,255,0.02);"></div>
           <button class="btn btn-primary" id="update-profile-btn">Update Profile</button>
         </div>
 
-        <!-- Password -->
+        <!-- Password border-top-color: #3b82f6;-->
         <div class="card">
           <div class="card-header"><h3 class="card-title">Change Password</h3></div>
           <div class="form-group"><label class="form-label">Current Password</label><div class="password-wrapper"><input type="password" class="form-input" id="current-password"><button type="button" class="password-toggle" onclick="togglePasswordVisibility('current-password', this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button></div></div>
@@ -652,7 +652,7 @@
           </div>
         </form>
         <div id="validation-loading" style="display: none; text-align: center; padding: 2rem;">
-          <div style="display: inline-block; width: 50px; height: 50px; border: 5px solid #f3f4f6; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          <div style="display: inline-block; width: 50px; height: 50px; border: 5px solid #f3f4f6; border-top-color: #D4FF00;; border-radius: 50%; animation: spin 1s linear infinite;"></div>
           <p style="margin-top: 1rem; color: var(--text-secondary);">AI is evaluating your answers...</p>
         </div>
       </div>

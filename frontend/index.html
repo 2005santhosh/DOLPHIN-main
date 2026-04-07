@@ -4,245 +4,315 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dolphin | Startup OS - Validate. Build. Scale.</title>
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#2563eb" />
-    <!-- FIX: Add this standard tag to remove the warning -->
-    <meta name="mobile-web-app-capable" content="yes"> 
-
-    <!-- iOS Specific (Keep these! Safari still needs them) -->
+    <meta name="theme-color" content="#020202" />
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Dolphin">
-
-    <!-- Manifest Link -->
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="https://res.cloudinary.com/dgtblk9dx/image/upload/w_192,h_192,c_fill/v1774520784/dolphin_d1mzaz.jpg">
-    <link rel="stylesheet" href="./css/index.css">
-    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐬</text></svg>">
-
     <meta name="google-site-verification" content="EoE1ICl53yuEcoC7Htj9w_PidmnEPPV2arCzdu1XKNs" />
-    
-    <style>
-        /* Style for the install button */
-        #install-btn {
-            background: transparent;
-            border: 1px solid #2563eb;
-            color: #2563eb;
-            padding: 8px 15px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            display: none; /* Hidden by default */
-            align-items: center;
-            gap: 5px;
-            transition: 0.3s;
-        }
-        #install-btn:hover {
-            background: #2563eb;
-            color: white;
-        }
-        /* Mobile styling for install button */
-        @media (max-width: 768px) {
-            #install-btn {
-                width: 100%;
-                justify-content: center;
-                margin-top: 10px;
-            }
-        }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <link rel="stylesheet" href="/css/index.css">
 </head>
 <body>
     <!-- HEADER -->
-    <header>
-        <div class="logo">🐬 Dolphin</div>
-        
-        <!-- Desktop Nav -->
+    <header id="main-header">
+        <div class="logo">
+            <span class="logo-dot"></span>
+            Dolphin
+        </div>
         <nav class="desktop-nav">
             <a href="#features" class="nav-link">Features</a>
             <a href="#how-it-works" class="nav-link">How It Works</a>
-            <!-- INSTALL BUTTON ADDED HERE -->
             <button id="install-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                Install App
+                <i data-lucide="download" style="width:14px;height:14px;"></i>
+                Install
             </button>
-            <a href="login.html" class="btn btn-primary">Launch Platform</a>
+            <a href="login.html" class="btn btn-glass">Log In</a>
+            <a href="register.html" class="btn btn-lime">Start Free</a>
         </nav>
-
-        <!-- Mobile Toggle Button -->
         <button class="menu-toggle" id="mobile-menu-btn" aria-label="Open Menu">
-            <!-- Hamburger Icon -->
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            <i data-lucide="menu" style="width:22px;height:22px;"></i>
         </button>
     </header>
 
-    <!-- MOBILE NAVIGATION -->
+    <!-- MOBILE SLIDE-IN MENU -->
     <nav class="mobile-nav" id="mobile-nav">
         <div class="mobile-nav-header">
-            <div class="logo">🐬 Dolphin</div>
+            <div class="logo"><span class="logo-dot"></span>🐬 Dolphin</div>
             <button class="menu-close" id="mobile-close-btn" aria-label="Close Menu">
-                <!-- X Icon -->
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <i data-lucide="x" style="width:18px;height:18px;"></i>
             </button>
         </div>
-        
         <div class="mobile-nav-links">
-            <a href="#features" class="mobile-nav-link">Features</a>
-            <a href="#how-it-works" class="mobile-nav-link">How It Works</a>
+            <a href="#features" class="mobile-nav-link">
+                <i data-lucide="layout-grid" style="width:18px;height:18px;"></i>
+                Features
+            </a>
+            <a href="#how-it-works" class="mobile-nav-link">
+                <i data-lucide="route" style="width:18px;height:18px;"></i>
+                How It Works
+            </a>
+            <a href="support.html" class="mobile-nav-link">
+                <i data-lucide="life-buoy" style="width:18px;height:18px;"></i>
+                Support
+            </a>
         </div>
-
         <div class="mobile-nav-actions">
-            <!-- INSTALL BUTTON ALSO ADDED HERE FOR MOBILE -->
-            <button id="install-btn-mobile" class="btn btn-secondary btn-block" style="display:none;">📲 Install App</button>
-            
-            <a href="login.html" class="btn btn-primary btn-block">Launch Platform</a>
-            <a href="register.html" class="btn btn-secondary btn-block">Get Started Free</a>
+            <button id="install-btn-mobile">
+                <i data-lucide="download" style="width:16px;height:16px;"></i>
+                Install App
+            </button>
+            <a href="login.html" class="btn btn-glass btn-block">Log In</a>
+            <a href="register.html" class="btn btn-lime btn-block">Get Started Free</a>
         </div>
     </nav>
-
-    <!-- OVERLAY -->
     <div class="overlay" id="overlay"></div>
 
-    <!-- CONTENT (Your existing content remains the same) -->
-    <section class="hero">
-        <div class="hero-content">
-            <div class="hero-badge">
-                <span>🚀</span>
-                <span>Trusted by 1,000+ Founders</span>
-            </div>
-            <h1>
-                The Operating System<br>
-                For <span class="gradient-text">Entrepreneurship</span>
-            </h1>
-            <p>Turn the chaotic "0-to-1" journey into a measurable, repeatable science. Validate faster. Build smarter. Get funded sooner.</p>
-            <div class="hero-cta">
-                <a href="register.html" class="btn btn-primary">Start Your Journey →</a>
-                <a href="#how-it-works" class="btn btn-secondary">See How It Works</a>
-            </div>
-        </div>
-
-        <div class="features" id="features">
-            <div class="feature-card">
-                <div class="feature-icon">🎯</div>
-                <h3>Validation Engine</h3>
-                <p>Stage-gated roadmap with AI-powered verification to ensure product-market fit at every milestone.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">💼</div>
-                <h3>Investor Discovery</h3>
-                <p>Curated pipeline connecting VCs with high-potential, funding-ready startups with validation scores ≥ 70%.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🤝</div>
-                <h3>Service Marketplace</h3>
-                <p>Connect with vetted legal, tech, and design partners verified by our platform for quality assurance.</p>
-            </div>
-        </div>
-    </section>
-
-    <section class="section">
-        <div class="section-header">
-            <div class="section-badge">Why Choose Dolphin</div>
-            <h2 class="section-title">Built for Stability, Scale & Trust</h2>
-            <p class="section-subtitle">A state-driven platform designed to de-risk your entrepreneurial journey with transparency at every step.</p>
-        </div>
-        
-        <div class="benefits-grid">
-            <div class="benefit-card reveal">
-                <div class="benefit-icon">🛡️</div>
-                <h3 class="benefit-title">De-Risked Growth</h3>
-                <p>Every milestone is AI-verified and admin-reviewed to protect against data falsification and ensure genuine progress toward your goals.</p>
-            </div>
-            <div class="benefit-card reveal">
-                <div class="benefit-icon">🔒</div>
-                <h3 class="benefit-title">Secure Interactions</h3>
-                <p>Strict role-based access control and comprehensive interaction tracking ensure trust between founders, investors, and service providers.</p>
-            </div>
-            <div class="benefit-card reveal">
-                <div class="benefit-icon">📊</div>
-                <h3 class="benefit-title">Total Transparency</h3>
-                <p>Complete audit trails for every startup profile, keeping all stakeholders aligned on metrics, progress, and validation status.</p>
-            </div>
-        </div>
-    </section>
-
-    <section class="section" id="how-it-works">
-        <div class="section-header">
-            <div class="section-badge">The Roadmap</div>
-            <h2 class="section-title">Your Path to Validation</h2>
-            <p class="section-subtitle">Our proven 4-stage framework ensures founder-investor fit and operational excellence.</p>
-        </div>
-        
-        <div class="process-steps">
-            <div class="step reveal">
-                <div class="step-number">1</div>
-                <div class="step-content">
-                    <h3 class="step-title">Idea Clarity & Problem Validation</h3>
-                    <p class="step-description">Define your core thesis and validate the pain point with supporting data. Complete AI-powered assessments to measure idea quality and market opportunity.</p>
+    <main>
+        <!-- HERO -->
+        <section class="hero">
+            <div class="hero-glow"></div>
+            <div class="hero-glow-2"></div>
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <span class="hero-badge-dot">
+                        <i data-lucide="zap" style="width:12px;height:12px;"></i>
+                    </span>
+                    Trusted by 50+ Founders
+                </div>
+                <h1>
+                    The OS for<br>
+                    <span class="lime-text">Entrepreneurship</span>
+                </h1>
+                <p class="hero-desc">
+                    Turn the chaotic 0-to-1 journey into a measurable, repeatable science. Validate faster. Build smarter. Get funded sooner.
+                </p>
+                <div class="hero-cta">
+                    <a href="register.html" class="btn btn-lime btn-lg magnetic-btn">
+                        Start Your Journey
+                        <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
+                    </a>
+                    <a href="#how-it-works" class="btn btn-glass btn-lg">See How It Works</a>
                 </div>
             </div>
-            <div class="step reveal">
-                <div class="step-number">2</div>
-                <div class="step-content">
-                    <h3 class="step-title">Customer Discovery & Interviews</h3>
-                    <p class="step-description">Conduct 20+ qualitative interviews to verify solution-market fit. Our platform guides you through structured interview frameworks and analysis.</p>
-                </div>
+            <div class="hero-photo-container" id="hero-photo">
+                <img src="https://picsum.photos/seed/dolphin-founder-pro/600/900.jpg" alt="Founder working" loading="eager">
+                <div class="hero-photo-overlay"></div>
             </div>
-            <div class="step reveal">
-                <div class="step-number">3</div>
-                <div class="step-content">
-                    <h3 class="step-title">MVP Development & Testing</h3>
-                    <p class="step-description">Build and test solution hypotheses with early adopters. Track key metrics and iterate based on real user feedback and validation data.</p>
+        </section>
+
+        <!-- TRUST BAR -->
+        <div class="trust-bar">
+            <div class="trust-scroll">
+                <div class="trust-chip stat-item">
+                    <span class="trust-chip-icon lime-bg"><i data-lucide="users" style="width:14px;height:14px;"></i></span>
+                    <span><span class="trust-chip-number stat-number">1,000</span>+ Founders</span>
                 </div>
-            </div>
-            <div class="step reveal">
-                <div class="step-number">4</div>
-                <div class="step-content">
-                    <h3 class="step-title">Traction & Funding Readiness</h3>
-                    <p class="step-description">Achieve measurable traction and finalize pitch-ready financials. Connect with our network of investors actively seeking validated opportunities.</p>
+                <div class="trust-chip stat-item">
+                    <span class="trust-chip-icon blue-bg"><i data-lucide="trending-up" style="width:14px;height:14px;"></i></span>
+                    <span><span class="trust-chip-number stat-number">2Cr+</span> Raised</span>
+                </div>
+                <div class="trust-chip stat-item">
+                    <span class="trust-chip-icon white-bg"><i data-lucide="layers" style="width:14px;height:14px;"></i></span>
+                    <span><span class="trust-chip-number stat-number">4</span> Stages</span>
+                </div>
+                <div class="trust-chip stat-item">
+                    <span class="trust-chip-icon lime-bg"><i data-lucide="shield-check" style="width:14px;height:14px;"></i></span>
+                    <span><span class="trust-chip-number stat-number">70</span>%+ Validation</span>
+                </div>
+                <div class="trust-chip">
+                    <span class="trust-chip-icon blue-bg"><i data-lucide="clock" style="width:14px;height:14px;"></i></span>
+                    <span>3x Faster to PMF</span>
                 </div>
             </div>
         </div>
-    </section>
 
-    <section class="cta-section">
-        <div class="cta-content">
-            <h2>Ready to Validate Your Idea?</h2>
-            <p>Join 1,000+ founders who are turning their startup dreams into fundable realities.</p>
-            <a href="register.html" class="btn btn-white">Get Started Free →</a>
+        <!-- CONNECTION LINE -->
+        <div class="connection-line reveal">
+            <svg viewBox="0 0 1200 80" preserveAspectRatio="none" fill="none">
+                <defs>
+                    <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#D4FF00" stop-opacity="0"/>
+                        <stop offset="30%" stop-color="#D4FF00" stop-opacity="0.6"/>
+                        <stop offset="70%" stop-color="#2563eb" stop-opacity="0.6"/>
+                        <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
+                    </linearGradient>
+                    <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                </defs>
+                <path d="M0,40 C200,10 400,70 600,40 C800,10 1000,70 1200,40" stroke="url(#lineGrad)" stroke-width="1.5" fill="none" filter="url(#glow)"/>
+            </svg>
         </div>
-    </section>
 
+        <!-- FEATURES BENTO -->
+        <section class="features-section" id="features">
+            <div class="section-label reveal">
+                <span class="section-label-line"></span>
+                Core Capabilities
+            </div>
+            <h2 class="section-heading reveal reveal-d1">Built for the<br>modern founder</h2>
+            <p class="section-sub reveal reveal-d2">Three integrated engines that eliminate guesswork from the startup journey.</p>
+
+            <div class="bento-grid">
+                <!-- Card 1: Validation — wide with photo -->
+                <div class="bento-card wide reveal">
+                    <div class="bento-card-icon lime"><i data-lucide="target" style="width:20px;height:20px;"></i></div>
+                    <h3>Validation Engine</h3>
+                    <p>Stage-gated roadmap with AI-powered verification to ensure product-market fit at every milestone. No more guessing.</p>
+                    <div class="bento-metric">
+                        <span class="bento-metric-value">94%</span>
+                        <span class="bento-metric-label">Accuracy Rate</span>
+                    </div>
+                    <div class="bento-card-photo">
+                        <img src="https://picsum.photos/seed/validation-data-viz/500/400.jpg" alt="Data validation" loading="lazy">
+                        <div class="bento-card-photo-overlay"></div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Investor -->
+                <div class="bento-card reveal reveal-d1">
+                    <div class="bento-card-icon blue"><i data-lucide="trending-up" style="width:20px;height:20px;"></i></div>
+                    <h3>Investor Discovery</h3>
+                    <p>Curated pipeline connecting VCs with funding-ready startups scoring 70%+ validation.</p>
+                    <div class="bento-card-visual">
+                        <div class="mini-avatar"><img src="https://picsum.photos/seed/avatar-inv1/64/64.jpg" alt="Investor" loading="lazy"></div>
+                        <div class="mini-avatar"><img src="https://picsum.photos/seed/avatar-inv2/64/64.jpg" alt="Investor" loading="lazy"></div>
+                        <div class="mini-avatar"><img src="https://picsum.photos/seed/avatar-inv3/64/64.jpg" alt="Investor" loading="lazy"></div>
+                        <div class="mini-badge"><i data-lucide="plus" style="width:12px;height:12px;"></i></div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Marketplace -->
+                <div class="bento-card reveal reveal-d2">
+                    <div class="bento-card-icon white"><i data-lucide="puzzle" style="width:20px;height:20px;"></i></div>
+                    <h3>Service Marketplace</h3>
+                    <p>Vetted legal, tech, and design partners verified for quality and startup-fit.</p>
+                    <div class="bento-card-visual">
+                        <span style="font-size:0.7rem;padding:4px 10px;border-radius:100px;background:var(--lime-dim);color:var(--lime);font-weight:600;">Legal</span>
+                        <span style="font-size:0.7rem;padding:4px 10px;border-radius:100px;background:rgba(37,99,235,0.15);color:#60a5fa;font-weight:600;">Tech</span>
+                        <span style="font-size:0.7rem;padding:4px 10px;border-radius:100px;background:rgba(255,255,255,0.06);color:var(--text-dim);font-weight:600;">Design</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- BENEFITS -->
+        <section class="benefits-section">
+            <div class="section-label reveal">
+                <span class="section-label-line"></span>
+                Why Dolphin
+            </div>
+            <h2 class="section-heading reveal reveal-d1">Stability, scale<br>& absolute trust</h2>
+            <p class="section-sub reveal reveal-d2">A state-driven platform designed to de-risk your journey with full transparency.</p>
+
+            <div class="benefits-grid">
+                <div class="benefit-card reveal">
+                    <div class="benefit-card-glow lime"></div>
+                    <div class="benefit-icon lime"><i data-lucide="shield-check" style="width:20px;height:20px;"></i></div>
+                    <h3>De-Risked Growth</h3>
+                    <p>Every milestone is AI-verified and admin-reviewed to protect against data falsification and ensure genuine progress.</p>
+                </div>
+                <div class="benefit-card reveal reveal-d1">
+                    <div class="benefit-card-glow blue"></div>
+                    <div class="benefit-icon blue"><i data-lucide="lock" style="width:20px;height:20px;"></i></div>
+                    <h3>Secure Interactions</h3>
+                    <p>Strict role-based access control and comprehensive interaction tracking ensure trust between all stakeholders.</p>
+                </div>
+                <div class="benefit-card reveal reveal-d2">
+                    <div class="benefit-card-glow lime"></div>
+                    <div class="benefit-icon white"><i data-lucide="bar-chart-3" style="width:20px;height:20px;"></i></div>
+                    <h3>Total Transparency</h3>
+                    <p>Complete audit trails for every startup profile, keeping all stakeholders aligned on metrics and validation status.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- HOW IT WORKS -->
+        <section class="process-section" id="how-it-works">
+            <div class="section-label reveal">
+                <span class="section-label-line"></span>
+                The Roadmap
+            </div>
+            <h2 class="section-heading reveal reveal-d1">Four stages to<br>validation</h2>
+            <p class="section-sub reveal reveal-d2">Our proven framework ensures founder-investor fit and operational excellence.</p>
+
+            <div class="process-scroll">
+                <div class="process-card reveal">
+                    <div class="process-card-number">01</div>
+                    <h3>Idea Clarity & Problem Validation</h3>
+                    <p>Define your core thesis and validate the pain point with supporting data. Complete AI-powered assessments to measure idea quality.</p>
+                </div>
+                <div class="process-connector"><div class="process-connector-line"></div></div>
+                <div class="process-card reveal reveal-d1">
+                    <div class="process-card-number">02</div>
+                    <h3>Customer Discovery & Interviews</h3>
+                    <p>Conduct 20+ qualitative interviews to verify solution-market fit with structured frameworks and analysis tools.</p>
+                </div>
+                <div class="process-connector"><div class="process-connector-line"></div></div>
+                <div class="process-card reveal reveal-d2">
+                    <div class="process-card-number">03</div>
+                    <h3>MVP Development & Testing</h3>
+                    <p>Build and test solution hypotheses with early adopters. Track key metrics and iterate based on real user feedback.</p>
+                </div>
+                <div class="process-connector"><div class="process-connector-line"></div></div>
+                <div class="process-card reveal reveal-d3">
+                    <div class="process-card-number">04</div>
+                    <h3>Traction & Funding Readiness</h3>
+                    <p>Achieve measurable traction and finalize pitch-ready financials. Connect with investors seeking validated opportunities.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section class="cta-section">
+            <div class="cta-card reveal">
+                <div class="cta-card-glow"></div>
+                <div class="cta-card-grid"></div>
+                <div class="cta-content">
+                    <h2>Ready to validate<br>your idea?</h2>
+                    <p>Join 1,000+ founders turning startup dreams into fundable realities.</p>
+                    <div class="magnetic-btn-wrap">
+                        <a href="register.html" class="btn btn-lime btn-lg magnetic-btn">
+                            Get Started Free
+                            <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- FOOTER -->
     <footer>
-        <div class="footer-content">
-            <div class="footer-column brand-col">
-                <h3>🐬 Dolphin</h3>
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <div class="logo"><span class="logo-dot"></span> Dolphin</div>
                 <p>The Operating System for modern entrepreneurship. Validate, build, and scale with confidence.</p>
             </div>
-            
-            <div class="footer-column">
-                <h3>Platform</h3>
+            <div class="footer-col">
+                <h4>Platform</h4>
                 <ul>
                     <li><a href="register.html">For Founders</a></li>
                     <li><a href="register.html">For Investors</a></li>
                     <li><a href="register.html">For Providers</a></li>
                 </ul>
             </div>
-            <div class="footer-column">
-                <h3>Resources</h3>
+            <div class="footer-col">
+                <h4>Resources</h4>
                 <ul>
-                    <li><a href="./support.html">Support</a></li>
+                    <li><a href="support.html">Support</a></li>
                 </ul>
             </div>
-            <div class="footer-column">
-                <h3>Company</h3>
+            <div class="footer-col">
+                <h4>Company</h4>
                 <ul>
-                    <li><a href="./privacy.html">Privacy</a></li>
-                    <li><a href="./termsofservice.html">Terms</a></li>
+                    <li><a href="privacy.html">Privacy</a></li>
+                    <li><a href="termsofservice.html">Terms</a></li>
                 </ul>
             </div>
         </div>
@@ -251,62 +321,23 @@
         </div>
     </footer>
 
+    <!-- MOBILE BOTTOM NAV -->
+    <nav class="bottom-nav" id="bottom-nav">
+        <a href="#features" class="bottom-nav-item active">
+            <i data-lucide="layout-grid" style="width:18px;height:18px;"></i>
+            Features
+        </a>
+        <a href="#how-it-works" class="bottom-nav-item">
+            <i data-lucide="route" style="width:18px;height:18px;"></i>
+            Roadmap
+        </a>
+        <a href="register.html" class="bottom-nav-item cta-item">
+            <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
+            Start
+        </a>
+    </nav>
+
     <!-- SCRIPTS -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('Service Worker Registered'))
-            .catch(err => console.log('Service Worker Failed', err));
-        });
-      }
-    </script>
-
-    <!-- PWA INSTALL LOGIC -->
-    <script>
-      let deferredPrompt;
-
-      window.addEventListener('beforeinstallprompt', (e) => {
-        // Prevent Chrome 67 and earlier from automatically showing the prompt
-        e.preventDefault();
-        // Stash the event so it can be triggered later.
-        deferredPrompt = e;
-        
-        // Show both desktop and mobile install buttons
-        const installBtn = document.getElementById('install-btn');
-        const installBtnMobile = document.getElementById('install-btn-mobile');
-        
-        if (installBtn) installBtn.style.display = 'flex';
-        if (installBtnMobile) installBtnMobile.style.display = 'block';
-      });
-
-      // Function to handle the click
-      const handleInstallClick = () => {
-        if (!deferredPrompt) return;
-        
-        // Show the prompt
-        deferredPrompt.prompt();
-        
-        // Wait for the user to respond to the prompt
-        deferredPrompt.userChoice.then((choiceResult) => {
-          if (choiceResult.outcome === 'accepted') {
-            console.log('User accepted the A2HS prompt');
-          }
-          deferredPrompt = null;
-          
-          // Hide buttons after prompt
-          const installBtn = document.getElementById('install-btn');
-          const installBtnMobile = document.getElementById('install-btn-mobile');
-          if (installBtn) installBtn.style.display = 'none';
-          if (installBtnMobile) installBtnMobile.style.display = 'none';
-        });
-      };
-
-      // Attach click listeners to buttons
-      document.getElementById('install-btn')?.addEventListener('click', handleInstallClick);
-      document.getElementById('install-btn-mobile')?.addEventListener('click', handleInstallClick);
-    </script>
-
-    <script src="./js/index.js"></script>
+    <script src="js/index.js"></script>
 </body>
 </html>

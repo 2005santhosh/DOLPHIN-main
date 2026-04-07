@@ -1,9 +1,57 @@
-        // Role selection functionality 
+// Initialize Lucide icons
+        lucide.createIcons();
+
+        // ==========================================
+        // TOAST SYSTEM
+        // ==========================================
+        const toastEl = document.getElementById('toast');
+        let toastTimeout;
+
+        function showToast(message, type = 'error') {
+            clearTimeout(toastTimeout);
+            toastEl.textContent = message;
+            toastEl.className = `toast toast-${type} show`;
+            toastTimeout = setTimeout(() => {
+                toastEl.classList.remove('show');
+            }, 3500);
+        }
+
+        // ==========================================
+        // FIELD VALIDATION HELPERS
+        // ==========================================
+        function showFieldError(fieldId, errorId) {
+            const field = document.getElementById(fieldId);
+            const error = document.getElementById(errorId);
+            if (field) field.classList.add('input-error');
+            if (error) error.classList.add('visible');
+        }
+        function clearFieldError(fieldId, errorId) {
+            const field = document.getElementById(fieldId);
+            const error = document.getElementById(errorId);
+            if (field) field.classList.remove('input-error');
+            if (error) error.classList.remove('visible');
+        }
+        function clearAllErrors() {
+            document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+            document.querySelectorAll('.field-error').forEach(el => el.classList.remove('visible'));
+        }
+
+        // Real-time error clearing
+        ['name', 'email', 'password'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', () => clearFieldError(id, `${id}-error`));
+            }
+        });
+
+        // ==========================================
+        // ROLE SELECTION
+        // ==========================================
         const API_URL = 'https://api.dolphinorg.in/api';
         const roleButtons = document.querySelectorAll('.role-btn');
         const selectedRoleInput = document.getElementById('selected-role');
         let selectedRole = 'founder';
-        
+
         roleButtons.forEach(button => {
             button.addEventListener('click', () => {
                 roleButtons.forEach(btn => btn.classList.remove('active'));
@@ -12,56 +60,67 @@
                 selectedRoleInput.value = selectedRole;
             });
         });
-        
-        // Password toggle functionality
+
+        // ==========================================
+        // PASSWORD TOGGLE
+        // ==========================================
         const passwordInput = document.getElementById('password');
         const togglePasswordBtn = document.getElementById('toggle-password');
         const eyeIcon = togglePasswordBtn.querySelector('.eye-icon');
         const eyeSlashIcon = togglePasswordBtn.querySelector('.eye-slash-icon');
-        
+
         togglePasswordBtn.addEventListener('click', () => {
             const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
             passwordInput.setAttribute('type', type);
-            if (type === 'password') {
-                eyeIcon.style.display = 'block';
-                eyeSlashIcon.style.display = 'none';
-            } else {
-                eyeIcon.style.display = 'none';
-                eyeSlashIcon.style.display = 'block';
-            }
+            eyeIcon.style.display = type === 'password' ? 'block' : 'none';
+            eyeSlashIcon.style.display = type === 'password' ? 'none' : 'block';
         });
-        
-        // Form submission handler
+
+        // ==========================================
+        // FORM SUBMISSION
+        // ==========================================
         const registerForm = document.getElementById('register-form');
-        
+        const submitBtn = document.getElementById('submit-btn');
+
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+            clearAllErrors();
+
             const name = document.getElementById('name').value.trim();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const role = selectedRoleInput.value;
-            
-            if (!name || !email || !password || !role) {
-                alert('All fields are required');
-                return;
+
+            // Validation
+            let hasError = false;
+
+            if (!name) {
+                showFieldError('name', 'name-error');
+                hasError = true;
             }
-            
-            if (password.length < 8) {
-                alert('Password must be at least 8 characters long');
-                return;
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!email || !emailRegex.test(email)) {
+                showFieldError('email', 'email-error');
+                hasError = true;
             }
-            
-            const submitButton = registerForm.querySelector('.btn');
-            const originalButtonText = submitButton.textContent;
-            submitButton.textContent = 'Creating Account...';
-            submitButton.disabled = true;
-            
+
+            if (!password || password.length < 8) {
+                showFieldError('password', 'password-error');
+                hasError = true;
+            }
+
+            if (hasError) return;
+
+            // Loading state
+            const originalContent = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="btn-spinner"><span class="spinner"></span>Creating Account...</span>';
+            submitBtn.disabled = true;
+
             try {
                 const response = await fetch(`${API_URL}/auth/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    // CRITICAL: Allows browser to set HttpOnly Cookie
                     credentials: 'include',
                     body: JSON.stringify({ name, email, password, role })
                 });
@@ -74,21 +133,25 @@
 
                 console.log('✅ Registration Successful');
 
-                // SECURITY FIX: Save ONLY user info. Token handled via Cookie.
+                // Save ONLY user info; token handled via HttpOnly Cookie
                 if (data.user) {
                     localStorage.setItem('user', JSON.stringify(data.user));
                 }
-                
-                // Redirect
-                if (role === 'investor') window.location.href = 'investor-dashboard.html';
-                else if (role === 'founder') window.location.href = 'dashboard.html';
-                else if (role === 'provider') window.location.href = 'provider-dashboard.html';
-                
+
+                showToast('Account created successfully!', 'success');
+
+                // Redirect after brief delay for toast visibility
+                setTimeout(() => {
+                    if (role === 'investor') window.location.href = 'investor-dashboard.html';
+                    else if (role === 'founder') window.location.href = 'dashboard.html';
+                    else if (role === 'provider') window.location.href = 'provider-dashboard.html';
+                }, 600);
+
             } catch (error) {
                 console.error('Registration error:', error);
-                alert(`Registration failed: ${error.message}`);
+                showToast(error.message || 'Registration failed. Please try again.', 'error');
             } finally {
-                submitButton.textContent = originalButtonText;
-                submitButton.disabled = false;
+                submitBtn.innerHTML = originalContent;
+                submitBtn.disabled = false;
             }
         });

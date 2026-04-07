@@ -5,38 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Dolphin | Startup OS</title>
     <link rel="stylesheet" href="./css/login.css">
-    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐬</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 </head>
 <body>
     <!-- ========================================== -->
     <!-- FRAME-BUSTING SCRIPT (Must be FIRST thing) -->
     <!-- ========================================== -->
     <script>
-        // Immediate frame-busting - runs before anything renders
         (function() {
             'use strict';
-            
-            // Check if page is loaded in an iframe
             if (window.top !== window.self) {
-                // Method 1: Try to break out of iframe
                 try {
                     window.top.location = window.self.location;
                 } catch (e) {
-                    // Method 2: If blocked by same-origin policy, hide everything
                     document.documentElement.style.display = 'none';
                     document.body.style.display = 'none';
                 }
-                
-                // Method 3: Alert user (backup)
                 setTimeout(function() {
                     if (window.top !== window.self) {
                         alert('Security Warning: This page cannot be displayed in a frame.');
                     }
                 }, 100);
             }
-            
-            // Additional: Prevent drag into iframe
             document.addEventListener('dragstart', function(e) {
                 if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON') {
                     e.preventDefault();
@@ -45,123 +39,143 @@
         })();
     </script>
 
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" role="alert" aria-live="assertive"></div>
+
     <div class="login-container">
-        <!-- Left side - Branding -->
+        <!-- Left Panel — Branding -->
         <div class="branding">
-            <div class="logo">Dolphin</div>
-            <div class="tagline">The Operating System For Entrepreneurship</div>
-            
-            <div class="features">
-                <div class="feature-item">
-                    <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 11l3 3L22 4"></path>
-                        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
-                    </svg>
-                    <div class="feature-text">Structured Validation</div>
+            <div class="branding-glow"></div>
+            <div class="branding-content">
+                <div class="brand-logo">
+                    <span class="brand-dot"></span>
+                    <span class="brand-name">🐬 Dolphin</span>
                 </div>
-                
-                <div class="feature-item">
-                    <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6"></path>
-                    </svg>
-                    <div class="feature-text">Investor Access</div>
+                <h1 class="brand-headline">
+                    Build startups<br>like a <span class="lime">science</span>.
+                </h1>
+                <p class="brand-desc">
+                    Turn the chaotic 0-to-1 journey into a measurable, repeatable process. Validate. Build. Scale.
+                </p>
+                <div class="brand-features">
+                    <div class="brand-feature-item">
+                        <div class="brand-feature-icon lime-icon">
+                            <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
+                        </div>
+                        <span>Structured Validation</span>
+                    </div>
+                    <div class="brand-feature-item">
+                        <div class="brand-feature-icon blue-icon">
+                            <i data-lucide="indian-rupee" style="width:16px;height:16px;"></i>
+                        </div>
+                        <span>Investor Access</span>
+                    </div>
+                    <div class="brand-feature-item">
+                        <div class="brand-feature-icon white-icon">
+                            <i data-lucide="zap" style="width:16px;height:16px;"></i>
+                        </div>
+                        <span>Vetted Resources</span>
+                    </div>
                 </div>
-                
-                <div class="feature-item">
-                    <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-                    </svg>
-                    <div class="feature-text">Vetted Resources</div>
+                <div class="brand-divider"></div>
+                <div class="brand-stats">
+                    <div>
+                        <div class="brand-stat-value">50+</div>
+                        <div class="brand-stat-label">Founders</div>
+                    </div>
+                    <div>
+                        <div class="brand-stat-value">2L+</div>
+                        <div class="brand-stat-label">Raised</div>
+                    </div>
+                    <div>
+                        <div class="brand-stat-value">94%</div>
+                        <div class="brand-stat-label">Accuracy</div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Right side - Login Form -->
+        <!-- Right Panel — Login Form -->
         <div class="login-form-container">
-            <h2>Welcome Back</h2>
-            <p class="subtitle">Log in to access your dashboard</p>
-            
-            <form id="login-form" autocomplete="on">
+            <a href="index.html" class="back-link">
+                <i data-lucide="arrow-left" style="width:14px;height:14px;"></i>
+                Back
+            </a>
+            <div class="form-header">
+                <h2>Welcome Back</h2>
+                <p class="subtitle">Log in to access your dashboard</p>
+            </div>
+
+            <form id="login-form" novalidate autocomplete="on">
                 <div class="form-group">
                     <label for="email">Email Address</label>
-                    <input 
-                        type="email" 
-                        id="email" 
+                    <input
+                        type="email"
+                        id="email"
                         name="email"
-                        placeholder="Enter your email" 
-                        required 
+                        placeholder="you@gmail.com"
+                        required
                         autocomplete="email"
                     >
+                    <div class="field-error" id="email-error">Please enter a valid email address</div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="password">Password</label>
                     <div class="password-input-container">
-                        <input 
-                            type="password" 
-                            id="password" 
+                        <input
+                            type="password"
+                            id="password"
                             name="password"
-                            placeholder="Enter your password" 
-                            required 
+                            placeholder="Enter your password"
+                            required
                             autocomplete="current-password"
                         >
-                        <button 
-                            type="button" 
-                            id="toggle-password" 
-                            class="toggle-password" 
+                        <button
+                            type="button"
+                            id="toggle-password"
+                            class="toggle-password"
                             aria-label="Toggle password visibility"
                             tabindex="-1"
                         >
-                            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
                             </svg>
-                            <svg class="eye-slash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                            <svg class="eye-slash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
                                 <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                                 <line x1="1" y1="1" x2="23" y2="23"></line>
                             </svg>
                         </button>
                     </div>
+                    <div class="field-error" id="password-error">Please enter your password</div>
                 </div>
-                
+
                 <button type="submit" class="btn" id="login-btn">Sign In</button>
 
-                <div style="text-align: center; margin-top: 1rem;">
-                    <a href="forgot-password.html" style="font-size: 0.9rem; color: #6b7280; text-decoration: none; font-weight: 500;">
-                        Forgot password?
-                    </a>
+                <div class="forgot-link">
+                    <a href="forgot-password.html">Forgot password?</a>
                 </div>
             </form>
-            
+
             <div class="footer-text">
                 Don't have an account? <a href="register.html">Join Dolphin</a>
             </div>
         </div>
     </div>
-    
-    <!-- ========================================== -->
-    <!-- ADDITIONAL CLICKJACKING CSS PROTECTION     -->
-    <!-- ========================================== -->
+
+    <!-- Additional Clickjacking CSS Protection -->
     <style>
-        /* Failsafe: If somehow JS fails, CSS can help */
-        html {
-            /* This doesn't fully work but adds a layer */
-            opacity: 1;
-        }
-        
-        /* Prevent selection/copy of form data for malicious use */
         #login-form input[type="email"],
         #login-form input[type="password"] {
             -webkit-user-select: text;
             user-select: text;
         }
-        
-        /* Disable context menu on sensitive elements */
         .password-input-container {
             -webkit-touch-callout: none;
         }
     </style>
-    
+
     <script src="./js/api.js?v=2"></script>
     <script src="./js/login.js?v=3"></script>
 </body>

@@ -1,5 +1,53 @@
+// Initialize Lucide icons
+lucide.createIcons();
+
 // ==========================================
-// 1. PASSWORD VISIBILITY TOGGLE
+// 1. TOAST SYSTEM
+// ==========================================
+const toastEl = document.getElementById('toast');
+let toastTimeout;
+
+function showToast(message, type = 'error') {
+    clearTimeout(toastTimeout);
+    toastEl.textContent = message;
+    toastEl.className = `toast toast-${type} show`;
+    toastTimeout = setTimeout(() => {
+        toastEl.classList.remove('show');
+    }, 4000);
+}
+
+// ==========================================
+// 2. FIELD VALIDATION HELPERS
+// ==========================================
+function showFieldError(fieldId, errorId) {
+    const field = document.getElementById(fieldId);
+    const error = document.getElementById(errorId);
+    if (field) field.classList.add('input-error');
+    if (error) error.classList.add('visible');
+}
+
+function clearFieldError(fieldId, errorId) {
+    const field = document.getElementById(fieldId);
+    const error = document.getElementById(errorId);
+    if (field) field.classList.remove('input-error');
+    if (error) error.classList.remove('visible');
+}
+
+function clearAllErrors() {
+    document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+    document.querySelectorAll('.field-error').forEach(el => el.classList.remove('visible'));
+}
+
+// Real-time error clearing on input
+['email', 'password'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('input', () => clearFieldError(id, `${id}-error`));
+    }
+});
+
+// ==========================================
+// 3. PASSWORD VISIBILITY TOGGLE
 // ==========================================
 const togglePassword = document.getElementById('toggle-password');
 const passwordInput = document.getElementById('password');
@@ -14,7 +62,7 @@ togglePassword.addEventListener('click', function() {
 });
 
 // ==========================================
-// 2. CLICKJACKING PROTECTION (Enhanced)
+// 4. CLICKJACKING PROTECTION (Enhanced)
 // ==========================================
 (function enforceFrameProtection() {
     let frameCheckInterval = setInterval(function() {
@@ -26,14 +74,14 @@ togglePassword.addEventListener('click', function() {
             }
         }
     }, 100);
-    
+
     setTimeout(function() {
         clearInterval(frameCheckInterval);
     }, 10000);
 })();
 
 // ==========================================
-// 3. FORM SUBMISSION HANDLER (Secured)
+// 5. FORM SUBMISSION HANDLER (Secured)
 // ==========================================
 const loginForm = document.getElementById('login-form');
 const loginBtn = document.getElementById('login-btn');
@@ -41,37 +89,43 @@ const loginBtn = document.getElementById('login-btn');
 if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+        clearAllErrors();
+
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
-        const originalButtonText = loginBtn.textContent;
-        
-        if (!email || !password) {
-            showError('Please enter both email and password');
-            return;
-        }
-        
+
+        // Validation
+        let hasError = false;
+
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            showError('Please enter a valid email address');
-            return;
+        if (!email || !emailRegex.test(email)) {
+            showFieldError('email', 'email-error');
+            hasError = true;
         }
-        
+
+        if (!password) {
+            showFieldError('password', 'password-error');
+            hasError = true;
+        }
+
+        if (hasError) return;
+
+        // Frame-busting check before submit
         if (window.top !== window.self) {
-            showError('Security error: Cannot submit from embedded context');
+            showToast('Security error: Cannot submit from embedded context', 'error');
             return;
         }
-        
-        loginBtn.textContent = 'Signing In...';
+
+        // Loading state
+        const originalContent = loginBtn.innerHTML;
+        loginBtn.innerHTML = '<span class="btn-spinner"><span class="spinner"></span>Signing In...</span>';
         loginBtn.disabled = true;
-        loginBtn.style.opacity = '0.7';
 
         try {
             const response = await fetch(`${API_URL}/auth/login`, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json'
-                    // Removed 'X-Requested-With' - was causing CORS preflight failure
                 },
                 credentials: 'include',
                 body: JSON.stringify({ email, password })
@@ -88,52 +142,33 @@ if (loginForm) {
             }
 
             console.log('✅ Login Successful! User Role:', data.user.role);
-            
+
+            // Clear storage and save fresh user data
             localStorage.clear();
             sessionStorage.clear();
             localStorage.setItem('user', JSON.stringify(data.user));
-            
+
+            showToast('Login successful!', 'success');
+
+            // Role-based redirect
             const role = data.user.role;
             let redirectUrl = 'dashboard.html';
 
             if (role === 'admin') redirectUrl = 'admin-dashboard.html';
             else if (role === 'investor') redirectUrl = 'investor-dashboard.html';
             else if (role === 'provider') redirectUrl = 'provider-dashboard.html';
-            
-            window.location.replace(redirectUrl + '?t=' + Date.now());
+
+            // Brief delay for toast visibility
+            setTimeout(() => {
+                window.location.replace(redirectUrl + '?t=' + Date.now());
+            }, 500);
 
         } catch (error) {
             console.error('❌ Login error:', error);
-            resetButton();
-            showError(`Login failed: ${error.message}`);
+            showToast(error.message || 'Login failed. Please try again.', 'error');
+        } finally {
+            loginBtn.innerHTML = originalContent;
+            loginBtn.disabled = false;
         }
     });
-}
-
-function resetButton() {
-    loginBtn.textContent = 'Sign In';
-    loginBtn.disabled = false;
-    loginBtn.style.opacity = '1';
-}
-
-function showError(message) {
-    const existingError = document.querySelector('.form-error');
-    if (existingError) existingError.remove();
-    
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'form-error';
-    errorDiv.style.cssText = `
-        color: #ef4444;
-        font-size: 0.875rem;
-        margin-top: 0.75rem;
-        text-align: center;
-        padding: 0.5rem;
-        background: #fef2f2;
-        border: 1px solid #fecaca;
-        border-radius: 0.375rem;
-    `;
-    errorDiv.textContent = message;
-    
-    loginForm.querySelector('.btn').after(errorDiv);
-    setTimeout(() => errorDiv.remove(), 5000);
 }

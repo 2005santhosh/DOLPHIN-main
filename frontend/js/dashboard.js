@@ -757,10 +757,10 @@ async function openStageValidationModal(stageKey) {
     questions.forEach((q) => {
       const questionDiv = document.createElement('div');
       questionDiv.style.marginBottom = '2rem';
-      questionDiv.innerHTML = `
-        <div style="background: #f9fafb; padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem;">
-          <label class="form-label" style="margin-bottom: 0.5rem;"><strong>Q${q.id}:</strong> ${q.question}</label>
-          <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 0.75rem;">💡 ${q.hint}</p>
+       questionDiv.innerHTML = `
+        <div style="background: var(--bg-surface-2, rgba(255,255,255,0.05)); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 0.5rem; border: 1px solid var(--border-color, rgba(255,255,255,0.08));">
+          <label class="form-label" style="margin-bottom: 0.5rem; color: var(--text-primary);"><strong>Q${q.id}:</strong> ${q.question}</label>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">${q.hint}</p>
           <textarea class="form-textarea validation-answer" data-question-id="${q.id}" data-category="${q.category}" data-weight="${q.weight}" placeholder="Your answer..." style="margin-bottom: 0; min-height: 100px;"></textarea>
         </div>
       `;
@@ -842,24 +842,24 @@ async function showStageValidationResults(stageKey) {
 
     const stageTitle = VALIDATION_STAGES.find(s => s.key === stageKey)?.title || stageKey;
     
-    let scoreColor = '#ef4444'; 
-    let statusText = 'Needs Improvement';
-    
-    if (rec.score >= 70) { 
-        scoreColor = '#10b981'; 
+    let scoreColor = 'var(--error)';
+      let statusText = 'Needs Improvement';
+      
+      if (rec.score >= 70) { 
+        scoreColor = 'var(--success)'; 
         statusText = 'Validated'; 
-    } else if (rec.score >= 50) { 
-        scoreColor = '#f59e0b'; 
+      } else if (rec.score >= 50) { 
+        scoreColor = 'var(--warning)'; 
         statusText = 'Almost There'; 
-    }
+      }
 
     let answersHtml = (rec.answers || []).map((a, idx) => `
-        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
+        <div style="background: var(--bg-surface-2, rgba(255,255,255,0.05)); border: 1px solid var(--border-color, rgba(255,255,255,0.08)); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-            <span style="font-weight: 600; color: #374151;">Question ${idx + 1}</span>
-            <span style="font-weight: 700; color: ${a.score >= 7 ? '#10b981' : '#ef4444'};">${a.score}/10</span>
+            <span style="font-weight: 600; color: var(--text-primary);">Question ${idx + 1}</span>
+            <span style="font-weight: 700; color: ${a.score >= 7 ? 'var(--success)' : 'var(--error)'};">${a.score}/10</span>
           </div>
-          <p style="font-size: 0.9rem; color: #4b5563; margin: 0; line-height: 1.5;">${(a.answer || '').substring(0, 150)}...</p>
+          <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0; line-height: 1.5;">${(a.answer || '').substring(0, 150)}...</p>
         </div>
       `).join('');
 
@@ -868,9 +868,9 @@ async function showStageValidationResults(stageKey) {
         <div style="font-size: 3.5rem; font-weight: 800; color: ${scoreColor}; line-height: 1;">${rec.score}%</div>
         <div style="display: inline-block; margin-top: 0.5rem; padding: 4px 12px; background: ${scoreColor}20; color: ${scoreColor}; border-radius: 9999px; font-weight: 600; font-size: 0.9rem;">${statusText}</div>
       </div>
-      <div style="border-top: 1px solid #e5e7eb; padding-top: 1.5rem;">
-        <h4 style="margin-bottom: 1rem; font-size: 1rem; color: #111827;">Answer Breakdown</h4>
-        ${answersHtml || '<p style="color: #6b7280;">No detailed answers recorded.</p>'}
+     <div style="border-top: 1px solid var(--border-color, rgba(255,255,255,0.08)); padding-top: 1.5rem;">
+        <h4 style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-primary);">Answer Breakdown</h4>
+        ${answersHtml || '<p style="color: var(--text-secondary);">No detailed answers recorded.</p>'}
       </div>
     `;
 
@@ -888,7 +888,7 @@ async function showStageValidationResults(stageKey) {
   }
 }
 // ==========================================
-// TASKS & RESOURCES
+// TASKS & RESOURCES openchat
 // ==========================================
 async function loadRoadmapTasks() {
     const container = document.getElementById('tasks-container');
@@ -904,15 +904,15 @@ async function loadRoadmapTasks() {
         container.innerHTML = res.tasks.map(task => {
             let statusClass = task.status;
             let btnHtml = '';
-            if (statusClass === 'locked') btnHtml = `<span style="color:#9ca3af; font-weight:600;">🔒 Locked</span>`;
-            else if (statusClass === 'completed') btnHtml = `<span style="color:#10b981; font-weight:600;">✓ Done +${task.points} Pts</span>`;
+            if (statusClass === 'locked') btnHtml = `<span style="color:var(--text-faint); font-weight:600;">Locked</span>`;
+            else if (statusClass === 'completed') btnHtml = `<span style="color:var(--success); font-weight:600;">Done +${task.points} Pts</span>`;
             else btnHtml = `<button class="btn btn-primary btn-sm" onclick="completeTask('${task.key}')">Mark Complete</button>`;
 
             return `
             <div class="roadmap-item ${statusClass}">
                 <div style="flex:1;">
-                    <div style="font-size:0.8rem; color:#6b7280; text-transform:uppercase; margin-bottom:0.25rem;">${task.phase}</div>
-                    <h4>${task.title}</h4>
+                    <div style="font-size:0.8rem; color:var(--text-tertiary); text-transform:uppercase; margin-bottom:0.25rem;">${task.phase}</div>
+                    <h4 style="font-weight:700; color:var(--text-primary); margin-bottom:4px;">${task.title}</h4>
                     <p style="font-size:0.9rem; color:var(--text-secondary);">${task.description}</p>
                 </div>
                 <div style="min-width: 120px; text-align: right;">${btnHtml}</div>
@@ -962,10 +962,64 @@ async function loadAnalytics() {
 
 function initCharts(perf, tasks) {
   const ctx1 = document.getElementById('stagePerformanceChart');
-  if(ctx1) new Chart(ctx1, { type: 'radar', data: { labels: perf.labels, datasets: [{ label: 'Score', data: perf.scores, backgroundColor: 'rgba(99, 102, 241, 0.2)', borderColor: '#6366f1' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, max: 100 } } } });
+  if(ctx1) new Chart(ctx1, {
+    type: 'radar',
+    data: {
+      labels: perf.labels,
+      datasets: [{
+        label: 'Score',
+        data: perf.scores,
+        backgroundColor: 'rgba(212,255,0,0.15)',
+        borderColor: '#D4FF00',
+        pointBackgroundColor: '#D4FF00',
+        pointBorderColor: '#D4FF00',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        r: {
+          beginAtZero: true,
+          max: 100,
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          angleLines: { color: 'rgba(255,255,255,0.06)' },
+          pointLabels: { color: 'rgba(245,245,247,0.5)', font: { size: 11 } },
+          ticks: { display: false }
+        }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
   const ctx2 = document.getElementById('taskCompletionChart');
-  if(ctx2) new Chart(ctx2, { type: 'doughnut', data: { labels: ['Completed', 'Pending'], datasets: [{ data: [tasks.completed, tasks.pending], backgroundColor: ['#10b981', '#e5e7eb'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+  if(ctx2) new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: ['Completed', 'Pending'],
+      datasets: [{
+        data: [tasks.completed, tasks.pending],
+        backgroundColor: ['#34d399', 'rgba(255,255,255,0.08)'],
+        borderColor: ['transparent', 'transparent'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '70%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: 'rgba(245,245,247,0.5)', padding: 16, font: { size: 12 } }
+        }
+      }
+    }
+  });
 }
+
 
 // ==========================================
 // INVESTORS & PROVIDERS
@@ -1219,24 +1273,24 @@ async function openDetailModal(type, id) {
     const imgUrl = data.profilePicture ? (data.profilePicture.startsWith('http') ? data.profilePicture : `${window.location.origin}${data.profilePicture}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name || 'User')}&background=${type === 'investor' ? '6366f1' : '10b981'}&color=fff`;
 
     // Build Details HTML
-    let detailsHtml = `<div style="margin-bottom: 8px; color: #555; line-height: 1.5;">${data.description || data.bio || 'No description provided.'}</div>`;
-    detailsHtml += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 1rem 0; padding: 1rem; background: #f9fafb; border-radius: 8px; font-size: 0.9rem;">`;
+   let detailsHtml = `<div style="margin-bottom: 8px; color: var(--text-secondary); line-height: 1.5;">${data.description || data.bio || 'No description provided.'}</div>`;
+    detailsHtml += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 1rem 0; padding: 1rem; background: var(--bg-surface-2, rgba(255,255,255,0.05)); border-radius: 8px; border: 1px solid var(--border-color, rgba(255,255,255,0.08)); font-size: 0.9rem;">`;
     
     if (type === 'investor') {
         detailsHtml += `
-          <div><strong style="font-size:0.8rem; color:#888; display:block; margin-bottom:4px;">Interest Areas</strong>${(data.interestAreas || []).join(', ') || 'N/A'}</div>
-          <div><strong style="font-size:0.8rem; color:#888; display:block; margin-bottom:4px;">Stage Preference</strong>${(data.stagePreference || []).join(', ') || 'Any'}</div>
-          <div><strong style="font-size:0.8rem; color:#888; display:block; margin-bottom:4px;">Rating</strong><span id="rating-display-value">⭐ ${data.rating || '0.0'}</span></div>
-          <div><strong style="font-size:0.8rem; color:#888; display:block; margin-bottom:4px;">Joined</strong>${data.joinedAt ? new Date(data.joinedAt).toLocaleDateString() : 'N/A'}</div>
+          <div><strong style="font-size:0.78rem; color:var(--text-tertiary); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">Interest Areas</strong><span style="color:var(--text-primary);">${(data.interestAreas || []).join(', ') || 'N/A'}</span></div>
+          <div><strong style="font-size:0.78rem; color:var(--text-tertiary); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">Stage Preference</strong><span style="color:var(--text-primary);">${(data.stagePreference || []).join(', ') || 'Any'}</span></div>
+          <div><strong style="font-size:0.78rem; color:var(--text-tertiary); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">Rating</strong><span id="rating-display-value" style="color:var(--warning);">★ ${data.rating || '0.0'}</span></div>
+          <div><strong style="font-size:0.78rem; color:var(--text-tertiary); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">Joined</strong><span style="color:var(--text-primary);">${data.joinedAt ? new Date(data.joinedAt).toLocaleDateString() : 'N/A'}</span></div>
         `;
     } else {
         detailsHtml += `
-          <div><strong style="font-size:0.8rem; color:#888; display:block; margin-bottom:4px;">Category</strong>${data.category || 'N/A'}</div>
-          <div><strong style="font-size:0.8rem; color:#888; display:block; margin-bottom:4px;">Experience</strong>${data.experienceLevel || 'N/A'}</div>
-          <div><strong style="font-size:0.8rem; color:#888; display:block; margin-bottom:4px;">Specialties</strong>${(data.specialties || []).join(', ') || 'N/A'}</div>
-          <div><strong style="font-size:0.8rem; color:#888; display:block; margin-bottom:4px;">Availability</strong>${data.availability || 'N/A'}</div>
-          <div><strong style="font-size:0.8rem; color:#888; display:block; margin-bottom:4px;">Contact Method</strong>${data.contactMethod || 'N/A'}</div>
-          <div><strong style="font-size:0.8rem; color:#888; display:block; margin-bottom:4px;">Rating</strong><span id="rating-display-value">⭐ ${data.rating || '0.0'}</span></div>
+          <div><strong style="font-size:0.78rem; color:var(--text-tertiary); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">Category</strong><span style="color:var(--text-primary);">${data.category || 'N/A'}</span></div>
+          <div><strong style="font-size:0.78rem; color:var(--text-tertiary); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">Experience</strong><span style="color:var(--text-primary);">${data.experienceLevel || 'N/A'}</span></div>
+          <div><strong style="font-size:0.78rem; color:var(--text-tertiary); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">Specialties</strong><span style="color:var(--text-primary);">${(data.specialties || []).join(', ') || 'N/A'}</span></div>
+          <div><strong style="font-size:0.78rem; color:var(--text-tertiary); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">Availability</strong><span style="color:var(--text-primary);">${data.availability || 'N/A'}</span></div>
+          <div><strong style="font-size:0.78rem; color:var(--text-tertiary); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">Contact</strong><span style="color:var(--text-primary);">${data.contactMethod || 'N/A'}</span></div>
+          <div><strong style="font-size:0.78rem; color:var(--text-tertiary); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em;">Rating</strong><span id="rating-display-value" style="color:var(--warning);">★ ${data.rating || '0.0'}</span></div>
         `;
     }
     detailsHtml += `</div>`;
@@ -1250,14 +1304,14 @@ async function openDetailModal(type, id) {
     else actionBtnHtml = `<button class="btn btn-primary" style="width: 100%;" onclick="sendFounderRequest('${requestTargetId}', '${data.name}')">Connect</button>`;
 
     const ratingSectionHtml = `
-      <div style="margin-top: 2rem; border-top: 1px solid #e5e7eb; padding-top: 1.5rem;">
-        <h4 style="font-size: 1rem; margin-bottom: 1rem; text-align: center;">Leave a Review</h4>
+      <div style="margin-top: 2rem; border-top: 1px solid var(--border-color, rgba(255,255,255,0.08)); padding-top: 1.5rem;">
+        <h4 style="font-size: 1rem; margin-bottom: 1rem; text-align: center; color:var(--text-primary);">Leave a Review</h4>
         <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 1rem;" id="star-container">
-          <span class="star" data-value="1" style="font-size: 2rem; cursor: pointer; color: #d1d5db;">★</span>
-          <span class="star" data-value="2" style="font-size: 2rem; cursor: pointer; color: #d1d5db;">★</span>
-          <span class="star" data-value="3" style="font-size: 2rem; cursor: pointer; color: #d1d5db;">★</span>
-          <span class="star" data-value="4" style="font-size: 2rem; cursor: pointer; color: #d1d5db;">★</span>
-          <span class="star" data-value="5" style="font-size: 2rem; cursor: pointer; color: #d1d5db;">★</span>
+          <span class="star" data-value="1" style="font-size: 2rem; cursor: pointer; color: var(--text-faint);">★</span>
+          <span class="star" data-value="2" style="font-size: 2rem; cursor: pointer; color: var(--text-faint);">★</span>
+          <span class="star" data-value="3" style="font-size: 2rem; cursor: pointer; color: var(--text-faint);">★</span>
+          <span class="star" data-value="4" style="font-size: 2rem; cursor: pointer; color: var(--text-faint);">★</span>
+          <span class="star" data-value="5" style="font-size: 2rem; cursor: pointer; color: var(--text-faint);">★</span>
         </div>
         <textarea id="rating-comment" class="form-textarea" rows="2" placeholder="Write your feedback (optional)..."></textarea>
         <button class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;" onclick="submitRating('${requestTargetId}')">Submit Rating</button>
@@ -1266,13 +1320,13 @@ async function openDetailModal(type, id) {
 
     // UPDATED HEADER HTML (META STYLE BADGE)
     if(body) {
-        body.innerHTML = `
+         body.innerHTML = `
           <div style="text-align:center; margin-bottom: 1.5rem;">
             <div class="profile-img-wrapper" style="width: 80px; height: 80px; border-radius: 50%; margin: 0 auto; border: 2px solid var(--border-color);">
                 <img src="${imgUrl}" style="border-radius: 50%;">
                 ${isVerified ? `<span class="verified-badge" style="display: flex;"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></span>` : ''}
             </div>
-            <h2 style="margin: 0.5rem 0 0.25rem;">${data.name}</h2>
+            <h2 style="margin: 0.5rem 0 0.25rem; color:var(--text-primary);">${data.name}</h2>
             <div style="font-size: 0.9rem; color: var(--text-secondary);">${type === 'investor' ? 'Investor' : 'Service Provider'}</div>
           </div>
           ${detailsHtml}
@@ -1309,7 +1363,7 @@ function setupStarListeners() {
 function updateStarDisplay(rating) {
   const stars = document.querySelectorAll('.star');
   stars.forEach(star => {
-    star.style.color = star.dataset.value <= rating ? '#fbbf24' : '#d1d5db'; 
+    star.style.color = star.dataset.value <= rating ? 'var(--warning)' : 'var(--text-faint)';
   });
 }
 
@@ -1328,7 +1382,7 @@ async function submitRating(targetUserId) {
     if (!res.ok) throw new Error(data.message);
     showToast('Rating submitted successfully!', 'success');
     const ratingEl = document.getElementById('rating-display-value');
-    if(ratingEl) ratingEl.textContent = `⭐ ${data.averageRating || selectedRating}.0`;
+      if(ratingEl) ratingEl.textContent = `★ ${data.averageRating || selectedRating}.0`;
   } catch (err) { showToast(err.message, 'error'); }
 }
 
@@ -1470,7 +1524,7 @@ window.openChat = async function(partnerId, partnerName, partnerPic) {
     const chatInputArea = document.getElementById('chat-input-area');
     
     let headerAvatarHtml = partnerPic ? `<img src="${partnerPic}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : partnerName.charAt(0);
-    if(chatHeader) chatHeader.innerHTML = `<div class="chat-avatar">${headerAvatarHtml}</div> <span style="color:white; font-weight:600;">${partnerName}</span>`;
+    if(chatHeader) chatHeader.innerHTML = `<div class="chat-avatar">${headerAvatarHtml}</div> <span style="color:var(--text-primary); font-weight:600;">${partnerName}</span>`;
     
     if (window.innerWidth <= 768) {
         if(chatList) chatList.style.display = 'none';
@@ -1504,7 +1558,7 @@ window.openChat = async function(partnerId, partnerName, partnerPic) {
         container.innerHTML = '';
         
         if(msgs.length === 0) { 
-            container.innerHTML = '<p style="text-align:center; margin-top:2rem; color:#888;">No messages yet. Say Hi!</p>'; 
+             container.innerHTML = '<p style="text-align:center; margin-top:2rem; color:var(--text-tertiary);">No messages yet. Say Hi!</p>';
         } else {
             msgs.forEach(m => {
                 const senderId = (m.senderId?._id || m.senderId)?.toString();
@@ -1573,7 +1627,7 @@ function renderConversationList(convs) {
     listContainer.innerHTML = '';
 
     if (!convs || convs.length === 0) { 
-        listContainer.innerHTML = '<p style="padding:1rem; text-align:center; color:#666;">No conversations found.</p>'; 
+         listContainer.innerHTML = '<p style="padding:1rem; text-align:center; color:var(--text-tertiary);">No conversations found.</p>';
         return; 
     }
 
@@ -1663,7 +1717,7 @@ function loadSettings() {
            previewImg.src = imageUrl;
            updateHeaderAvatar(imageUrl);
          } else {
-           previewImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'User')}&background=e2e8f0&color=64748b&size=100`;
+           previewImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'User')}&background=0a0a0a&color=D4FF00&size=100`;
          }
        }
 
@@ -1679,7 +1733,7 @@ function loadSettings() {
     }).catch(err => console.error(err));
 }
 
-// Profile Update button listener
+// Profile Update button listener style
 const updateProfileBtnSettings = document.getElementById('update-profile-btn');
 if(updateProfileBtnSettings) {
     updateProfileBtnSettings.addEventListener('click', async () => {
@@ -1866,7 +1920,7 @@ if(confirmDeleteBtn) {
 }
 
 // Init
-// document.addEventListener('DOMContentLoaded', async () => {
+// document.addEventListener('DOMContentLoaded', async () => { openstagevalidation
 //   const currentPage = window.location.pathname;
 
 //   const isAuthed = await checkAuthStatus();
