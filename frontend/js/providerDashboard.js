@@ -162,7 +162,12 @@ function updateVerifiedBadges(state) {
     const settingsBadge = document.getElementById('settings-verified-badge');
     
     if(navBadge) navBadge.style.display = isApproved ? 'flex' : 'none';
-    if(settingsBadge) settingsBadge.style.display = isApproved ? 'flex' : 'none';
+   if(settingsBadge) {
+  settingsBadge.style.display =
+    isApproved ? 'flex' : 'none';
+  settingsBadge.style.width='24px';
+  settingsBadge.style.height='24px';
+}
 }
 
 function navigateToPage(pageName) {
@@ -175,7 +180,7 @@ function navigateToPage(pageName) {
 }
 
 // ==========================================
-// 4. UI HELPERS: TOAST & CONFIRM
+// 4. UI HELPERS: TOAST & CONFIRM sidebar
 // ==========================================
 function showToast(message, type = 'info') {
   const container = document.getElementById('toast-container');
@@ -297,7 +302,7 @@ window.clearNotifications = async () => {
 };
 
 // ==========================================
-// 6. CORE PAGE LOADERS
+// 6. CORE PAGE LOADERS togglepassword
 // ==========================================
 function loadPageContent(page) {
   switch(page) {
@@ -308,6 +313,7 @@ function loadPageContent(page) {
     case 'settings': loadSettings(); break;
     case 'chat': loadConversations(); break;
   }
+  if (window.lucide) lucide.createIcons();
 }
 
 async function loadDashboard() {
@@ -817,9 +823,13 @@ window.openRequestModal = function(startupId) {
   document.getElementById('request-modal').classList.add('active');
 };
 
-window.togglePassword = function(inputId) {
-    const input = document.getElementById(inputId);
-    if (input) input.type = input.type === 'password' ? 'text' : 'password';
+window.togglePassword = function(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const show = el.type === 'password';
+  el.type = show ? 'text' : 'password';
+  const ic = document.getElementById(id+'-toggle-icon');
+  if (ic) ic.style.opacity = show ? '0.4' : '1';
 };
 
 const legalDocs = {
@@ -840,7 +850,7 @@ window.closeLegalModal = function() {
 };
 
 // ==========================================
-// 11. EVENT LISTENERS & INITIALIZATION profile sendprovider
+// 11. EVENT LISTENERS & INITIALIZATION settingsbadge
 // ==========================================
 document.addEventListener('DOMContentLoaded', async () => {
   const currentPage = window.location.pathname;
@@ -1112,7 +1122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Socket.io Initialization
   if (typeof io === 'function' && userId) {
     const socket = io("https://api.dolphinorg.in", { 
-        withCredentials: true, // FIX: Added for cookies samesite
+        withCredentials: true, // FIX: Added for cookies samesite loadpage
         transports: ['websocket']
     });
     socket.emit('join', userId);
