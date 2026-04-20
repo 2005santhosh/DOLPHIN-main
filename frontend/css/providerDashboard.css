@@ -571,7 +571,7 @@ body {
 .chat-search-container {
   position:sticky; top:0; z-index:10;
   padding:1rem; border-bottom:1px solid var(--border-color);
-  background:rgba(5,5,5,0.5);
+  background:rgba(5,5,5,1);
   flex-shrink:0;
   display: flex;
   align-items: center;
