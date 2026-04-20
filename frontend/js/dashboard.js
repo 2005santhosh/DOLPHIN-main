@@ -1527,28 +1527,45 @@ window.openChat = async function(partnerId, partnerName, partnerPic) {
     if(chatHeader) chatHeader.innerHTML = `<div class="chat-avatar">${headerAvatarHtml}</div> <span style="color:var(--text-primary); font-weight:600;">${partnerName}</span>`;
     
     if (window.innerWidth <= 768) {
-        if(chatList) chatList.style.display = 'none';
-        if(chatWindow) { chatWindow.classList.add('active'); chatWindow.style.display = 'flex'; }
-        
-        let backBtn = document.getElementById('chat-back-btn');
-        if (!backBtn && chatHeader) {
-            backBtn = document.createElement('button'); 
-            backBtn.id = 'chat-back-btn'; 
-            backBtn.className = 'chat-back-btn';
-            backBtn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>`;
-            backBtn.onclick = () => { 
-                if(chatWindow) { chatWindow.classList.remove('active'); chatWindow.style.display = 'none'; }
-                if(chatList) chatList.style.display = 'flex'; 
-            };
-            chatHeader.prepend(backBtn);
-        }
-    } else {
-        // Desktop Logic Fix
-        if(chatWindow) chatWindow.style.display = 'flex';
-        if(chatHeader) chatHeader.style.display = 'flex';
-        if(chatInputArea) chatInputArea.style.display = 'flex';
+    // Hide the conversation list, show the chat window
+    const convList  = document.getElementById('conversations-list');
+    const chatWin   = document.getElementById('chat-window');
+    const inputArea = document.getElementById('chat-input-area');
+ 
+    if (convList) convList.classList.add('panel-hidden');
+    if (chatWin)  { chatWin.classList.add('active'); chatWin.style.display = 'flex'; }
+    if (inputArea) inputArea.style.display = 'flex';
+ 
+    // Inject back-button if it doesn't exist yet
+    const chatHeader = document.getElementById('chat-header');
+    if (chatHeader && !document.getElementById('chat-back-btn')) {
+        const backBtn = document.createElement('button');
+        backBtn.id        = 'chat-back-btn';
+        backBtn.className = 'chat-back-btn';
+        backBtn.setAttribute('aria-label', 'Back to chats');
+        backBtn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>`;
+        backBtn.addEventListener('click', () => {
+            // Slide chat window out, reveal conversation list
+            if (chatWin)  { chatWin.classList.remove('active'); chatWin.style.display = 'none'; }
+            if (convList) convList.classList.remove('panel-hidden');
+        });
+        chatHeader.prepend(backBtn);
     }
-
+ 
+} else {
+    // ── DESKTOP: just show both panels normally ──
+    const chatWin   = document.getElementById('chat-window');
+    const chatHeader = document.getElementById('chat-header');
+    const inputArea  = document.getElementById('chat-input-area');
+ 
+    if (chatWin)   { chatWin.style.display = 'flex'; }
+    if (chatHeader) chatHeader.style.display = 'flex';
+    if (inputArea)  inputArea.style.display = 'flex';
+}
+ 
     if(chatInputArea) chatInputArea.style.display = 'flex';
 
     try {
