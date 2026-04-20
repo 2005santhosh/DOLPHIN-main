@@ -8,6 +8,7 @@
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐬</text></svg>">
   <link rel="stylesheet" href="./css/feed.css">
+  <link rel="stylesheet" href="./css/chat.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
@@ -422,30 +423,84 @@
         </div>
       </div>
 
-      <!-- Chat Page (WhatsApp Style) -->
-      <div id="chat-page" class="page">
-        <div class="page-header">
-          <h1 class="page-title">Messages</h1>
-          <p class="page-subtitle">Chat with your connections</p>
-        </div>
-        <div class="card" style="display: flex; height: 70vh; padding: 0; overflow: hidden; position: relative;">
-            <div id="conversations-list" style="width: 30%; border-right: 1px solid var(--border-color); overflow-y: auto; background: white; display: flex; flex-direction: column;">
-            <!-- NEW: Search Bar -->
-            <div style="padding: 12px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: white; z-index: 10;">
-                <input type="text" id="chat-search-input" class="form-input" placeholder="Search chats..." style="margin-bottom: 0;">
-            </div>
-            <div id="conversations-container"></div>
-            </div>
-            <div id="chat-window" style="flex: 1; display: none; flex-direction: column; background: var(--bg-base); position: relative;">
-                <div id="chat-header" style="padding: 1rem; border-bottom: 1px solid var(--border-color); font-weight: bold; display:flex; align-items: center; gap: 0.5rem; background: white; height: 60px; flex-shrink: 0;"></div>
-                <div id="messages-container" style="flex: 1; padding: 1rem; overflow-y: auto; background: var(--bg-base); display: flex; flex-direction: column; gap: 8px;"></div>
-                <div id="chat-input-area" style="padding: 1rem; border-top: 1px solid var(--border-color); display: none; gap: 0.5rem; align-items: center; background: white; flex-shrink: 0;">
-                  <input type="text" id="message-input" class="form-input" placeholder="Type a message..." style="margin-bottom: 0;">
-                  <button class="btn btn-primary" onclick="sendMessage()" style="margin-bottom: 0;">Send</button>
-                </div>
-            </div>
-        </div>
+      <!-- ═══════════════════════════════════════════════
+     CHAT PAGE  —  drop-in replacement for the
+     existing #chat-page <div> block in index.html
+     ═══════════════════════════════════════════════ -->
+<div id="chat-page" class="page">
+
+  <div class="page-header">
+    <h1 class="page-title">Messages</h1>
+    <p class="page-subtitle">Chat with your connections</p>
+  </div>
+
+  <!-- Main shell -->
+  <div class="chat-shell">
+
+    <!-- ── LEFT: conversation list panel ── -->
+    <div class="chat-panel-list" id="conversations-list">
+
+      <!-- Search -->
+      <div class="chat-search-bar">
+        <svg class="chat-search-icon" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input
+          type="text"
+          id="chat-search-input"
+          placeholder="Search conversations…"
+          autocomplete="off"
+        >
       </div>
+
+      <!-- Conversation rows injected by JS -->
+      <div id="conversations-container"></div>
+
+    </div><!-- /chat-panel-list -->
+
+    <!-- ── RIGHT: active chat window ── -->
+    <div class="chat-panel-window" id="chat-window">
+
+      <!-- Header -->
+      <div class="chat-win-header" id="chat-header">
+        <!-- Back button (mobile only, injected by JS) -->
+      </div>
+
+      <!-- Messages -->
+      <div class="chat-win-messages" id="messages-container"></div>
+
+      <!-- Input bar -->
+      <div class="chat-win-input" id="chat-input-area">
+        <input
+          type="text"
+          id="message-input"
+          placeholder="Type a message…"
+          autocomplete="off"
+          onkeydown="if(event.key==='Enter')sendMessage()"
+        >
+        <button class="btn btn-primary chat-send-btn" onclick="sendMessage()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Empty state (shown before any chat is selected) -->
+      <div class="chat-empty-state" id="chat-empty-state">
+        <div class="chat-empty-icon">💬</div>
+        <h3>Your Messages</h3>
+        <p>Select a conversation to start chatting</p>
+      </div>
+
+    </div><!-- /chat-panel-window -->
+
+  </div><!-- /chat-shell -->
+
+</div><!-- /#chat-page -->
 
       <!-- Investors & Providers Page -->
       <div id="investors-providers-page" class="page">

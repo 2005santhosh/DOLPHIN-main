@@ -1514,175 +1514,210 @@ function updateRequestsBadge(requests) {
 let currentChatPartnerId = null;
 let allConversations = []; 
 
-window.openChat = async function(partnerId, partnerName, partnerPic) {
+window.openChat = async function (partnerId, partnerName, partnerPic) {
     currentChatPartnerId = partnerId?.toString();
     resetBadge('chat-badge');
-
-    const chatWindow = document.getElementById('chat-window');
-    const chatList = document.getElementById('conversations-list');
-    const chatHeader = document.getElementById('chat-header');
-    const chatInputArea = document.getElementById('chat-input-area');
-    
-    let headerAvatarHtml = partnerPic ? `<img src="${partnerPic}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : partnerName.charAt(0);
-    if(chatHeader) chatHeader.innerHTML = `<div class="chat-avatar">${headerAvatarHtml}</div> <span style="color:var(--text-primary); font-weight:600;">${partnerName}</span>`;
-    
-    if (window.innerWidth <= 768) {
-    // Hide the conversation list, show the chat window
-    const convList  = document.getElementById('conversations-list');
-    const chatWin   = document.getElementById('chat-window');
-    const inputArea = document.getElementById('chat-input-area');
  
-    if (convList) convList.classList.add('panel-hidden');
-    if (chatWin)  { chatWin.classList.add('active'); chatWin.style.display = 'flex'; }
-    if (inputArea) inputArea.style.display = 'flex';
+    const panelList   = document.getElementById('conversations-list');   // .chat-panel-list
+    const panelWindow = document.getElementById('chat-window');           // .chat-panel-window
+    const chatHeader  = document.getElementById('chat-header');           // .chat-win-header
+    const inputArea   = document.getElementById('chat-input-area');       // .chat-win-input
  
-    // Inject back-button if it doesn't exist yet
-    const chatHeader = document.getElementById('chat-header');
-    if (chatHeader && !document.getElementById('chat-back-btn')) {
-        const backBtn = document.createElement('button');
-        backBtn.id        = 'chat-back-btn';
-        backBtn.className = 'chat-back-btn';
-        backBtn.setAttribute('aria-label', 'Back to chats');
-        backBtn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-        </svg>`;
-        backBtn.addEventListener('click', () => {
-            // Slide chat window out, reveal conversation list
-            if (chatWin)  { chatWin.classList.remove('active'); chatWin.style.display = 'none'; }
-            if (convList) convList.classList.remove('panel-hidden');
-        });
-        chatHeader.prepend(backBtn);
+    // ── Build header content ──────────────────────────────────
+    const avatarHtml = partnerPic
+        ? `<img src="${partnerPic}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+        : partnerName.charAt(0).toUpperCase();
+ 
+    if (chatHeader) {
+        chatHeader.innerHTML = `
+            <div class="chat-avatar" style="width:38px;height:38px;font-size:0.9rem;">${avatarHtml}</div>
+            <span>${partnerName}</span>
+        `;
     }
  
-} else {
-    // ── DESKTOP: just show both panels normally ──
-    const chatWin   = document.getElementById('chat-window');
-    const chatHeader = document.getElementById('chat-header');
-    const inputArea  = document.getElementById('chat-input-area');
+    // ── Mark this item as active in the list closechatmobile ─────────────────
+    document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active-chat'));
+    const activeItem = document.querySelector(`.chat-item[data-partner-id="${partnerId}"]`);
+    if (activeItem) activeItem.classList.add('active-chat');
  
-    if (chatWin)   { chatWin.style.display = 'flex'; }
-    if (chatHeader) chatHeader.style.display = 'flex';
-    if (inputArea)  inputArea.style.display = 'flex';
-}
+    // ── Mobile: slide list out, window in ────────────────────
+    const isMobile = window.innerWidth <= 768;
  
-    if(chatInputArea) chatInputArea.style.display = 'flex';
-
+    if (isMobile) {
+        // Inject back button once
+        if (chatHeader && !document.getElementById('chat-back-btn')) {
+            const backBtn = document.createElement('button');
+            backBtn.id        = 'chat-back-btn';
+            backBtn.className = 'chat-back-btn';
+            backBtn.setAttribute('aria-label', 'Back to chats');
+            backBtn.innerHTML = `
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>`;
+            backBtn.addEventListener('click', closeChatMobile);
+            chatHeader.prepend(backBtn);
+        }
+ 
+        if (panelList)   panelList.classList.add('slide-out');
+        if (panelWindow) panelWindow.classList.add('slide-in');
+    }
+ 
+    // ── Mark window as open (shows input, hides empty state) ─
+    if (panelWindow) panelWindow.classList.add('chat-open');
+ 
+    // ── Load messages ─────────────────────────────────────────
+    const container = document.getElementById('messages-container');
+    if (container) container.innerHTML = '<p>Loading…</p>';
+ 
     try {
         const msgs = await chatApiCall(`/${partnerId}`);
-        const container = document.getElementById('messages-container');
-        if(!container) return;
+        if (!container) return;
         container.innerHTML = '';
-        
-        if(msgs.length === 0) { 
-             container.innerHTML = '<p style="text-align:center; margin-top:2rem; color:var(--text-tertiary);">No messages yet. Say Hi!</p>';
+ 
+        if (!msgs || msgs.length === 0) {
+            container.innerHTML = '<p style="margin:auto;text-align:center;">No messages yet. Say hi! 👋</p>';
         } else {
-            msgs.forEach(m => {
-                const senderId = (m.senderId?._id || m.senderId)?.toString();
-                const isSent = senderId === userId;
-                const div = document.createElement('div');
-                div.className = `message-row ${isSent ? 'sent' : 'received'}`;
-                const time = new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                div.innerHTML = `<div class="message-bubble">${m.content}<div class="message-time">${time}</div></div>`;
-                container.appendChild(div);
-            });
+            msgs.forEach(m => appendMessage(m, userId));
             container.scrollTop = container.scrollHeight;
         }
-    } catch(e) { 
-        console.error(e); 
-        showToast('Failed to load messages', 'error'); 
+    } catch (e) {
+        console.error(e);
+        if (container) container.innerHTML = '<p style="color:var(--error);">Failed to load messages.</p>';
     }
+};
+function closeChatMobile() {
+    const panelList   = document.getElementById('conversations-list');
+    const panelWindow = document.getElementById('chat-window');
+ 
+    if (panelList)   panelList.classList.remove('slide-out');
+    if (panelWindow) { panelWindow.classList.remove('slide-in'); panelWindow.classList.remove('chat-open'); }
+ 
+    currentChatPartnerId = null;
+    document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active-chat'));
 }
-
+function appendMessage(m, myUserId) {
+    const container = document.getElementById('messages-container');
+    if (!container) return;
+ 
+    const senderId = (m.senderId?._id || m.senderId)?.toString();
+    const isSent   = senderId === myUserId;
+ 
+    const div  = document.createElement('div');
+    div.className = `message-row ${isSent ? 'sent' : 'received'}`;
+ 
+    const time = new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    div.innerHTML = `
+        <div class="message-bubble">
+            ${m.content}
+            <span class="message-time">${time}</span>
+        </div>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+// ── loadConversations ───────────────────────────────────────────
 async function loadConversations() {
-    const listContainer = document.getElementById('conversations-container');
-    const searchInput = document.getElementById('chat-search-input');
-    
+    const listContainer  = document.getElementById('conversations-container');
+    const searchInput    = document.getElementById('chat-search-input');
+ 
+    // Wire up search once
     if (searchInput && !searchInput.dataset.listenerAdded) {
-        searchInput.addEventListener('input', (e) => {
-            filterConversations(e.target.value);
-        });
+        searchInput.addEventListener('input', e => filterConversations(e.target.value));
         searchInput.dataset.listenerAdded = 'true';
     }
-
-    if(listContainer) listContainer.innerHTML = '<p style="text-align:center; padding: 2rem;">Loading...</p>';
-    
+ 
+    if (listContainer) listContainer.innerHTML = '<p>Loading…</p>';
+ 
     try {
-        const convs = await chatApiCall('/conversations');
-        allConversations = convs || []; 
+        const convs   = await chatApiCall('/conversations');
+        allConversations = convs || [];
         renderConversationList(allConversations);
-
-    } catch(e) { 
+    } catch (e) {
         console.error(e);
-        if(listContainer) {
-            listContainer.innerHTML = `
-              <div class="chat-error-state">
+        if (listContainer) listContainer.innerHTML = `
+            <div class="chat-error-state">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="8" x2="12" y2="12"></line>
-                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
                 <p>Failed to load chats.</p>
                 <button class="btn btn-secondary btn-sm" onclick="loadConversations()">Retry</button>
-              </div>`;
-        }
+            </div>`;
     }
 }
-
-function filterConversations(searchTerm) {
-    const term = searchTerm.toLowerCase();
-    const filtered = allConversations.filter(c => 
-        (c.name || '').toLowerCase().includes(term) || 
-        (c.lastMessage || '').toLowerCase().includes(term)
+// ── renderConversationList ──────────────────────────────────────
+function renderConversationList(convs) {
+    const container = document.getElementById('conversations-container');
+    if (!container) return;
+    container.innerHTML = '';
+ 
+    if (!convs || convs.length === 0) {
+        container.innerHTML = '<p class="chat-empty-list">No conversations yet.</p>';
+        return;
+    }
+ 
+    convs.forEach(c => {
+        const partnerName = c.name || 'Unknown';
+        const picUrl      = c.profilePicture
+            ? (c.profilePicture.startsWith('http') ? c.profilePicture : window.location.origin + c.profilePicture)
+            : null;
+ 
+        const avatarHtml  = picUrl
+            ? `<img src="${picUrl}" alt="${partnerName}">`
+            : partnerName.charAt(0).toUpperCase();
+ 
+        const div = document.createElement('div');
+        div.className = 'chat-item';
+        div.dataset.partnerId = c._id;
+        div.innerHTML = `
+            <div class="chat-avatar">${avatarHtml}</div>
+            <div class="chat-info">
+                <div class="chat-name">${partnerName}</div>
+                <div class="chat-preview">${c.lastMessage || 'Start chatting…'}</div>
+            </div>`;
+ 
+        div.addEventListener('click', () => openChat(c._id, partnerName, picUrl));
+        container.appendChild(div);
+    });
+}
+ 
+// ── filterConversations ─────────────────────────────────────────
+function filterConversations(term) {
+    const t        = term.toLowerCase();
+    const filtered = allConversations.filter(c =>
+        (c.name        || '').toLowerCase().includes(t) ||
+        (c.lastMessage || '').toLowerCase().includes(t)
     );
     renderConversationList(filtered);
 }
-
-function renderConversationList(convs) {
-    const listContainer = document.getElementById('conversations-container');
-    if(!listContainer) return;
-    listContainer.innerHTML = '';
-
-    if (!convs || convs.length === 0) { 
-         listContainer.innerHTML = '<p style="padding:1rem; text-align:center; color:var(--text-tertiary);">No conversations found.</p>';
-        return; 
-    }
-
-    convs.forEach(c => {
-        const div = document.createElement('div');
-        div.className = 'chat-item';
-        const partnerName = c.name || 'Unknown User';
-        
-        let avatarHtml = c.profilePicture 
-            ? `<img src="${c.profilePicture.startsWith('http') ? c.profilePicture : window.location.origin + c.profilePicture}" class="chat-avatar" alt="${partnerName}">` 
-            : `<div class="chat-avatar">${partnerName.charAt(0)}</div>`;
-        
-        div.innerHTML = `${avatarHtml}<div class="chat-info"><div class="chat-name">${partnerName}</div><div class="chat-preview">${c.lastMessage || 'Start chatting...'}</div></div>`;
-        
-        // Pass Partner ID
-        div.onclick = () => openChat(c._id, partnerName, c.profilePicture);
-        
-        listContainer.appendChild(div);
-    });
-}
-
-window.sendMessage = async function() {
-    const input = document.getElementById('message-input');
+ 
+// ── sendMessage ─────────────────────────────────────────────────
+window.sendMessage = async function () {
+    const input   = document.getElementById('message-input');
     const content = input?.value.trim();
     if (!content || !currentChatPartnerId) return;
+ 
+    // Optimistic render
     const container = document.getElementById('messages-container');
-    if(!container) return;
-    const emptyMsg = container.querySelector('p');
-    if(emptyMsg) emptyMsg.remove();
-    const div = document.createElement('div');
-    div.className = 'message-row sent';
-    div.innerHTML = `<div class="message-bubble">${content}<div class="message-time" style="text-align: right;">Just now</div></div>`;
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
-    if(input) input.value = '';
-    try { await chatApiCall('/send', 'POST', { receiverId: currentChatPartnerId, content }); } catch(e) { showToast('Failed to send message', 'error'); }
+    const emptyP    = container?.querySelector('p');
+    if (emptyP) emptyP.remove();
+ 
+    const now = new Date();
+    appendMessage(
+        { senderId: userId, content, createdAt: now.toISOString() },
+        userId
+    );
+ 
+    if (input) input.value = '';
+ 
+    try {
+        await chatApiCall('/send', 'POST', { receiverId: currentChatPartnerId, content });
+    } catch (e) {
+        showToast('Failed to send message', 'error');
+    }
 };
-
 async function chatApiCall(endpoint, method = 'GET', body = null) {
   const config = { 
       method, 
