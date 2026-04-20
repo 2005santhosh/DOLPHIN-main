@@ -103,7 +103,14 @@ body {
   .mobile-menu-toggle { display: flex; }
 }
 @media (max-width: 768px) { .header { padding: 0 1rem; } }
-
+.hamburger-line {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--text-primary);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
 .header-right { display: flex; align-items: center; gap: var(--spacing-sm); position: relative; z-index: 1200;}
 .header-action {
   position: relative; background: transparent; border: 1px solid var(--border-color);
@@ -724,7 +731,7 @@ body {
 .request-actions { display:flex; flex-direction:column; gap:0.75rem; margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid var(--border-color); }
 .request-actions .btn { width:100%; }
 
-/* 17. TOASTS */
+/* 17. TOASTS menu*/
 #toast-container {
   position:fixed; top:80px; right:20px;
   z-index:9999;
