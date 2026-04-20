@@ -292,13 +292,13 @@ body {
 /* 6. MAIN CONTENT */
 .app-container { display: flex; min-height: 100vh; padding-top: var(--header-height); }
 .main-content {
-  flex: 1; margin-left: 0;
+  flex: 1; margin-left: var(--sidebar-width);
   padding: var(--spacing-xl);
   min-height: calc(100vh - var(--header-height));
   background: var(--bg-base);
 }
 @media (max-width: 768px) {
-  .main-content { margin-left: var(--sidebar-width); padding: var(--spacing-md); }
+  .main-content { margin-left: 0; padding: var(--spacing-md); }
 }
 
 /* 7. LAYOUT */
