@@ -201,7 +201,7 @@ function startOtpTimer(seconds) {
   otpTimerInterval = setInterval(tick, 1000);
 }
 
-async function submitOtp(boxes) {
+async function submitOtp() {
   const boxes = document.querySelectorAll('#otp-boxes input'); // ← query fresh, not from parameter
   const otp = Array.from(boxes).map(b => b.value).join('');
   const errorEl = document.getElementById('otp-error-msg');
