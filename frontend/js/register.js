@@ -146,25 +146,22 @@ function showOtpModal(email) {
   document.getElementById('otp-error-msg').style.display = 'none';
 
   // Clear boxes
-  const boxes = modal.querySelectorAll('#otp-boxes input');
-  boxes.forEach(b => { b.value = ''; b.style.borderColor = '#ccc'; });
-  boxes[0].focus();
+  document.querySelectorAll('#otp-boxes input').forEach(b => {
+    b.value = '';
+    b.style.borderColor = '#ccc';
+  });
+  document.querySelectorAll('#otp-boxes input')[0].focus();
 
   startOtpTimer(10 * 60);
-  wireOtpBoxes(boxes);
+  wireOtpBoxes(); // ← no argument needed anymore
 
-  document.getElementById('otp-verify-btn').onclick = () => submitOtp(boxes);
+  document.getElementById('otp-verify-btn').onclick = () => submitOtp(); // ← no argument
   document.getElementById('otp-resend-btn').onclick = () => resendOtp();
 }
 
-function wireOtpBoxes(boxes) {
-  boxes.forEach((inp, i) => {
-    // Remove old listeners by cloning
-    const fresh = inp.cloneNode(true);
-    inp.parentNode.replaceChild(fresh, inp);
-    boxes[i] = fresh;
-  });
-
+function wireOtpBoxes() {
+  const boxes = document.querySelectorAll('#otp-boxes input');
+  
   boxes.forEach((inp, i) => {
     inp.addEventListener('input', () => {
       inp.value = inp.value.replace(/[^0-9]/g, '');
@@ -184,7 +181,6 @@ function wireOtpBoxes(boxes) {
     });
   });
 }
-
 function startOtpTimer(seconds) {
   clearInterval(otpTimerInterval);
   const timerEl = document.getElementById('otp-timer');
@@ -206,10 +202,11 @@ function startOtpTimer(seconds) {
 }
 
 async function submitOtp(boxes) {
+  const boxes = document.querySelectorAll('#otp-boxes input'); // ← query fresh, not from parameter
   const otp = Array.from(boxes).map(b => b.value).join('');
   const errorEl = document.getElementById('otp-error-msg');
 
-  if (otp.length < 6) {
+  if (otp.length < 6 || otp.split('').some(d => d === '')) {
     errorEl.textContent = 'Please enter all 6 digits.';
     errorEl.style.display = 'block';
     return;
