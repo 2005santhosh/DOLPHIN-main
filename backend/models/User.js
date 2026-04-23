@@ -54,7 +54,9 @@ const userSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
   }],
   resetPasswordToken: String,
-  resetPasswordExpire: Date
+  resetPasswordExpire: Date,
+  verificationToken: String,
+  verificationExpire: Date,
   // Virtual or static method to calculate average could be added, but we will calculate on the fly for simplicity
 });
 // Add a method to the schema to generate a reset token

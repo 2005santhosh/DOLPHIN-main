@@ -1,5 +1,22 @@
 // utils/emailTemplates.js
 
+const getOtpEmail = (name, otp) => ({
+  subject: 'Verify your Dolphin account — OTP inside',
+  html: `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+      <h2 style="color: #2563eb;">Hi ${name} 👋</h2>
+      <p>Use the code below to verify your Dolphin account. It expires in <strong>10 minutes</strong>.</p>
+      <div style="background: #f4f4f5; border-radius: 8px; padding: 24px; text-align: center; font-size: 40px; font-weight: 700; letter-spacing: 14px; color: #1a1a1a; margin: 20px 0;">
+        ${otp}
+      </div>
+      <p style="color: #888; font-size: 13px;">If you didn't create a Dolphin account, you can safely ignore this email.</p>
+      <br/>
+      <p>Cheers,</p>
+      <p><strong>The Dolphin Team</strong></p>
+    </div>
+  `
+});
+
 module.exports = {
   getWelcomeEmail: (name) => ({
     subject: 'Welcome to Dolphin! 🐬',
@@ -7,7 +24,7 @@ module.exports = {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
         <h2 style="color: #2563eb;">Welcome to Dolphin, ${name}!</h2>
         <p>Thanks for signing up. You are now part of a community dedicated to validating and growing startups.</p>
-        <p>Here’s what you can do next:</p>
+        <p>Here's what you can do next:</p>
         <ul>
           <li>Complete your profile</li>
           <li>Start your validation journey</li>
@@ -20,6 +37,8 @@ module.exports = {
       </div>
     `
   }),
+
+  getOtpEmail,
 
   getNewMessageEmail: (senderName, messageContent) => ({
     subject: `New message from ${senderName}`,

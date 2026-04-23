@@ -12,7 +12,7 @@ const Log = require('../models/Log');
 const { protect } = require('../middleware/authMiddleware');
 const { forgotPassword, resetPassword } = require('../controller/auth');
 const sendEmail = require('../utils/sendEmail');
-const { getWelcomeEmail } = require('../utils/emailTemplates');
+const { getWelcomeEmail,  getOtpEmail } = require('../utils/emailTemplates');
 // ✅ IMPORT CLOUDINARY CONFIG
 const { upload, cloudinary } = require('../config/cloudinary');
 
@@ -69,38 +69,34 @@ router.post('/register', async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ 
-        message: 'Name, email and password are required',
-        nextSteps: 'Please fill in all required fields'
-      });
-    }
+    if (!name || !email || !password)
+      return res.status(400).json({ message: 'Name, email and password are required' });
 
-    if (password.length < 8) {
-      return res.status(400).json({ 
-        message: 'Password must be at least 8 characters long',
-        nextSteps: 'Choose a stronger password'
-      });
-    }
+    if (password.length < 8)
+      return res.status(400).json({ message: 'Password must be at least 8 characters long' });
 
     const userExists = await User.findOne({ email });
-    if (userExists) {
+    if (userExists)
       return res.status(409).json({ 
-        message: 'Email already in use',
-        reason: 'This email is already registered',
-        nextSteps: 'Try logging in or use a different email'
+        message: 'Email already in use', 
+        nextSteps: 'Try logging in or use a different email' 
       });
-    }
 
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(password, salt);
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
 
     const user = await User.create({
       name,
       email: email.toLowerCase(),
       password: hashedPassword,
       role,
-      state: 'PENDING_APPROVAL'
+      state: 'PENDING_APPROVAL',
+      emailVerified: false,
+      verificationToken: hashedOtp,
+      verificationExpire: Date.now() + 10 * 60 * 1000
     });
 
     if (role === 'provider') {
@@ -114,30 +110,77 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Use secure helper to set cookie
-    sendTokenResponse(user, 201, req, res);
-          // Send Welcome Email
+    // Send OTP — if this fails, roll back user AND provider
     try {
-        const welcomeTemplate = getWelcomeEmail(user.name);
-        await sendEmail({
-          email: user.email,
-          subject: welcomeTemplate.subject,
-          message: welcomeTemplate.html
-        });
+      const otpEmail = getOtpEmail(user.name, otp);
+      await sendEmail({
+        email: user.email,
+        subject: otpEmail.subject,
+        message: otpEmail.html  // ← sendEmail maps 'message' to htmlContent
+      });
     } catch (emailError) {
-        console.error("Failed to send welcome email:", emailError);
-  // Do not block registration if email fails
+      console.error('Failed to send OTP email:', emailError);
+      await User.findByIdAndDelete(user._id);
+      if (role === 'provider') await Provider.deleteOne({ userId: user._id }); // ← was missing
+      return res.status(500).json({ message: 'Could not send verification email. Please try again.' });
     }
+
+    res.status(200).json({
+      success: true,
+      message: 'OTP sent to your email. Please verify to complete registration.',
+      email: user.email
+    });
 
   } catch (error) {
     res.status(500).json({ 
-      message: 'Server error during registration',
-      reason: error.message,
-      nextSteps: 'Try again or contact support'
+      message: 'Server error during registration', 
+      reason: error.message 
     });
   }
 });
+// @route   POST /api/auth/verify-otp
+// @desc    Verify OTP sent during registration, then issue session
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
 
+    if (!email || !otp)
+      return res.status(400).json({ message: 'Email and OTP are required' });
+
+    const hashedOtp = crypto.createHash('sha256').update(otp.trim()).digest('hex');
+
+    const user = await User.findOne({
+      email: email.toLowerCase(),
+      verificationToken: hashedOtp,
+      verificationExpire: { $gt: Date.now() }
+    });
+
+    if (!user)
+      return res.status(400).json({ message: 'Invalid or expired OTP. Please try again.' });
+
+    // Mark verified and clear OTP fields
+    user.emailVerified = true;
+    user.verificationToken = undefined;
+    user.verificationExpire = undefined;
+    await user.save();
+
+    // Send welcome email now
+    try {
+      const welcomeTemplate = getWelcomeEmail(user.name);
+      await sendEmail({
+        email: user.email,
+        subject: welcomeTemplate.subject,
+        message: welcomeTemplate.html  // ← same fix
+      });
+    } catch (e) { console.error('Welcome email failed:', e); }
+
+    // Log the user in (sets HttpOnly cookie)
+    sendTokenResponse(user, 200, req, res);
+
+  } catch (error) {
+    res.status(500).json({ message: 'Server error during OTP verification', reason: error.message });
+  }
+});
 // @route   POST /api/auth/login
 // @access  Public
 router.post('/login', async (req, res) => {
