@@ -248,27 +248,77 @@ const api = {
     });
   },
     // ===== POSTS ENDPOINTS =====
-  async createPost(content, postType, tags) {
+  async createPost(content, postType, tags, mediaFiles = []) {
+    const formData = new FormData();
+    formData.append('content', content);
+    formData.append('postType', postType);
+    
+    if (tags && tags.length > 0) {
+      tags.forEach(tag => formData.append('tags', tag));
+    }
+    
+    // Append media files
+    if (mediaFiles && mediaFiles.length > 0) {
+      for (const file of mediaFiles) {
+        formData.append('media', file);
+      }
+    }
+
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), 60000); // 60s for uploads
+    
     try {
-      return await this.request('/posts', {
+      const res = await fetch(`${API_URL}/posts`, {
         method: 'POST',
-        body: JSON.stringify({ content, postType, tags }),
+        headers: {
+          // Don't set Content-Type for FormData - browser sets it with boundary
+        },
+        credentials: 'include',
+        body: formData,
         signal: controller.signal
+      });
+
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        throw new Error(`Server returned ${res.status}: ${text.substring(0, 100)}...`);
+      }
+      
+      const data = await res.json();
+
+      if (res.status === 401) {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        window.location.href = 'login.html';
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Request failed');
+      }
+
+      return data;
+    } finally { 
+      clearTimeout(timeout); 
+    }
+  },
+
+  async getFeed(filter = 'all', page = 1, limit = 20) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+      return await this.request(`/posts/feed?filter=${filter}&page=${page}&limit=${limit}`, { 
+        signal: controller.signal 
       });
     } finally { clearTimeout(timeout); }
   },
 
-  async getFeed(filter = 'all') {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    try {
-      return await this.request(`/posts/feed?filter=${filter}`, { signal: controller.signal });
-    } finally { clearTimeout(timeout); }
-  },
-    async toggleLike(postId) {
+  async toggleLike(postId) {
     return this.request(`/posts/${postId}/like`, { method: 'POST' });
+  },
+
+  async trackView(postId) {
+    return this.request(`/posts/${postId}/view`, { method: 'POST' });
   },
 
   // ADD THIS EXACTLY HERE:

@@ -252,7 +252,22 @@
         </div>
         <div class="feed-container">
           <div class="create-post-card">
-            <textarea id="post-content" placeholder="What are you looking for today?" maxlength="500"></textarea>
+            <textarea id="post-content" placeholder="Share your services with images or videos..." maxlength="2200"></textarea>
+            
+            <!-- Media Upload Section -->
+            <div class="media-upload-section">
+                <input type="file" id="post-media-input" accept="image/*,video/*" multiple>
+                <button type="button" id="upload-media-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    Add Photos/Videos
+                </button>
+                <div id="media-preview-container"></div>
+            </div>
+            
             <div class="create-post-actions">
               <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
                 <select id="post-type">
@@ -265,6 +280,11 @@
           </div>
           <div id="posts-feed">
             <div style="text-align: center; padding: 2rem; color: var(--text-faint, rgba(245,245,247,0.15));">Loading posts...</div>
+          </div>
+          
+          <!-- Loading Indicator for Infinite Scroll -->
+          <div id="loading-indicator">
+              <span class="spinner"></span> Loading more posts...
           </div>
         </div>
       </div>
