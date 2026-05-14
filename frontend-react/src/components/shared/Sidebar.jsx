@@ -60,16 +60,6 @@ export default function Sidebar({ isOpen, onClose, requestsCount = 0, chatCount 
       {isOpen && (
         <div
           onClick={onClose}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 999,
-            display: 'none',
-          }}
           className="sidebar-overlay"
         />
       )}
@@ -85,7 +75,8 @@ export default function Sidebar({ isOpen, onClose, requestsCount = 0, chatCount 
           borderRight: '1px solid #E5E7EB',
           overflowY: 'auto',
           padding: '1.5rem 0',
-          transition: 'transform 300ms',
+          flexShrink: 0,
+          transition: 'transform 300ms ease',
         }}
         className={`sidebar ${isOpen ? 'open' : ''}`}
       >
@@ -170,18 +161,22 @@ export default function Sidebar({ isOpen, onClose, requestsCount = 0, chatCount 
       <style>{`
         @media (max-width: 768px) {
           .sidebar {
-            position: fixed;
-            top: 73px;
-            left: 0;
-            z-index: 1000;
-            transform: translateX(-100%);
-            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+            position: fixed !important;
+            top: 73px !important;
+            left: 0 !important;
+            z-index: 1000 !important;
+            transform: translateX(-100%) !important;
+            box-shadow: 4px 0 16px rgba(0,0,0,0.12) !important;
+            height: calc(100vh - 73px) !important;
           }
           .sidebar.open {
-            transform: translateX(0);
+            transform: translateX(0) !important;
           }
           .sidebar-overlay {
-            display: block !important;
+            position: fixed !important;
+            inset: 0 !important;
+            background: rgba(0,0,0,0.5) !important;
+            z-index: 999 !important;
           }
         }
       `}</style>

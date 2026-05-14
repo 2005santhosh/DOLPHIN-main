@@ -463,28 +463,120 @@
 @media (max-width: 768px) {
   .grid {
     grid-template-columns: 1fr;
+    gap: 0.875rem;
   }
-  
+
   .btn-lg {
     padding: 0.875rem 1.5rem;
     font-size: 0.9375rem;
   }
-  
+
   .page-title {
-    font-size: 1.5rem;
+    font-size: 1.375rem;
   }
-  
+
+  .page-subtitle {
+    font-size: 0.875rem;
+  }
+
+  .page-header {
+    margin-bottom: 1.25rem;
+  }
+
   .modal-content {
     max-width: 100%;
     border-radius: var(--radius-md);
+    margin: 0.5rem;
   }
-  
+
+  .modal-overlay {
+    padding: 0.5rem;
+    align-items: flex-end;
+  }
+
+  .modal-content {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 92vh;
+  }
+
   .tabs {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
-  
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
   .tab {
     flex-shrink: 0;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  .card-header {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .card-title {
+    font-size: 1rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-value {
+    font-size: 1.625rem;
+  }
+
+  .list-item {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.875rem;
+  }
+
+  .list-item-status {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.625rem;
+  }
+
+  .form-input,
+  .form-textarea,
+  .form-select {
+    font-size: 1rem; /* Prevents iOS zoom on focus */
+  }
+
+  .btn {
+    font-size: 0.9rem;
+  }
+
+  .btn-sm {
+    padding: 0.4rem 0.875rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-title {
+    font-size: 1.25rem;
+  }
+
+  .card {
+    padding: 0.875rem;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+
+  .grid {
+    gap: 0.75rem;
   }
 }

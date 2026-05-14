@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { lazy, Suspense } from 'react';
 import './styles/GlobalStyles.css';
 import './styles/components.css';
+import './styles/mobile.css';
 
 // Auth Pages
 const Login = lazy(() => import('./components/auth/Login'));

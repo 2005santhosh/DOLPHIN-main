@@ -290,13 +290,38 @@ input, textarea, select {
   }
   
   #toast-container {
-    left: 20px;
-    right: 20px;
+    left: 12px;
+    right: 12px;
     bottom: 80px;
   }
   
   .toast-notification {
     max-width: 100%;
+  }
+}
+
+/* Dashboard layout mobile */
+@media (max-width: 768px) {
+  .dashboard-main {
+    padding: 1rem !important;
+  }
+}
+
+/* Sidebar overlay */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar-overlay {
+    display: block;
   }
 }
 

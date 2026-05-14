@@ -1,0 +1,443 @@
+/* ============================================================
+   DOLPHIN — MOBILE RESPONSIVE STYLES
+   Applies to all dashboard pages on screens ≤ 768px
+   ============================================================ */
+
+/* ── Dashboard layout ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Main content area */
+  .dashboard-main {
+    padding: 1rem !important;
+  }
+
+  /* Sidebar overlay */
+  .sidebar-overlay {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
+
+  /* Sidebar slides in from left */
+  .sidebar {
+    position: fixed !important;
+    top: 73px !important;
+    left: 0 !important;
+    z-index: 1000 !important;
+    transform: translateX(-100%) !important;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.12) !important;
+    height: calc(100vh - 73px) !important;
+  }
+
+  .sidebar.open {
+    transform: translateX(0) !important;
+  }
+
+  /* Header hamburger visible */
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+}
+
+/* ── Page headers ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .page-header {
+    margin-bottom: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.25rem !important;
+    line-height: 1.3;
+  }
+
+  .page-subtitle {
+    font-size: 0.82rem !important;
+  }
+}
+
+/* ── Cards ────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .card {
+    padding: 1rem !important;
+    border-radius: 10px !important;
+  }
+
+  .card-header {
+    margin-bottom: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+  }
+
+  .card-title {
+    font-size: 0.95rem !important;
+  }
+}
+
+/* ── Stat cards grid ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+  }
+
+  .stat-card {
+    padding: 0.875rem !important;
+  }
+
+  .stat-value {
+    font-size: 1.5rem !important;
+  }
+
+  .stat-label {
+    font-size: 0.75rem !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── List items ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .list-item {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+    padding: 0.75rem !important;
+  }
+
+  .list-item-title {
+    font-size: 0.875rem !important;
+  }
+
+  .list-item-subtitle {
+    font-size: 0.78rem !important;
+  }
+
+  .list-item-status {
+    font-size: 0.72rem !important;
+    padding: 0.2rem 0.5rem !important;
+  }
+}
+
+/* ── Forms ────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Prevent iOS zoom on input focus */
+  .form-input,
+  .form-textarea,
+  .form-select,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  .form-group {
+    margin-bottom: 1rem !important;
+  }
+
+  .form-label {
+    font-size: 0.82rem !important;
+  }
+}
+
+/* ── Buttons ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .btn {
+    font-size: 0.875rem !important;
+    padding: 0.625rem 1.125rem !important;
+  }
+
+  .btn-sm {
+    font-size: 0.78rem !important;
+    padding: 0.375rem 0.75rem !important;
+  }
+
+  .btn-lg {
+    font-size: 0.9375rem !important;
+    padding: 0.75rem 1.5rem !important;
+  }
+}
+
+/* ── Modals ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 0 !important;
+    align-items: flex-end !important;
+  }
+
+  .modal-content {
+    max-width: 100% !important;
+    width: 100% !important;
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 90vh !important;
+    margin: 0 !important;
+  }
+
+  .modal-header {
+    padding: 1.125rem 1.25rem !important;
+  }
+
+  .modal-body {
+    padding: 1.25rem !important;
+  }
+
+  .modal-title {
+    font-size: 1.05rem !important;
+  }
+}
+
+/* ── Tabs ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .tabs {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    gap: 0 !important;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .tab {
+    flex-shrink: 0 !important;
+    padding: 0.625rem 1rem !important;
+    font-size: 0.82rem !important;
+  }
+}
+
+/* ── Progress bar card ────────────────────────────────────── */
+@media (max-width: 768px) {
+  .progress-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.5rem !important;
+  }
+
+  .progress-title {
+    font-size: 1rem !important;
+  }
+}
+
+/* ── Roadmap tasks ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .roadmap-item {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+
+  .roadmap-item > div:last-child {
+    text-align: left !important;
+    min-width: unset !important;
+    width: 100% !important;
+  }
+}
+
+/* ── Profile grid (investors/providers) ───────────────────── */
+@media (max-width: 768px) {
+  .profile-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .profile-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Chat page ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Chat container full height */
+  .chat-container {
+    height: calc(100vh - 140px) !important;
+  }
+}
+
+/* ── Admin tables ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Make tables scroll horizontally */
+  .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  table {
+    min-width: 600px;
+  }
+
+  /* Admin sidebar */
+  .admin-sidebar {
+    display: none !important;
+  }
+
+  .admin-sidebar.mobile-open {
+    display: flex !important;
+    position: fixed !important;
+    top: 73px !important;
+    left: 0 !important;
+    width: 240px !important;
+    height: calc(100vh - 73px) !important;
+    z-index: 1000 !important;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.12) !important;
+  }
+}
+
+/* ── Notification dropdown ────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Notification dropdown full width on mobile */
+  [data-notif-dropdown] {
+    position: fixed !important;
+    top: 73px !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 0 0 12px 12px !important;
+  }
+}
+
+/* ── Toast position ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* React Hot Toast override */
+  [data-hot-toast] {
+    bottom: 80px !important;
+  }
+}
+
+/* ── Utility: hide on mobile ──────────────────────────────── */
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+/* ── Utility: full width on mobile ───────────────────────── */
+@media (max-width: 768px) {
+  .full-mobile {
+    width: 100% !important;
+  }
+}
+
+/* ── Settings page ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Profile picture section */
+  .profile-edit-container {
+    width: 72px !important;
+    height: 72px !important;
+  }
+
+  /* Danger zone items */
+  .danger-item {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+
+  .danger-item .btn {
+    width: 100% !important;
+  }
+}
+
+/* ── Posts page ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Post card actions */
+  .post-actions-buttons {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Post type badge */
+  .post-type-badge {
+    font-size: 0.7rem !important;
+    padding: 3px 8px !important;
+  }
+}
+
+/* ── Validation stages ────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Stage card buttons */
+  .stage-actions {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .stage-actions .btn {
+    width: 100% !important;
+  }
+}
+
+/* ── Requests page ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .request-actions {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+  }
+
+  .request-actions .btn {
+    width: 100% !important;
+  }
+}
+
+/* ── Investors/Providers page ─────────────────────────────── */
+@media (max-width: 768px) {
+  /* Profile cards grid */
+  .investors-grid,
+  .providers-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Profile card action buttons */
+  .profile-card-actions {
+    flex-direction: column !important;
+    gap: 0.4rem !important;
+    width: 100% !important;
+  }
+
+  .profile-card-actions .btn {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .investors-grid,
+  .providers-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Analytics charts ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Charts stack vertically */
+  .charts-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Chart height smaller on mobile */
+  .chart-container {
+    height: 220px !important;
+  }
+}
+
+/* ── Smooth scrolling for hash navigation ─────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Safe area for notched phones ─────────────────────────── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  @media (max-width: 768px) {
+    .dashboard-main {
+      padding-bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
+    }
+  }
+}

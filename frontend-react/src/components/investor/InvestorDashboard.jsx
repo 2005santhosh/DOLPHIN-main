@@ -74,7 +74,7 @@ export default function InvestorDashboard() {
           chatCount={chatCount}
           navItems={sidebarItems}
         />
-        <main style={{ flex: 1, padding: '2rem', maxWidth: '100%', minHeight: 'calc(100vh - 73px)' }}>
+        <main style={{ flex: 1, padding: '2rem', maxWidth: '100%', minHeight: 'calc(100vh - 73px)', overflowX: 'hidden' }} className="dashboard-main">
           {renderPage()}
         </main>
       </div>

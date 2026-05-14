@@ -110,7 +110,9 @@ export default function FounderDashboard() {
             padding: '2rem',
             maxWidth: '100%',
             minHeight: 'calc(100vh - 73px)',
-          }}>
+            overflowX: 'hidden',
+          }}
+          className="dashboard-main">
             {renderPage()}
           </main>
         </div>
