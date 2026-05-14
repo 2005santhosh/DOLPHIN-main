@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Authentication</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #84CC16;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        button:hover {
+            background: #65A30D;
+        }
+        .info {
+            background: #FEF3C7;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #F59E0B;
+        }
+        .success {
+            background: #D1FAE5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #10B981;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔓 Clear Authentication</h1>
+        
+        <div class="info">
+            <strong>⚠️ Issue:</strong> If you're logged in, the app will redirect you to your dashboard when you try to access login/register pages.
+        </div>
+        
+        <p><strong>Current Status:</strong></p>
+        <p id="status">Checking...</p>
+        
+        <button onclick="clearAuth()">Clear Authentication & Reload</button>
+        
+        <div class="success" id="success">
+            ✅ Authentication cleared! Redirecting to landing page...
+        </div>
+        
+        <hr style="margin: 30px 0;">
+        
+        <h3>Manual Steps:</h3>
+        <ol>
+            <li>Open browser DevTools (F12)</li>
+            <li>Go to "Application" or "Storage" tab</li>
+            <li>Click "Local Storage" → "http://localhost:5175"</li>
+            <li>Delete "user" and "token" entries</li>
+            <li>Refresh the page</li>
+        </ol>
+    </div>
+    
+    <script>
+        // Check current auth status
+        function checkStatus() {
+            const user = localStorage.getItem('user');
+            const token = localStorage.getItem('token');
+            
+            if (user || token) {
+                document.getElementById('status').innerHTML = 
+                    '🔴 <strong>You are logged in</strong><br>' +
+                    'User: ' + (user ? JSON.parse(user).name : 'Unknown') + '<br>' +
+                    'This is why you\'re being redirected to dashboard.';
+            } else {
+                document.getElementById('status').innerHTML = 
+                    '🟢 <strong>You are NOT logged in</strong><br>' +
+                    'Navigation should work correctly.';
+            }
+        }
+        
+        // Clear authentication
+        function clearAuth() {
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            localStorage.removeItem('startupData');
+            
+            document.getElementById('success').style.display = 'block';
+            
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1500);
+        }
+        
+        // Check status on load
+        checkStatus();
+    </script>
+</body>
+</html>

@@ -158,24 +158,41 @@ exports.forgotPassword = async (req, res, next) => {
     const resetToken = user.getResetPasswordToken();
     await user.save({ validateBeforeSave: false });
 
-    // FIX: Hardcoded your production domain
-    const baseUrl = 'https://dolphinorg.in';
-    const resetUrl = `${baseUrl}/reset-password.html?token=${resetToken}`;
+    // Use the React app URL so the reset link opens the React reset page
+    const baseUrl = (process.env.FRONTEND_URL || 'http://localhost:5174').trim();
+    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
 
     const message = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-        <h2 style="color: #4f46e5;">Password Reset Request</h2>
-        <p>You are receiving this email because you (or someone else) has requested the reset of a password.</p>
-        <p>Please click the button below to reset your password:</p>
-        <a href="${resetUrl}" clicktracking=off style="display: inline-block; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0;">Reset Password</a>
-        <p style="font-size: 12px; color: #777;">This link is valid for 10 minutes.</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px; background: #f8fafc; border-radius: 12px;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <span style="font-size: 2rem;">🐬</span>
+          <h2 style="color: #0f172a; margin: 8px 0 0;">Dolphin</h2>
+        </div>
+        <div style="background: white; border-radius: 10px; padding: 32px; border: 1px solid #e2e8f0;">
+          <h2 style="color: #0f172a; margin: 0 0 12px;">Password Reset Request</h2>
+          <p style="color: #475569; line-height: 1.6; margin: 0 0 24px;">
+            You requested a password reset for your Dolphin account. Click the button below to set a new password. This link expires in <strong>10 minutes</strong>.
+          </p>
+          <div style="text-align: center; margin: 24px 0;">
+            <a href="${resetUrl}" style="display: inline-block; padding: 14px 32px; background: #84CC16; color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 1rem;">
+              Reset My Password
+            </a>
+          </div>
+          <p style="color: #94a3b8; font-size: 0.85rem; margin: 24px 0 0; line-height: 1.6;">
+            If you didn't request this, you can safely ignore this email.<br><br>
+            Or copy this link: <a href="${resetUrl}" style="color: #84CC16; word-break: break-all;">${resetUrl}</a>
+          </p>
+        </div>
+        <p style="text-align: center; color: #94a3b8; font-size: 0.8rem; margin-top: 24px;">
+          &copy; 2026 Dolphin &middot; support@pacificdev.in
+        </p>
       </div>
     `;
 
     try {
       await sendEmail({
         email: user.email,
-        subject: 'Dolphin Password Reset Token',
+        subject: 'Dolphin — Reset Your Password',
         message
       });
 

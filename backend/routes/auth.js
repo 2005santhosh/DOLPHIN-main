@@ -50,11 +50,15 @@ const sendTokenResponse = (user, statusCode, req, res) => {
     .cookie('token', token, options)
     .json({ 
       success: true, 
+      token,
       user: { 
         _id: user._id, 
         name: user.name, 
         email: user.email, 
-        role: user.role 
+        role: user.role,
+        rewardPoints: user.rewardPoints || 0,
+        profilePicture: user.profilePicture || '',
+        state: user.state || 'PENDING_APPROVAL',
       } 
     });
 };

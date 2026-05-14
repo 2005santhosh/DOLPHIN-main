@@ -91,29 +91,8 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
         if (filterType === 'mine') {
             filter = { authorId: req.user._id };
         } else {
-            // Instagram-like algorithm: Show relevant posts based on role
-            if (userRole === 'founder') {
-                filter = { 
-                    $or: [ 
-                        { authorId: req.user._id }, 
-                        { postType: { $in: ['offering_service', 'offering_funding'] } } 
-                    ] 
-                };
-            } else if (userRole === 'provider') {
-                filter = { 
-                    $or: [ 
-                        { authorId: req.user._id }, 
-                        { postType: 'service_needed' } 
-                    ] 
-                };
-            } else if (userRole === 'investor') {
-                filter = { 
-                    $or: [ 
-                        { authorId: req.user._id }, 
-                        { postType: 'funding_needed' } 
-                    ] 
-                };
-            }
+            // 'all' — show every post to everyone regardless of role
+            filter = {};
         }
 
         // Get total count for pagination
