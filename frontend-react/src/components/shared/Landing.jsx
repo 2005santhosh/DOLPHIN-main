@@ -161,7 +161,17 @@ const Landing = () => {
         </nav>
         <div className="mobile-nav-right">
           {isAuthenticated ? (
-            <button onClick={handleLogout} className="btn btn-glass btn-sm mobile-login-btn">Log Out</button>
+            <Link
+              to={
+                user?.role === 'founder' ? '/dashboard' :
+                user?.role === 'investor' ? '/investor-dashboard' :
+                user?.role === 'provider' ? '/provider-dashboard' :
+                '/dashboard'
+              }
+              className="btn btn-glass btn-sm mobile-login-btn"
+            >
+              Dashboard
+            </Link>
           ) : (
             <Link to="/login" className="btn btn-glass btn-sm mobile-login-btn">Log In</Link>
           )}

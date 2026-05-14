@@ -110,9 +110,9 @@ export default function Header({ onMenuToggle }) {
     <header style={{
       position: 'sticky', top: 0, zIndex: 1000,
       background: 'white', borderBottom: '1px solid #E5E7EB',
-      padding: '0.875rem 1.5rem',
+      padding: '0.75rem 1rem',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
 
         {/* Left: hamburger + logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -126,11 +126,11 @@ export default function Header({ onMenuToggle }) {
               <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#3B82F6' }}>🐬 Dolphin</span>
+          <span style={{ fontSize: '1.25rem', fontWeight: 700, color: '#3B82F6', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>🐬 <span>Dolphin</span></span>
         </div>
 
         {/* Right: points + notifications + avatar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
 
           {/* Reward Points / Rating */}
           <div

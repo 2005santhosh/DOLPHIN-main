@@ -45,14 +45,20 @@ const server = http.createServer(app);
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true); // Allow server-to-server/curl
-    
-    // STRICT CHECK: Allows dolphinorg.in AND exact subdomains like api.dolphinorg.in
+
+    // Allow dolphinorg.in subdomains, localhost, and Vercel deployments
     const allowedRegex = /^https:\/\/([a-zA-Z0-9-]+\.)?dolphinorg\.in$/;
-    
-    if (allowedRegex.test(origin) || origin.startsWith('http://localhost')) {
+    const vercelRegex  = /^https:\/\/[a-zA-Z0-9-]+(\.vercel\.app)$/;
+
+    if (
+      allowedRegex.test(origin) ||
+      vercelRegex.test(origin) ||
+      origin.startsWith('http://localhost') ||
+      origin.startsWith('http://127.0.0.1')
+    ) {
       return callback(null, true);
     }
-    
+
     return callback(new Error('CORS blocked'), false);
   },
   credentials: true

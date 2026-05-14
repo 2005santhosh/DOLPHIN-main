@@ -74,7 +74,8 @@ export default function Sidebar({ isOpen, onClose, requestsCount = 0, chatCount 
           background: 'white',
           borderRight: '1px solid #E5E7EB',
           overflowY: 'auto',
-          padding: '1.5rem 0',
+          overflowX: 'hidden',
+          padding: '1rem 0 2rem',
           flexShrink: 0,
           transition: 'transform 300ms ease',
         }}
@@ -162,12 +163,15 @@ export default function Sidebar({ isOpen, onClose, requestsCount = 0, chatCount 
         @media (max-width: 768px) {
           .sidebar {
             position: fixed !important;
-            top: 73px !important;
+            top: 0 !important;
             left: 0 !important;
             z-index: 1000 !important;
             transform: translateX(-100%) !important;
             box-shadow: 4px 0 16px rgba(0,0,0,0.12) !important;
-            height: calc(100vh - 73px) !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            padding-top: 73px !important;
+            width: 280px !important;
           }
           .sidebar.open {
             transform: translateX(0) !important;

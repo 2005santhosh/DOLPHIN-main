@@ -96,13 +96,13 @@ export default function SupportPage() {
 
       <div style={{ paddingTop: 64 }}>
         {/* Hero */}
-        <div style={{ background: 'linear-gradient(135deg, #0D9488 0%, #0F766E 100%)', padding: '5rem 1.5rem 4rem', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ background: 'linear-gradient(135deg, #0D9488 0%, #0F766E 100%)', padding: 'clamp(3rem, 8vw, 5rem) 1rem clamp(2.5rem, 6vw, 4rem)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: -60, right: -60, width: 300, height: 300, background: 'rgba(255,255,255,0.05)', borderRadius: '50%', pointerEvents: 'none' }} />
           <div style={{ position: 'absolute', bottom: -80, left: -40, width: 250, height: 250, background: 'rgba(255,255,255,0.05)', borderRadius: '50%', pointerEvents: 'none' }} />
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={{ width: 72, height: 72, background: 'rgba(255,255,255,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', fontSize: '2rem' }}>🛟</div>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white', marginBottom: '1rem', letterSpacing: '-0.025em' }}>Support Center</h1>
-            <p style={{ fontSize: '1.125rem', color: 'rgba(255,255,255,0.85)', maxWidth: '36rem', margin: '0 auto 2rem' }}>
+            <h1 style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', fontWeight: 800, color: 'white', marginBottom: '1rem', letterSpacing: '-0.025em' }}>Support Center</h1>
+            <p style={{ fontSize: 'clamp(0.95rem, 2.5vw, 1.125rem)', color: 'rgba(255,255,255,0.85)', maxWidth: '36rem', margin: '0 auto 2rem' }}>
               We're here to help. Find answers to common questions or reach out to our team.
             </p>
             {/* Quick contact cards */}
@@ -112,7 +112,7 @@ export default function SupportPage() {
                 { icon: '💬', label: 'Live Chat', value: 'In-app messaging', sub: '9am–6pm IST' },
                 { icon: '📖', label: 'Help Center', value: 'FAQs below', sub: 'Guides & tutorials' },
               ].map(({ icon, label, value, sub }) => (
-                <div key={label} style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', borderRadius: 12, padding: '1.25rem 1.5rem', minWidth: 160, border: '1px solid rgba(255,255,255,0.2)', textAlign: 'center' }}>
+                <div key={label} style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', borderRadius: 12, padding: '1rem 1.25rem', minWidth: 130, flex: '1 1 130px', border: '1px solid rgba(255,255,255,0.2)', textAlign: 'center' }}>
                   <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{icon}</div>
                   <p style={{ color: 'white', fontWeight: 600, margin: '0 0 2px', fontSize: '0.9rem' }}>{label}</p>
                   <p style={{ color: 'rgba(255,255,255,0.75)', margin: 0, fontSize: '0.8rem' }}>{value}</p>
@@ -123,8 +123,8 @@ export default function SupportPage() {
           </div>
         </div>
 
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '4rem 1.5rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(480px, 1fr))', gap: '3rem' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '3rem 1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 460px), 1fr))', gap: '2.5rem' }}>
             {/* FAQ */}
             <div>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', marginBottom: '0.5rem' }}>Frequently Asked Questions</h2>
@@ -174,7 +174,7 @@ export default function SupportPage() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} style={{ background: 'white', borderRadius: 12, border: '1px solid #E5E7EB', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '0.375rem' }}>Full Name *</label>
                       <input required value={contactForm.name} onChange={e => setContactForm(p => ({ ...p, name: e.target.value }))} placeholder="John Doe" style={{ width: '100%', padding: '0.625rem 0.875rem', border: '1px solid #D1D5DB', borderRadius: 8, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }} />

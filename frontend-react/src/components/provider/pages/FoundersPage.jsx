@@ -250,89 +250,60 @@ const FoundersPage = () => {
             const founderPic  = founder.founderId?.profilePicture;
 
             return (
-              <Card key={founder._id} style={{ padding: '1.5rem' }}>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                  {/* Avatar */}
+              <Card key={founder._id} style={{ padding: '1.25rem' }}>
+                {/* Top row: avatar + info */}
+                <div style={{ display: 'flex', gap: '0.875rem', alignItems: 'flex-start', marginBottom: '0.875rem' }}>
                   <img
                     src={avatarUrl(founderName, founderPic)}
                     alt={founderName}
                     style={{
-                      width: 72,
-                      height: 72,
+                      width: 52, height: 52,
                       borderRadius: '50%',
                       objectFit: 'cover',
                       border: '2px solid var(--border-color)',
                       flexShrink: 0,
                     }}
                   />
-
-                  {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <h3 style={{ margin: '0 0 0.2rem', color: 'var(--text-primary)', fontSize: '1rem' }}>
+                    <h3 style={{ margin: '0 0 0.15rem', color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 700 }}>
                       {founder.startupName || 'Unnamed Startup'}
                     </h3>
-                    <p style={{ margin: '0 0 0.4rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                    <p style={{ margin: '0 0 0.4rem', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                       by {founderName}
                     </p>
-
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       {founder.industry && (
-                        <span style={{
-                          padding: '3px 10px',
-                          background: 'var(--primary-bg, #F0FDF4)',
-                          color: 'var(--primary, #16A34A)',
-                          borderRadius: '9999px',
-                          fontSize: '0.78rem',
-                          fontWeight: 600,
-                        }}>
+                        <span style={{ padding: '2px 8px', background: 'var(--primary-bg, #F0FDF4)', color: 'var(--primary, #16A34A)', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: 600 }}>
                           {founder.industry}
                         </span>
                       )}
                       {founder.validationScore != null && (
-                        <span style={{
-                          padding: '3px 10px',
-                          background: '#EFF6FF',
-                          color: '#1D4ED8',
-                          borderRadius: '9999px',
-                          fontSize: '0.78rem',
-                          fontWeight: 600,
-                        }}>
+                        <span style={{ padding: '2px 8px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: 600 }}>
                           {founder.validationScore}% validated
                         </span>
                       )}
-                      {founder.currentStage && (
-                        <span style={{
-                          padding: '3px 10px',
-                          background: '#F5F3FF',
-                          color: '#6D28D9',
-                          borderRadius: '9999px',
-                          fontSize: '0.78rem',
-                          fontWeight: 600,
-                        }}>
-                          {founder.currentStage}
-                        </span>
-                      )}
                     </div>
-
-                    {founder.thesis && (
-                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-                        {founder.thesis.length > 160
-                          ? `${founder.thesis.substring(0, 160)}…`
-                          : founder.thesis}
-                      </p>
-                    )}
                   </div>
+                </div>
 
-                  {/* Actions */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '120px', alignItems: 'stretch' }}>
-                    {renderActionButtons(founder)}
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => { setDetailFounder(founder); setDetailOpen(true); }}
-                    >
-                      View Profile
-                    </button>
-                  </div>
+                {/* Thesis — full width, clamped */}
+                {founder.thesis && (
+                  <p style={{ margin: '0 0 0.875rem', fontSize: '0.82rem', color: 'var(--text-tertiary)', lineHeight: 1.5,
+                    display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {founder.thesis}
+                  </p>
+                )}
+
+                {/* Actions — full width row */}
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 100 }}>{renderActionButtons(founder)}</div>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ flex: 1, minWidth: 100 }}
+                    onClick={() => { setDetailFounder(founder); setDetailOpen(true); }}
+                  >
+                    View Profile
+                  </button>
                 </div>
               </Card>
             );
