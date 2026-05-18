@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Post = require('../models/Post');
+const IntroRequest = require('../models/IntroRequest');
 const { protect } = require('../middleware/authMiddleware');
 const { uploadPostMedia, cloudinary } = require('../config/cloudinary');
 const rateLimit = require('express-rate-limit');
@@ -122,8 +123,47 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
             viewCount: post.viewCount || 0
         }));
 
+        // Enrich with connection status for each post author
+        // Batch lookup: find all IntroRequests involving the current user and any of the post authors
+        const authorIds = [...new Set(
+            formattedPosts
+                .filter(p => p.authorId?.toString() !== req.user._id.toString())
+                .map(p => p.authorId?.toString())
+                .filter(Boolean)
+        )];
+
+        let connectionMap = {};
+        if (authorIds.length > 0) {
+            const requests = await IntroRequest.find({
+                $or: [
+                    { founderId: req.user.id, providerId: { $in: authorIds } },
+                    { providerId: req.user.id, founderId: { $in: authorIds } },
+                ]
+            }).select('founderId providerId status').lean();
+
+            requests.forEach(req2 => {
+                const otherId = req2.founderId?.toString() === req.user.id.toString()
+                    ? req2.providerId?.toString()
+                    : req2.founderId?.toString();
+                if (otherId) {
+                    // Prefer accepted > pending > rejected
+                    const priority = { accepted: 3, pending: 2, rejected: 1 };
+                    if (!connectionMap[otherId] || (priority[req2.status] || 0) > (priority[connectionMap[otherId]] || 0)) {
+                        connectionMap[otherId] = req2.status;
+                    }
+                }
+            });
+        }
+
+        const enrichedPosts = formattedPosts.map(p => ({
+            ...p,
+            connectionStatus: p.authorId?.toString() === req.user._id.toString()
+                ? 'own'
+                : (connectionMap[p.authorId?.toString()] || null)
+        }));
+
         res.json({
-            posts: formattedPosts,
+            posts: enrichedPosts,
             pagination: {
                 currentPage: page,
                 totalPages: Math.ceil(totalPosts / limit),
