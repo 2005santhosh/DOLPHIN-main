@@ -9,6 +9,7 @@ const Startup = require('../models/Startup');
 const IntroRequest = require('../models/IntroRequest');
 const Notification = require('../models/Notification');
 const Log = require('../models/Log');
+const Post = require('../models/Post');
 const { protect } = require('../middleware/authMiddleware');
 const { forgotPassword, resetPassword } = require('../controller/auth');
 const sendEmail = require('../utils/sendEmail');
@@ -367,6 +368,14 @@ router.put('/profile', protect, async (req, res) => {
       { new: true, runValidators: true }
     ).select('-password');
 
+    // Sync authorName in all posts by this user when name changes
+    if (name) {
+      Post.updateMany(
+        { authorId: req.user.id },
+        { $set: { authorName: name } }
+      ).catch(err => console.error('Post name sync error:', err));
+    }
+
     res.json({ 
       success: true, 
       message: 'Profile updated',
@@ -502,6 +511,12 @@ async function handleUpload(req, res) {
 
     user.profilePicture = req.file.path; 
     await user.save();
+
+    // Sync authorImage in all posts by this user
+    Post.updateMany(
+      { authorId: req.user.id },
+      { $set: { authorImage: req.file.path } }
+    ).catch(err => console.error('Post image sync error:', err));
 
     res.json({
       success: true,

@@ -102,10 +102,10 @@ export const AuthProvider = ({ children }) => {
       refreshProfile();
     }
 
-    // Refresh every 30 seconds
+    // Refresh every 2 minutes — enough to keep points/picture fresh without hammering the API
     timerRef.current = setInterval(() => {
       if (localStorage.getItem('token')) refreshProfile();
-    }, 30_000);
+    }, 120_000);
 
     return () => clearInterval(timerRef.current);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

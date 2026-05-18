@@ -117,8 +117,15 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500,                  // 500 requests per 15 min per IP — enough for normal usage
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests, please try again in a few minutes.' },
+  skip: (req) => {
+    // Skip rate limiting for static assets and health checks
+    return req.path === '/health' || req.path === '/';
+  },
 });
 app.use('/api/', limiter);
 

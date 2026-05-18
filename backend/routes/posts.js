@@ -5,10 +5,10 @@ const { protect } = require('../middleware/authMiddleware');
 const { uploadPostMedia, cloudinary } = require('../config/cloudinary');
 const rateLimit = require('express-rate-limit');
 
-const feedLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 50 });
-const createLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10 });
-const likeLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 50 });
-const uploadLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 20 });
+const feedLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 300 });
+const createLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 30 });
+const likeLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 200 });
+const uploadLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 30 });
 
 // POST /api/posts - Create post with optional media
 router.post('/', protect, createLimiter, uploadPostMedia.array('media', 10), async (req, res) => {
