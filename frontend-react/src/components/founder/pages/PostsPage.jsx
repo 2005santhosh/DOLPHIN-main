@@ -6,270 +6,7 @@ import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { postsAPI, connectionsAPI } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
-
-// ─── Instagram Reels-style video viewer ──────────────────────────────────────
-function ReelsViewer({ posts, startIndex, onClose, onToggleLike, onConnect, currentUserId, stateLocks, onUpdatePost }) {
-  const [currentIdx, setCurrentIdx] = useState(startIndex);
-  const [muted, setMuted] = useState(false);
-  const containerRef = useRef(null);
-  const videoRefs = useRef({});
-
-  const videoPosts = posts.filter(p =>
-    p.media?.some(m => typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video')
-  );
-
-  const getVideoUrl = (post) => {
-    const vid = post.media?.find(m => typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video');
-    const url = typeof vid === 'string' ? vid : vid?.url;
-    return url?.includes('cloudinary') ? url.replace('/upload/', '/upload/f_auto,q_auto/') : url;
-  };
-
-  // Lock body scroll
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', handler);
-    };
-  }, [onClose]);
-
-  // Auto-play current, pause others
-  useEffect(() => {
-    Object.entries(videoRefs.current).forEach(([idx, vid]) => {
-      if (!vid) return;
-      if (Number(idx) === currentIdx) {
-        vid.muted = muted;
-        vid.play().catch(() => {});
-      } else {
-        vid.pause();
-        vid.currentTime = 0;
-      }
-    });
-  }, [currentIdx, muted]);
-
-  // Detect which reel is in view via IntersectionObserver
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const items = containerRef.current.querySelectorAll('.reel-item');
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const idx = Number(entry.target.dataset.idx);
-            // If user scrolled to the clone (last+1 item), silently jump to real first
-            if (idx === videoPosts.length) {
-              // Disable snap, jump to top, re-enable — user won't notice
-              if (containerRef.current) {
-                containerRef.current.style.scrollSnapType = 'none';
-                containerRef.current.scrollTop = 0;
-                setCurrentIdx(0);
-                requestAnimationFrame(() => {
-                  if (containerRef.current) {
-                    containerRef.current.style.scrollSnapType = 'y mandatory';
-                  }
-                });
-              }
-            } else {
-              setCurrentIdx(idx);
-            }
-          }
-        });
-      },
-      { root: containerRef.current, threshold: 0.6 }
-    );
-    items.forEach(item => observer.observe(item));
-    return () => observer.disconnect();
-  }, [videoPosts.length]);
-
-  // No handleScroll needed — IntersectionObserver handles everything
-  const handleScroll = useCallback(() => {}, []);
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: '#000' }}>
-      {/* Back */}
-      <button onClick={onClose} aria-label="Back" style={{
-        position: 'fixed', top: 16, left: 16, zIndex: 100001,
-        background: 'rgba(0,0,0,0.55)', border: 'none', borderRadius: '50%',
-        width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-      }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-      </button>
-
-      {/* Mute */}
-      <button onClick={() => setMuted(v => !v)} aria-label={muted ? 'Unmute' : 'Mute'} style={{
-        position: 'fixed', top: 16, right: 16, zIndex: 100001,
-        background: 'rgba(0,0,0,0.55)', border: 'none', borderRadius: '50%',
-        width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-      }}>
-        {muted ? (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-            <line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" />
-          </svg>
-        ) : (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
-          </svg>
-        )}
-      </button>
-
-      {/* Scroll container */}
-      <div
-        ref={containerRef}
-        onScroll={handleScroll}
-        style={{ height: '100vh', overflowY: 'scroll', scrollSnapType: 'y mandatory', WebkitOverflowScrolling: 'touch' }}
-      >
-        {videoPosts.map((post, idx) => {
-          const videoUrl = getVideoUrl(post);
-          const isOwn = post.authorId?.toString() === currentUserId?.toString();
-          const connStatus = post.connectionStatus;
-          const avatarSrc = post.authorImage ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'U')}&background=84CC16&color=fff&size=80`;
-
-          return (
-            <div
-              key={post._id}
-              data-idx={idx}
-              className="reel-item"
-              style={{ height: '100vh', width: '100%', scrollSnapAlign: 'start', position: 'relative', background: '#000', flexShrink: 0 }}
-            >
-              {/* Video — tap to pause/play */}
-              <video
-                ref={el => { videoRefs.current[idx] = el; }}
-                src={videoUrl}
-                loop={videoPosts.length === 1}
-                playsInline
-                muted={muted}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                onClick={() => {
-                  const vid = videoRefs.current[idx];
-                  if (vid) { vid.paused ? vid.play() : vid.pause(); }
-                }}
-              />
-
-              {/* Gradients */}
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, transparent 45%)', pointerEvents: 'none' }} />
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 80, background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, transparent 100%)', pointerEvents: 'none' }} />
-
-              {/* Bottom-left: author + caption */}
-              <div style={{ position: 'absolute', bottom: 80, left: 16, right: 80, zIndex: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.5rem' }}>
-                  <img src={avatarSrc} alt={post.authorName}
-                    style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid white', flexShrink: 0 }} />
-                  <div>
-                    <p style={{ margin: 0, color: 'white', fontWeight: 700, fontSize: '0.9rem', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>{post.authorName}</p>
-                    <p style={{ margin: 0, color: 'rgba(255,255,255,0.7)', fontSize: '0.72rem' }}>{post.authorRole}</p>
-                  </div>
-                </div>
-                {post.content && (
-                  <p style={{
-                    margin: 0, color: 'white', fontSize: '0.85rem', lineHeight: 1.45,
-                    textShadow: '0 1px 4px rgba(0,0,0,0.9)',
-                    display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                  }}>
-                    {post.content}
-                  </p>
-                )}
-              </div>
-
-              {/* Right side: like + views + connect/chat */}
-              <div style={{
-                position: 'absolute', bottom: 80, right: 12, zIndex: 10,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem',
-              }}>
-                {/* Like */}
-                <button
-                  onClick={() => onToggleLike(post._id)}
-                  disabled={stateLocks[post._id]}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: 0 }}
-                >
-                  <span style={{ fontSize: '1.8rem', filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.9))' }}>
-                    {post.isLikedByMe ? '❤️' : '🤍'}
-                  </span>
-                  <span style={{ color: 'white', fontSize: '0.72rem', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
-                    {post.likeCount || 0}
-                  </span>
-                </button>
-
-                {/* Views */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.9))' }}>
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
-                  </svg>
-                  <span style={{ color: 'white', fontSize: '0.72rem', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
-                    {post.viewCount || 0}
-                  </span>
-                </div>
-
-                {/* Connect / Chat — only for other users */}
-                {!isOwn && (
-                  connStatus === 'accepted' ? (
-                    <button
-                      onClick={() => { onClose(); window.location.hash = 'chat'; }}
-                      style={{ background: 'rgba(255,255,255,0.18)', border: '1.5px solid rgba(255,255,255,0.8)', borderRadius: 10, padding: '7px 12px', color: 'white', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', backdropFilter: 'blur(6px)', whiteSpace: 'nowrap' }}
-                    >
-                      💬 Chat
-                    </button>
-                  ) : connStatus === 'pending' ? (
-                    <button disabled style={{ background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '7px 12px', color: 'rgba(255,255,255,0.55)', fontSize: '0.75rem', fontWeight: 700, cursor: 'not-allowed', whiteSpace: 'nowrap' }}>
-                      Pending
-                    </button>
-                  ) : (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onConnect(post.authorId, post._id, e);
-                      }}
-                      disabled={stateLocks[post.authorId]}
-                      style={{ background: '#84CC16', border: 'none', borderRadius: 10, padding: '7px 12px', color: 'white', fontSize: '0.75rem', fontWeight: 700, cursor: stateLocks[post.authorId] ? 'not-allowed' : 'pointer', opacity: stateLocks[post.authorId] ? 0.7 : 1, whiteSpace: 'nowrap' }}
-                    >
-                      {stateLocks[post.authorId] ? '…' : '+ Connect'}
-                    </button>
-                  )
-                )}
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Clone of first video — triggers infinite loop when user scrolls past last */}
-        {videoPosts.length > 1 && (() => {
-          const post = videoPosts[0];
-          const videoUrl = getVideoUrl(post);
-          const avatarSrc = post.authorImage ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'U')}&background=84CC16&color=fff&size=80`;
-          return (
-            <div
-              key="clone-first"
-              data-idx={videoPosts.length}
-              className="reel-item"
-              style={{ height: '100vh', width: '100%', scrollSnapAlign: 'start', position: 'relative', background: '#000', flexShrink: 0 }}
-            >
-              <video
-                src={videoUrl}
-                playsInline
-                muted
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, transparent 45%)', pointerEvents: 'none' }} />
-              <div style={{ position: 'absolute', bottom: 80, left: 16, right: 80, zIndex: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                  <img src={avatarSrc} alt={post.authorName} style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid white' }} />
-                  <p style={{ margin: 0, color: 'white', fontWeight: 700, fontSize: '0.9rem', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>{post.authorName}</p>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-      </div>
-    </div>
-  );
-}
+import ReelsViewer from '../../shared/ReelsViewer';
 
 // Helper functions
 const escapeXSS = (str) => {
@@ -577,7 +314,7 @@ const PostsPage = () => {
     }
   };
 
-  const renderMediaGallery = (media, postIndex) => {
+  const renderMediaGallery = (media, postId) => {
     if (!media || media.length === 0) return null;
 
     return (
@@ -597,15 +334,17 @@ const PostsPage = () => {
             : url;
 
           if (isVideo) {
-            // Find which index this post is among all video posts
-            const videoPosts = posts.filter(p => p.media?.some(m => (typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video')));
-            const videoPostIdx = videoPosts.findIndex(p => p._id === posts[postIndex]?._id);
-
             return (
               <div
                 key={index}
                 style={{ position: 'relative', cursor: 'pointer', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: '#000' }}
-                onClick={() => { setReelsStartIndex(Math.max(0, videoPostIdx)); setReelsOpen(true); }}
+                onClick={() => {
+                  // Find this post's index among video posts at click time
+                  const vp = posts.filter(p => p.media?.some(m => (typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video')));
+                  const idx = vp.findIndex(p => p._id === postId);
+                  setReelsStartIndex(idx >= 0 ? idx : 0);
+                  setReelsOpen(true);
+                }}
               >
                 <video
                   src={optimizedUrl}
@@ -686,7 +425,7 @@ const PostsPage = () => {
         </Card>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {posts.map((post, postIndex) => {
+          {posts.map((post) => {
             const imgSrc =
               post.authorImage ||
               `https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'User')}&background=e2e8f0&color=64748b&size=100`;
@@ -823,7 +562,7 @@ const PostsPage = () => {
                 )}
 
                 {/* Post Media */}
-                {renderMediaGallery(post.media, postIndex)}
+                {renderMediaGallery(post.media, post._id)}
 
                 {/* Post Tags */}
                 {post.tags && post.tags.length > 0 && (
