@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import PageHeader from '../../shared/PageHeader';
 import Card from '../../shared/Card';
 import Modal from '../../shared/Modal';
@@ -7,18 +7,16 @@ import toast from 'react-hot-toast';
 import { postsAPI, connectionsAPI } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 
-// ─── Full-screen video viewer ─────────────────────────────────────────────────
-function VideoViewer({ src, onClose }) {
-  const videoRef = useRef(null);
+// ─── Instagram Reels-style video viewer ──────────────────────────────────────
+function ReelsViewer({ posts, startIndex, onClose, onToggleLike, onConnect, currentUserId, stateLocks }) {
+  const [currentIdx, setCurrentIdx] = useState(startIndex);
+  const [muted, setMuted] = useState(false);
+  const containerRef = useRef(null);
+  const videoRefs = useRef({});
 
+  // Lock body scroll
   useEffect(() => {
-    // Lock body scroll
     document.body.style.overflow = 'hidden';
-    // Auto-play
-    if (videoRef.current) {
-      videoRef.current.play().catch(() => {});
-    }
-    // Close on Escape
     const handler = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => {
@@ -27,45 +25,214 @@ function VideoViewer({ src, onClose }) {
     };
   }, [onClose]);
 
+  // Auto-play current, pause others
+  useEffect(() => {
+    Object.entries(videoRefs.current).forEach(([idx, vid]) => {
+      if (!vid) return;
+      if (Number(idx) === currentIdx) {
+        vid.muted = muted;
+        vid.play().catch(() => {});
+      } else {
+        vid.pause();
+        vid.currentTime = 0;
+      }
+    });
+  }, [currentIdx, muted]);
+
+  // Scroll snap — detect which reel is in view
+  const handleScroll = useCallback(() => {
+    if (!containerRef.current) return;
+    const { scrollTop, clientHeight } = containerRef.current;
+    const idx = Math.round(scrollTop / clientHeight);
+    if (idx !== currentIdx) setCurrentIdx(idx);
+  }, [currentIdx]);
+
+  const videoPosts = posts.filter(p => p.media?.some(m => (typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video')));
+
+  const getVideoUrl = (post) => {
+    const vid = post.media?.find(m => typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video');
+    const url = typeof vid === 'string' ? vid : vid?.url;
+    return url?.includes('cloudinary') ? url.replace('/upload/', '/upload/f_auto,q_auto/') : url;
+  };
+
+  const goTo = (idx) => {
+    if (!containerRef.current) return;
+    containerRef.current.scrollTo({ top: idx * containerRef.current.clientHeight, behavior: 'smooth' });
+    setCurrentIdx(idx);
+  };
+
   return (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 99999,
-        background: '#000',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}
-      onClick={onClose}
-    >
+    <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: '#000' }}>
       {/* Back button */}
       <button
         onClick={onClose}
         style={{
-          position: 'absolute', top: 16, left: 16, zIndex: 1,
-          background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%',
+          position: 'fixed', top: 16, left: 16, zIndex: 100001,
+          background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%',
           width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', color: 'white',
+          cursor: 'pointer',
         }}
-        aria-label="Close video"
+        aria-label="Back"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
       </button>
 
-      <video
-        ref={videoRef}
-        src={src}
-        controls
-        playsInline
-        onClick={e => e.stopPropagation()}
+      {/* Mute toggle */}
+      <button
+        onClick={() => setMuted(v => !v)}
         style={{
-          maxWidth: '100%',
-          maxHeight: '100%',
-          width: '100%',
-          height: '100%',
-          objectFit: 'contain',
+          position: 'fixed', top: 16, right: 16, zIndex: 100001,
+          background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%',
+          width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer',
         }}
-      />
+        aria-label={muted ? 'Unmute' : 'Mute'}
+      >
+        {muted ? (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+            <line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" />
+          </svg>
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+          </svg>
+        )}
+      </button>
+
+      {/* Scroll container */}
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        style={{
+          height: '100vh', overflowY: 'scroll',
+          scrollSnapType: 'y mandatory',
+          scrollBehavior: 'smooth',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        {videoPosts.map((post, idx) => {
+          const videoUrl = getVideoUrl(post);
+          const isOwn = post.authorId === currentUserId;
+          const connStatus = post.connectionStatus;
+          const avatarSrc = post.authorImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'U')}&background=84CC16&color=fff&size=80`;
+
+          return (
+            <div
+              key={post._id}
+              style={{
+                height: '100vh', width: '100%',
+                scrollSnapAlign: 'start',
+                position: 'relative',
+                background: '#000',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              {/* Video */}
+              <video
+                ref={el => { videoRefs.current[idx] = el; }}
+                src={videoUrl}
+                loop
+                playsInline
+                muted={muted}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onClick={() => {
+                  const vid = videoRefs.current[idx];
+                  if (vid) { vid.paused ? vid.play() : vid.pause(); }
+                }}
+              />
+
+              {/* Gradient overlays */}
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 40%)', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 80, background: 'linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 100%)', pointerEvents: 'none' }} />
+
+              {/* Bottom-left: author info + caption */}
+              <div style={{ position: 'absolute', bottom: 80, left: 16, right: 80, zIndex: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.5rem' }}>
+                  <img src={avatarSrc} alt={post.authorName} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid white' }} />
+                  <div>
+                    <p style={{ margin: 0, color: 'white', fontWeight: 700, fontSize: '0.9rem', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>{post.authorName}</p>
+                    <p style={{ margin: 0, color: 'rgba(255,255,255,0.75)', fontSize: '0.72rem' }}>{post.authorRole}</p>
+                  </div>
+                </div>
+                {post.content && (
+                  <p style={{ margin: 0, color: 'white', fontSize: '0.85rem', lineHeight: 1.4, textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                    display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {post.content}
+                  </p>
+                )}
+              </div>
+
+              {/* Right side: actions */}
+              <div style={{
+                position: 'absolute', bottom: 80, right: 12, zIndex: 10,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem',
+              }}>
+                {/* Like */}
+                <button
+                  onClick={() => onToggleLike(post._id)}
+                  disabled={stateLocks[post._id]}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}
+                >
+                  <span style={{ fontSize: '1.75rem', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.8))' }}>
+                    {post.isLikedByMe ? '❤️' : '🤍'}
+                  </span>
+                  <span style={{ color: 'white', fontSize: '0.72rem', fontWeight: 700, textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+                    {post.likeCount || 0}
+                  </span>
+                </button>
+
+                {/* Views */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.8))' }}>
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+                  </svg>
+                  <span style={{ color: 'white', fontSize: '0.72rem', fontWeight: 700, textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+                    {post.viewCount || 0}
+                  </span>
+                </div>
+
+                {/* Connect / Chat / Delete */}
+                {!isOwn && (
+                  connStatus === 'accepted' ? (
+                    <button
+                      onClick={() => { onClose(); window.location.hash = 'chat'; }}
+                      style={{ background: 'rgba(255,255,255,0.2)', border: '1.5px solid white', borderRadius: 8, padding: '6px 10px', color: 'white', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', backdropFilter: 'blur(4px)' }}
+                    >
+                      💬 Chat
+                    </button>
+                  ) : connStatus === 'pending' ? (
+                    <button disabled style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.5)', borderRadius: 8, padding: '6px 10px', color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', fontWeight: 700, cursor: 'not-allowed' }}>
+                      Pending
+                    </button>
+                  ) : (
+                    <button
+                      onClick={(e) => onConnect(post.authorId, e)}
+                      disabled={stateLocks[post.authorId]}
+                      style={{ background: '#84CC16', border: 'none', borderRadius: 8, padding: '6px 10px', color: 'white', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', opacity: stateLocks[post.authorId] ? 0.7 : 1 }}
+                    >
+                      {stateLocks[post.authorId] ? '…' : '+ Connect'}
+                    </button>
+                  )
+                )}
+              </div>
+
+              {/* Scroll indicator dots */}
+              {videoPosts.length > 1 && (
+                <div style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 4, zIndex: 10 }}>
+                  {videoPosts.map((_, i) => (
+                    <div key={i} onClick={() => goTo(i)} style={{ width: 4, height: i === idx ? 20 : 8, borderRadius: 9999, background: i === idx ? 'white' : 'rgba(255,255,255,0.4)', cursor: 'pointer', transition: 'height 0.2s' }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -137,7 +304,8 @@ const PostsPage = () => {
   const [uploading, setUploading] = useState(false);
   const observerTarget = useRef(null);
   const [stateLocks, setStateLocks] = useState({});
-  const [fullscreenVideo, setFullscreenVideo] = useState(null); // url string
+  const [reelsOpen, setReelsOpen] = useState(false);
+  const [reelsStartIndex, setReelsStartIndex] = useState(0);
 
   const MAX_FILES = 10;
   const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
@@ -376,7 +544,7 @@ const PostsPage = () => {
     }
   };
 
-  const renderMediaGallery = (media) => {
+  const renderMediaGallery = (media, postIndex) => {
     if (!media || media.length === 0) return null;
 
     return (
@@ -396,11 +564,15 @@ const PostsPage = () => {
             : url;
 
           if (isVideo) {
+            // Find which index this post is among all video posts
+            const videoPosts = posts.filter(p => p.media?.some(m => (typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video')));
+            const videoPostIdx = videoPosts.findIndex(p => p._id === posts[postIndex]?._id);
+
             return (
               <div
                 key={index}
                 style={{ position: 'relative', cursor: 'pointer', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: '#000' }}
-                onClick={() => setFullscreenVideo(optimizedUrl || url)}
+                onClick={() => { setReelsStartIndex(Math.max(0, videoPostIdx)); setReelsOpen(true); }}
               >
                 <video
                   src={optimizedUrl}
@@ -409,20 +581,13 @@ const PostsPage = () => {
                   muted
                   style={{ width: '100%', display: 'block', maxHeight: 320, objectFit: 'cover' }}
                 />
-                {/* Play overlay */}
                 <div style={{
                   position: 'absolute', inset: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: 'rgba(0,0,0,0.25)',
                 }}>
-                  <div style={{
-                    width: 48, height: 48, borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.9)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#111827">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#111827"><path d="M8 5v14l11-7z" /></svg>
                   </div>
                 </div>
               </div>
@@ -446,9 +611,17 @@ const PostsPage = () => {
 
   return (
     <div>
-      {/* Full-screen video viewer */}
-      {fullscreenVideo && (
-        <VideoViewer src={fullscreenVideo} onClose={() => setFullscreenVideo(null)} />
+      {/* Instagram Reels-style video viewer */}
+      {reelsOpen && (
+        <ReelsViewer
+          posts={posts}
+          startIndex={reelsStartIndex}
+          onClose={() => setReelsOpen(false)}
+          onToggleLike={toggleLike}
+          onConnect={sendConnectionRequest}
+          currentUserId={user?._id}
+          stateLocks={stateLocks}
+        />
       )}
 
       <PageHeader title="Community Posts" subtitle="Share updates and connect with the community" />
@@ -480,7 +653,7 @@ const PostsPage = () => {
         </Card>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {posts.map((post) => {
+          {posts.map((post, postIndex) => {
             const imgSrc =
               post.authorImage ||
               `https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'User')}&background=e2e8f0&color=64748b&size=100`;
@@ -626,7 +799,7 @@ const PostsPage = () => {
                 )}
 
                 {/* Post Media */}
-                {renderMediaGallery(post.media)}
+                {renderMediaGallery(post.media, postIndex)}
 
                 {/* Post Tags */}
                 {post.tags && post.tags.length > 0 && (
