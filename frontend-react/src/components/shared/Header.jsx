@@ -17,41 +17,33 @@ function buildImageUrl(pic) {
 }
 
 export default function Header({ onMenuToggle }) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [imgError, setImgError] = useState(false);
   const [providerRating, setProviderRating] = useState(null);
   const notifRef = useRef(null);
+  const bellRef = useRef(null);
+  const [dropdownStyle, setDropdownStyle] = useState({});
 
-  // Reset imgError when profilePicture changes
-  useEffect(() => {
-    setImgError(false);
-  }, [user?.profilePicture]);
+  useEffect(() => { setImgError(false); }, [user?.profilePicture]);
 
-  // For providers: fetch avg rating from profile
   useEffect(() => {
     if (user?.role === 'provider') {
       providerAPI.getMyProfile()
-        .then(profile => {
-          const rating = profile?.avgRating;
-          if (rating !== undefined && rating !== null) {
-            setProviderRating(Number(rating).toFixed(1));
-          }
-        })
-        .catch(() => {}); // silent — don't break header on error
+        .then(p => { if (p?.avgRating != null) setProviderRating(Number(p.avgRating).toFixed(1)); })
+        .catch(() => {});
     }
   }, [user?.role]);
 
-  // Load notifications on mount and every 30s
   useEffect(() => {
     loadNotifications();
     const interval = setInterval(loadNotifications, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Close notifications dropdown on outside click
+  // Close on outside click
   useEffect(() => {
     const handler = (e) => {
       if (notifRef.current && !notifRef.current.contains(e.target)) {
@@ -62,15 +54,33 @@ export default function Header({ onMenuToggle }) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Recalculate dropdown position so it never overflows the viewport
+  const openNotifications = () => {
+    if (!bellRef.current) { setShowNotifications(v => !v); return; }
+    const rect = bellRef.current.getBoundingClientRect();
+    const dropW = Math.min(340, window.innerWidth - 16);
+    // Try to align right edge of dropdown with right edge of bell button
+    let left = rect.right - dropW;
+    // Clamp so it doesn't go off the left edge
+    if (left < 8) left = 8;
+    // Clamp so it doesn't go off the right edge
+    if (left + dropW > window.innerWidth - 8) left = window.innerWidth - dropW - 8;
+    setDropdownStyle({
+      position: 'fixed',
+      top: rect.bottom + 8,
+      left,
+      width: dropW,
+    });
+    setShowNotifications(v => !v);
+  };
+
   const loadNotifications = async () => {
     try {
       const data = await notificationsAPI.getNotifications();
       const list = Array.isArray(data) ? data : [];
       setNotifications(list);
       setUnreadCount(list.filter(n => !n.read).length);
-    } catch (err) {
-      // silent — don't spam errors for notifications
-    }
+    } catch (_) {}
   };
 
   const markAllRead = async () => {
@@ -92,19 +102,19 @@ export default function Header({ onMenuToggle }) {
     } catch { toast.error('Failed to clear notifications'); }
   };
 
-  // Derived values
-  const rewardPoints = user?.rewardPoints ?? 0;
-  const isVerified = VERIFIED_STATES.includes(user?.state);
-  const avatarUrl = buildImageUrl(user?.profilePicture);
-  const showImage = !!avatarUrl && !imgError;
+  // Navigate to profile page (hash-based routing)
+  const goToProfile = () => {
+    window.location.hash = 'profile';
+  };
 
-  // For providers: show avg rating (★ 4.5); for others: show reward points (⭐ 150)
+  // Derived
+  const isVerified = VERIFIED_STATES.includes(user?.state);
+  const avatarUrl  = buildImageUrl(user?.profilePicture);
+  const showImage  = !!avatarUrl && !imgError;
   const isProvider = user?.role === 'provider';
-  const statIcon  = isProvider ? '★' : '⭐';
-  const statValue = isProvider
-    ? (providerRating !== null ? providerRating : '—')
-    : rewardPoints;
-  const statTitle = isProvider ? 'Avg Rating' : 'Reward Points';
+  const statIcon   = isProvider ? '★' : '⭐';
+  const statValue  = isProvider ? (providerRating ?? '—') : (user?.rewardPoints ?? 0);
+  const statTitle  = isProvider ? 'Avg Rating' : 'Reward Points';
 
   return (
     <header style={{
@@ -115,81 +125,121 @@ export default function Header({ onMenuToggle }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
 
         {/* Left: hamburger + logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
           <button
             onClick={onMenuToggle}
             className="mobile-menu-btn"
-            style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem', color: '#6B7280' }}
+            style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: '0.375rem', color: '#6B7280', flexShrink: 0 }}
             aria-label="Toggle menu"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          <span style={{ fontSize: '1.25rem', fontWeight: 700, color: '#3B82F6', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>🐬 <span>Dolphin</span></span>
+          <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#3B82F6', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.2rem', lineHeight: 1 }}>
+            🐬 <span>Dolphin</span>
+          </span>
         </div>
 
-        {/* Right: points + notifications + avatar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        {/* Right: stat + bell + avatar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
 
-          {/* Reward Points / Rating */}
-          <div
-            title={statTitle}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#6B7280', fontSize: '0.9rem', fontWeight: 500 }}
-          >
-            <span style={{ fontSize: '1rem', color: isProvider ? '#F59E0B' : undefined }}>{statIcon}</span>
+          {/* Stat (points / rating) */}
+          <div title={statTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#6B7280', fontSize: '0.875rem', fontWeight: 500 }}>
+            <span style={{ fontSize: '0.95rem', color: isProvider ? '#F59E0B' : undefined }}>{statIcon}</span>
             <span style={{ fontWeight: 700, color: '#374151' }}>{statValue}</span>
           </div>
 
-          {/* Notifications bell */}
-          <div style={{ position: 'relative' }} ref={notifRef}>
+          {/* Bell */}
+          <div ref={notifRef} style={{ position: 'relative' }}>
             <button
-              onClick={() => setShowNotifications(v => !v)}
-              style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem', color: '#6B7280', display: 'flex', alignItems: 'center' }}
+              ref={bellRef}
+              onClick={openNotifications}
+              style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '0.375rem', color: '#6B7280', display: 'flex', alignItems: 'center' }}
               aria-label="Notifications"
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
               {unreadCount > 0 && (
                 <span style={{
-                  position: 'absolute', top: '2px', right: '2px',
+                  position: 'absolute', top: '1px', right: '1px',
                   background: '#EF4444', color: 'white', borderRadius: '9999px',
-                  fontSize: '0.6rem', fontWeight: 700, padding: '1px 5px', minWidth: '16px', textAlign: 'center',
+                  fontSize: '0.58rem', fontWeight: 700, padding: '1px 4px',
+                  minWidth: '15px', textAlign: 'center', lineHeight: 1.4,
                 }}>
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
             </button>
 
-            {/* Notifications dropdown */}
+            {/* Notifications dropdown — position: fixed, viewport-aware */}
             {showNotifications && (
               <div style={{
-                position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-                width: '340px', maxWidth: '92vw',
-                background: 'white', borderRadius: '12px',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.15)', border: '1px solid #E5E7EB', zIndex: 2000,
+                ...dropdownStyle,
+                background: 'white',
+                borderRadius: '12px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                border: '1px solid #E5E7EB',
+                zIndex: 9999,
+                overflow: 'hidden',
               }}>
-                <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>Notifications</span>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={markAllRead} style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 500 }}>Mark all read</button>
-                    <button onClick={clearNotifications} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 500 }}>Clear</button>
-                    <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '1.2rem', cursor: 'pointer', lineHeight: 1 }}>×</button>
+                {/* Header */}
+                <div style={{
+                  padding: '0.875rem 1rem',
+                  borderBottom: '1px solid #E5E7EB',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: '#FAFAFA',
+                }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111827' }}>
+                    Notifications
+                    {unreadCount > 0 && (
+                      <span style={{ marginLeft: '6px', background: '#EF4444', color: 'white', borderRadius: '9999px', fontSize: '0.65rem', padding: '1px 6px', fontWeight: 700 }}>
+                        {unreadCount}
+                      </span>
+                    )}
+                  </span>
+                  <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
+                    <button onClick={markAllRead} style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600, padding: '2px 6px', borderRadius: 4 }}>
+                      Mark read
+                    </button>
+                    <button onClick={clearNotifications} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600, padding: '2px 6px', borderRadius: 4 }}>
+                      Clear
+                    </button>
+                    <button onClick={() => setShowNotifications(false)} style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1, padding: '2px 4px' }}>
+                      ×
+                    </button>
                   </div>
                 </div>
-                <div style={{ maxHeight: '380px', overflowY: 'auto' }}>
+
+                {/* List */}
+                <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
                   {notifications.length === 0 ? (
-                    <div style={{ padding: '2rem', textAlign: 'center', color: '#9CA3AF', fontSize: '0.9rem' }}>No notifications</div>
+                    <div style={{ padding: '2rem', textAlign: 'center', color: '#9CA3AF', fontSize: '0.875rem' }}>
+                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔔</div>
+                      No notifications yet
+                    </div>
                   ) : (
                     notifications.map(n => (
                       <div key={n._id} style={{
-                        padding: '0.875rem 1rem', borderBottom: '1px solid #F3F4F6',
-                        background: n.read ? 'white' : '#EFF6FF', cursor: 'pointer',
-                      }}>
-                        <div style={{ fontSize: '0.875rem', color: '#111827', marginBottom: '3px' }}>{n.message || n.title}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>{new Date(n.createdAt).toLocaleString()}</div>
+                        padding: '0.75rem 1rem',
+                        borderBottom: '1px solid #F3F4F6',
+                        background: n.read ? 'white' : '#EFF6FF',
+                        cursor: 'pointer',
+                        transition: 'background 0.15s',
+                      }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#F9FAFB'}
+                        onMouseLeave={e => e.currentTarget.style.background = n.read ? 'white' : '#EFF6FF'}
+                      >
+                        <div style={{ fontSize: '0.85rem', color: '#111827', lineHeight: 1.4, marginBottom: '3px' }}>
+                          {n.message || n.title}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: '#9CA3AF' }}>
+                          {new Date(n.createdAt).toLocaleString()}
+                        </div>
                       </div>
                     ))
                   )}
@@ -198,44 +248,55 @@ export default function Header({ onMenuToggle }) {
             )}
           </div>
 
-          {/* User avatar */}
-          <div style={{ position: 'relative', cursor: 'pointer' }} title={user?.name || 'Profile'}>
+          {/* Avatar — click goes to profile */}
+          <button
+            onClick={goToProfile}
+            title={`${user?.name || 'Profile'} — Go to profile`}
+            style={{
+              position: 'relative',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              borderRadius: '50%',
+              flexShrink: 0,
+            }}
+            aria-label="Go to profile"
+          >
             {showImage ? (
               <img
                 src={avatarUrl}
                 alt={user?.name || 'Profile'}
                 onError={() => setImgError(true)}
-                style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E5E7EB', display: 'block' }}
+                style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E5E7EB', display: 'block' }}
               />
             ) : (
               <div style={{
-                width: 38, height: 38, borderRadius: '50%',
+                width: 36, height: 36, borderRadius: '50%',
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontWeight: 700, fontSize: '0.85rem',
+                color: 'white', fontWeight: 700, fontSize: '0.8rem',
                 border: '2px solid #E5E7EB',
               }}>
                 {getInitials(user?.name)}
               </div>
             )}
-
-            {/* Verified badge */}
             {isVerified && (
               <span style={{
-                position: 'absolute', bottom: '-2px', right: '-2px',
-                width: 16, height: 16, background: '#22C55E',
+                position: 'absolute', bottom: '-1px', right: '-1px',
+                width: 14, height: 14, background: '#22C55E',
                 borderRadius: '50%', border: '2px solid white',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" style={{ width: 8, height: 8 }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" style={{ width: 7, height: 7 }}>
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </span>
             )}
-          </div>
+          </button>
 
           {/* Name (desktop only) */}
-          <span className="user-name-desktop" style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827', display: 'none' }}>
+          <span className="user-name-desktop" style={{ fontSize: '0.85rem', fontWeight: 600, color: '#111827', display: 'none', whiteSpace: 'nowrap' }}>
             {user?.name}
           </span>
         </div>
