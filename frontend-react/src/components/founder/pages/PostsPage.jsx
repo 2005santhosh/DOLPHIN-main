@@ -57,30 +57,34 @@ function ReelsViewer({ posts, startIndex, onClose, onToggleLike, onConnect, curr
       (entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
-            setCurrentIdx(Number(entry.target.dataset.idx));
+            const idx = Number(entry.target.dataset.idx);
+            // If user scrolled to the clone (last+1 item), silently jump to real first
+            if (idx === videoPosts.length) {
+              // Disable snap, jump to top, re-enable — user won't notice
+              if (containerRef.current) {
+                containerRef.current.style.scrollSnapType = 'none';
+                containerRef.current.scrollTop = 0;
+                setCurrentIdx(0);
+                requestAnimationFrame(() => {
+                  if (containerRef.current) {
+                    containerRef.current.style.scrollSnapType = 'y mandatory';
+                  }
+                });
+              }
+            } else {
+              setCurrentIdx(idx);
+            }
           }
         });
       },
-      { root: containerRef.current, threshold: 0.55 }
+      { root: containerRef.current, threshold: 0.6 }
     );
     items.forEach(item => observer.observe(item));
     return () => observer.disconnect();
   }, [videoPosts.length]);
 
-  // Infinite loop: when near bottom, jump silently to top
-  const handleScroll = useCallback(() => {
-    if (!containerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    if (scrollTop + clientHeight >= scrollHeight - 5) {
-      // Disable snap temporarily, jump to top, re-enable
-      containerRef.current.style.scrollSnapType = 'none';
-      containerRef.current.scrollTop = 0;
-      setCurrentIdx(0);
-      requestAnimationFrame(() => {
-        if (containerRef.current) containerRef.current.style.scrollSnapType = 'y mandatory';
-      });
-    }
-  }, []);
+  // No handleScroll needed — IntersectionObserver handles everything
+  const handleScroll = useCallback(() => {}, []);
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: '#000' }}>
@@ -232,6 +236,36 @@ function ReelsViewer({ posts, startIndex, onClose, onToggleLike, onConnect, curr
             </div>
           );
         })}
+
+        {/* Clone of first video — triggers infinite loop when user scrolls past last */}
+        {videoPosts.length > 1 && (() => {
+          const post = videoPosts[0];
+          const videoUrl = getVideoUrl(post);
+          const avatarSrc = post.authorImage ||
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'U')}&background=84CC16&color=fff&size=80`;
+          return (
+            <div
+              key="clone-first"
+              data-idx={videoPosts.length}
+              className="reel-item"
+              style={{ height: '100vh', width: '100%', scrollSnapAlign: 'start', position: 'relative', background: '#000', flexShrink: 0 }}
+            >
+              <video
+                src={videoUrl}
+                playsInline
+                muted
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, transparent 45%)', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', bottom: 80, left: 16, right: 80, zIndex: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <img src={avatarSrc} alt={post.authorName} style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid white' }} />
+                  <p style={{ margin: 0, color: 'white', fontWeight: 700, fontSize: '0.9rem', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>{post.authorName}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
