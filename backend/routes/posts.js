@@ -92,8 +92,36 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
         if (filterType === 'mine') {
             filter = { authorId: req.user._id };
         } else {
-            // 'all' — show every post to everyone regardless of role
-            filter = {};
+            // Role-based feed: each role sees their own posts + relevant other roles
+            if (userRole === 'founder') {
+                // Founders see: own posts + posts by investors + posts by providers
+                filter = {
+                    $or: [
+                        { authorId: req.user._id },
+                        { authorRole: 'investor' },
+                        { authorRole: 'provider' },
+                    ]
+                };
+            } else if (userRole === 'provider') {
+                // Providers see: own posts + posts by founders
+                filter = {
+                    $or: [
+                        { authorId: req.user._id },
+                        { authorRole: 'founder' },
+                    ]
+                };
+            } else if (userRole === 'investor') {
+                // Investors see: own posts + posts by founders
+                filter = {
+                    $or: [
+                        { authorId: req.user._id },
+                        { authorRole: 'founder' },
+                    ]
+                };
+            } else {
+                // Admin or other roles: see everything
+                filter = {};
+            }
         }
 
         // Get total count for pagination
