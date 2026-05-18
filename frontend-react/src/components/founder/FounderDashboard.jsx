@@ -5,6 +5,7 @@ import { founderAPI } from '../../services/api';
 import Header from '../shared/Header';
 import Sidebar from '../shared/Sidebar';
 import ErrorBoundary from '../shared/ErrorBoundary';
+import DashboardBottomNav from '../shared/DashboardBottomNav';
 
 // Import pages
 import DashboardPage from './pages/DashboardPage';
@@ -117,6 +118,7 @@ export default function FounderDashboard() {
           </main>
         </div>
       </div>
+      <DashboardBottomNav requestsCount={requestsCount} chatCount={chatCount} />
     </ErrorBoundary>
   );
 }

@@ -7,6 +7,69 @@ import toast from 'react-hot-toast';
 import { postsAPI, connectionsAPI } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 
+// ─── Full-screen video viewer ─────────────────────────────────────────────────
+function VideoViewer({ src, onClose }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    // Lock body scroll
+    document.body.style.overflow = 'hidden';
+    // Auto-play
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+    // Close on Escape
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handler);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 99999,
+        background: '#000',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+      onClick={onClose}
+    >
+      {/* Back button */}
+      <button
+        onClick={onClose}
+        style={{
+          position: 'absolute', top: 16, left: 16, zIndex: 1,
+          background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%',
+          width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', color: 'white',
+        }}
+        aria-label="Close video"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7" />
+        </svg>
+      </button>
+
+      <video
+        ref={videoRef}
+        src={src}
+        controls
+        playsInline
+        onClick={e => e.stopPropagation()}
+        style={{
+          maxWidth: '100%',
+          maxHeight: '100%',
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain',
+        }}
+      />
+    </div>
+  );
+}
+
 // Helper functions
 const escapeXSS = (str) => {
   const div = document.createElement('div');
@@ -74,6 +137,7 @@ const PostsPage = () => {
   const [uploading, setUploading] = useState(false);
   const observerTarget = useRef(null);
   const [stateLocks, setStateLocks] = useState({});
+  const [fullscreenVideo, setFullscreenVideo] = useState(null); // url string
 
   const MAX_FILES = 10;
   const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
@@ -316,51 +380,62 @@ const PostsPage = () => {
     if (!media || media.length === 0) return null;
 
     return (
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: media.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '0.5rem',
-          marginBottom: '0.75rem',
-        }}
-      >
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: media.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '0.5rem',
+        marginBottom: '0.75rem',
+      }}>
         {media.map((item, index) => {
           const isVideo = typeof item === 'string'
             ? item.includes('.mp4') || item.includes('video')
             : item.type === 'video';
           const url = typeof item === 'string' ? item : item.url;
-          // Optimize Cloudinary URL but preserve aspect ratio — no w_800 crop
           const optimizedUrl = url?.includes('cloudinary')
             ? url.replace('/upload/', '/upload/f_auto,q_auto/')
             : url;
 
-          return isVideo ? (
-            <video
-              key={index}
-              src={optimizedUrl}
-              controls
-              preload="metadata"
-              playsInline
-              style={{
-                width: '100%',
-                borderRadius: 'var(--radius-md)',
-                display: 'block',
-                // No maxHeight — preserve original aspect ratio
-              }}
-            />
-          ) : (
+          if (isVideo) {
+            return (
+              <div
+                key={index}
+                style={{ position: 'relative', cursor: 'pointer', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: '#000' }}
+                onClick={() => setFullscreenVideo(optimizedUrl || url)}
+              >
+                <video
+                  src={optimizedUrl}
+                  preload="metadata"
+                  playsInline
+                  muted
+                  style={{ width: '100%', display: 'block', maxHeight: 320, objectFit: 'cover' }}
+                />
+                {/* Play overlay */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(0,0,0,0.25)',
+                }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.9)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#111827">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          return (
             <img
               key={index}
               src={optimizedUrl}
               alt={`Post media ${index + 1}`}
               loading="lazy"
-              style={{
-                width: '100%',
-                borderRadius: 'var(--radius-md)',
-                display: 'block',
-                cursor: 'pointer',
-                // No objectFit: cover — preserve original aspect ratio
-              }}
+              style={{ width: '100%', borderRadius: 'var(--radius-md)', display: 'block', cursor: 'pointer' }}
               onClick={() => window.open(url, '_blank')}
             />
           );
@@ -371,6 +446,11 @@ const PostsPage = () => {
 
   return (
     <div>
+      {/* Full-screen video viewer */}
+      {fullscreenVideo && (
+        <VideoViewer src={fullscreenVideo} onClose={() => setFullscreenVideo(null)} />
+      )}
+
       <PageHeader title="Community Posts" subtitle="Share updates and connect with the community" />
 
       {/* Create Post Button & Filters */}

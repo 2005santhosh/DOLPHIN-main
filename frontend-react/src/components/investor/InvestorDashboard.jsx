@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Header from '../shared/Header';
 import Sidebar from '../shared/Sidebar';
+import DashboardBottomNav from '../shared/DashboardBottomNav';
 
 import DashboardPage from './pages/DashboardPage';
 import StartupsPage from './pages/StartupsPage';
@@ -78,6 +79,7 @@ export default function InvestorDashboard() {
           {renderPage()}
         </main>
       </div>
+      <DashboardBottomNav requestsCount={requestsCount} chatCount={chatCount} />
     </div>
   );
 }

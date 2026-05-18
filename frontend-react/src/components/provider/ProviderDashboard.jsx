@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { providerAPI } from '../../services/api';
 import Header from '../shared/Header';
 import Sidebar from '../shared/Sidebar';
+import DashboardBottomNav from '../shared/DashboardBottomNav';
 
 // Import pages
 import DashboardPage from './pages/DashboardPage';
@@ -103,6 +104,7 @@ export default function ProviderDashboard() {
           {renderPage()}
         </main>
       </div>
+      <DashboardBottomNav requestsCount={requestsCount} chatCount={chatCount} />
     </div>
   );
 }
