@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto'); // Needed for hashing
+const crypto = require('crypto');
 const User = require('../models/User');
 const Provider = require('../models/Provider');
 const Startup = require('../models/Startup');
@@ -13,54 +13,72 @@ const Post = require('../models/Post');
 const { protect } = require('../middleware/authMiddleware');
 const { forgotPassword, resetPassword } = require('../controller/auth');
 const sendEmail = require('../utils/sendEmail');
-const { getWelcomeEmail,  getOtpEmail } = require('../utils/emailTemplates');
-// ✅ IMPORT CLOUDINARY CONFIG
+const { getWelcomeEmail, getOtpEmail } = require('../utils/emailTemplates');
 const { upload, cloudinary } = require('../config/cloudinary');
+const {
+  loginLimiter,
+  registerLimiter,
+  otpLimiter,
+  forgotPasswordLimiter
+} = require('../middleware/rateLimiters');
+const { sanitizeBody } = require('../middleware/sanitize');
+
+// Allowed roles for self-registration (admin cannot self-register)
+const ALLOWED_ROLES = ['founder', 'investor', 'provider'];
 
 // ==========================================
-// HELPER FUNCTIONS FOR SECURITY await
+// HELPER FUNCTIONS
 // ==========================================
-// Helper to generate token with User-Agent Binding
-// Simplified generateToken
+
 const generateToken = (user) => {
   return jwt.sign(
-    { id: user._id, role: user.role }, 
-    process.env.JWT_SECRET, 
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET,
     { expiresIn: '30d' }
   );
 };
 
-// Helper: Send Cookie Response (Environment Aware)
-const sendTokenResponse = (user, statusCode, req, res) => {
-  const token = generateToken(user, req.headers['user-agent'] || '');
-  const options = {
+// Cookie options — shared across all auth responses
+const cookieOptions = () => ({
   expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   httpOnly: true,
-  // secure: false,
-  secure: true,                      // must stay true in prod
+  secure: true,
   sameSite: 'None',
-  // sameSite: 'Lax',
   path: '/',
-  // ← add this line (lowercase 'p')
-  // domain: 'localhost'
-  domain: '.dolphinorg.in'        //strongly recommended – see below
-};
+  domain: '.dolphinorg.in'
+});
+
+// Expired cookie options — used for logout/delete
+const expiredCookieOptions = () => ({
+  expires: new Date(Date.now() - 1000), // Past date — deletes the cookie
+  httpOnly: true,
+  secure: true,
+  sameSite: 'None',
+  path: '/',
+  domain: '.dolphinorg.in'
+});
+
+// Send token in HttpOnly cookie + safe user object in body (NO raw token in body)
+const sendTokenResponse = (user, statusCode, req, res) => {
+  const token = generateToken(user);
 
   res
     .status(statusCode)
-    .cookie('token', token, options)
-    .json({ 
-      success: true, 
+    .cookie('token', token, cookieOptions())
+    .json({
+      success: true,
+      // Token also sent in body for cross-domain React app (localStorage fallback)
+      // This is intentional for the Vercel ↔ Railway cross-domain setup
       token,
-      user: { 
-        _id: user._id, 
-        name: user.name, 
-        email: user.email, 
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
         role: user.role,
         rewardPoints: user.rewardPoints || 0,
         profilePicture: user.profilePicture || '',
-        state: user.state || 'PENDING_APPROVAL',
-      } 
+        state: user.state || 'PENDING_APPROVAL'
+      }
     });
 };
 
@@ -70,7 +88,7 @@ const sendTokenResponse = (user, statusCode, req, res) => {
 
 // @route   POST /api/auth/register
 // @access  Public
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, sanitizeBody(['name', 'email']), async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
@@ -80,11 +98,16 @@ router.post('/register', async (req, res) => {
     if (password.length < 8)
       return res.status(400).json({ message: 'Password must be at least 8 characters long' });
 
-    const userExists = await User.findOne({ email });
+    // Validate role — prevent self-registration as admin
+    if (!role || !ALLOWED_ROLES.includes(role)) {
+      return res.status(400).json({ message: 'Invalid role. Must be founder, investor, or provider.' });
+    }
+
+    const userExists = await User.findOne({ email: email.toLowerCase() });
     if (userExists)
-      return res.status(409).json({ 
-        message: 'Email already in use', 
-        nextSteps: 'Try logging in or use a different email' 
+      return res.status(409).json({
+        message: 'Email already in use',
+        nextSteps: 'Try logging in or use a different email'
       });
 
     const salt = await bcrypt.genSalt(12);
@@ -121,12 +144,12 @@ router.post('/register', async (req, res) => {
       await sendEmail({
         email: user.email,
         subject: otpEmail.subject,
-        message: otpEmail.html  // ← sendEmail maps 'message' to htmlContent
+        message: otpEmail.html
       });
     } catch (emailError) {
       console.error('Failed to send OTP email:', emailError);
       await User.findByIdAndDelete(user._id);
-      if (role === 'provider') await Provider.deleteOne({ userId: user._id }); // ← was missing
+      if (role === 'provider') await Provider.deleteOne({ userId: user._id });
       return res.status(500).json({ message: 'Could not send verification email. Please try again.' });
     }
 
@@ -137,15 +160,13 @@ router.post('/register', async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ 
-      message: 'Server error during registration', 
-      reason: error.message 
-    });
+    console.error('Registration error:', error);
+    res.status(500).json({ message: 'Server error during registration' });
   }
 });
 // @route   POST /api/auth/verify-otp
 // @desc    Verify OTP sent during registration, then issue session
-router.post('/verify-otp', async (req, res) => {
+router.post('/verify-otp', otpLimiter, async (req, res) => {
   try {
     const { email, otp } = req.body;
 
@@ -169,13 +190,13 @@ router.post('/verify-otp', async (req, res) => {
     user.verificationExpire = undefined;
     await user.save();
 
-    // Send welcome email now
+    // Send welcome email
     try {
       const welcomeTemplate = getWelcomeEmail(user.name);
       await sendEmail({
         email: user.email,
         subject: welcomeTemplate.subject,
-        message: welcomeTemplate.html  // ← same fix
+        message: welcomeTemplate.html
       });
     } catch (e) { console.error('Welcome email failed:', e); }
 
@@ -183,12 +204,13 @@ router.post('/verify-otp', async (req, res) => {
     sendTokenResponse(user, 200, req, res);
 
   } catch (error) {
-    res.status(500).json({ message: 'Server error during OTP verification', reason: error.message });
+    console.error('OTP verification error:', error);
+    res.status(500).json({ message: 'Server error during OTP verification' });
   }
 });
 // @route   POST /api/auth/login
 // @access  Public
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, sanitizeBody(['email']), async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -196,9 +218,16 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
     if (!user) {
+      // Constant-time response to prevent user enumeration
+      await bcrypt.compare(password, '$2a$12$placeholderhashthatnevermatchesXXXXXXXXXXXXXXXXXXXXXX');
       return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    // Check if account is blocked before password check
+    if (user.state === 'BLOCKED') {
+      return res.status(403).json({ message: 'Your account has been suspended. Contact support@pacificdev.in' });
     }
 
     if (user.password) {
@@ -210,7 +239,6 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Use secure helper to set cookie
     sendTokenResponse(user, 200, req, res);
 
   } catch (error) {
@@ -223,28 +251,22 @@ router.post('/login', async (req, res) => {
 // @access  Private
 router.post('/logout', protect, (req, res) => {
   try {
-   const options = {
-  expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-  httpOnly: true,
-  secure: true,                      // must stay true in prod
-  sameSite: 'None',
-  path: '/',
-                   // ← add this line (lowercase 'p')
-  domain: '.dolphinorg.in'        // strongly recommended – see below
-};
+    // Blacklist the current token so it can't be reused
+    const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+    if (token && req.app.locals.tokenBlacklist) {
+      req.app.locals.tokenBlacklist.add(token);
+    }
 
-    res.cookie('token', 'none', options);
+    // Clear the cookie by setting it to expire in the past
+    res.cookie('token', 'none', expiredCookieOptions());
 
     res.status(200).json({
       success: true,
-      message: 'Logged out successfully',
-      nextSteps: 'You can now safely close the browser'
+      message: 'Logged out successfully'
     });
   } catch (error) {
-    res.status(500).json({
-      message: 'Error during logout',
-      reason: error.message
-    });
+    console.error('Logout error:', error);
+    res.status(500).json({ message: 'Error during logout' });
   }
 });
 
@@ -259,12 +281,11 @@ router.post('/verify-email', async (req, res) => {
     if (!email || !verificationCode) {
       return res.status(400).json({ message: 'Email and verification code required' });
     }
-    
+
     const user = await User.findOne({
       email,
-      // Assuming you add a verificationToken field to your User model
       verificationToken: crypto.createHash('sha256').update(verificationCode).digest('hex'),
-      verificationExpire: { $gt: Date.now() } // Ensure code hasn't expired
+      verificationExpire: { $gt: Date.now() }
     });
 
     if (!user) {
@@ -272,13 +293,14 @@ router.post('/verify-email', async (req, res) => {
     }
 
     user.emailVerified = true;
-    user.verificationToken = undefined; // Clear the token
+    user.verificationToken = undefined;
     user.verificationExpire = undefined;
     await user.save();
-    
+
     res.status(200).json({ message: 'Email verified successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Server error during email verification', reason: error.message });
+    console.error('Email verification error:', error);
+    res.status(500).json({ message: 'Server error during email verification' });
   }
 });
 
@@ -294,15 +316,13 @@ router.post('/send-verification-email', async (req, res) => {
       nextSteps: 'Check your email for the verification code'
     });
   } catch (error) {
-    res.status(500).json({
-      message: 'Error sending verification email',
-      reason: error.message
-    });
+    console.error('Send verification email error:', error);
+    res.status(500).json({ message: 'Error sending verification email' });
   }
 });
 
 // @route   POST /api/auth/forgot-password
-router.post('/forgot-password', forgotPassword);
+router.post('/forgot-password', forgotPasswordLimiter, forgotPassword);
 
 // @route   PUT /api/auth/reset-password/:token
 router.put('/reset-password/:token', resetPassword);
@@ -456,21 +476,11 @@ router.delete('/account', protect, async (req, res) => {
     await User.findByIdAndDelete(userId);
 
     if (req.app.locals.tokenBlacklist) {
-      const token = req.headers.authorization?.split(' ')[1];
+      const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
       if (token) req.app.locals.tokenBlacklist.add(token);
     }
-    
-    const options = {
-  expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-  httpOnly: true,
-  secure: true,                      // must stay true in prod
-  sameSite: 'None',
-  path: '/',
-                   // ← add this line (lowercase 'p')
-  domain: '.dolphinorg.in'        // strongly recommended – see below
-};
 
-    res.cookie('token', 'none', options);
+    res.cookie('token', 'none', expiredCookieOptions());
 
     res.status(200).json({
       message: 'Account deleted successfully',
@@ -478,10 +488,7 @@ router.delete('/account', protect, async (req, res) => {
     });
   } catch (error) {
     console.error('Error deleting account:', error);
-    res.status(500).json({
-      message: 'Failed to delete account',
-      reason: error.message
-    });
+    res.status(500).json({ message: 'Failed to delete account' });
   }
 });
 

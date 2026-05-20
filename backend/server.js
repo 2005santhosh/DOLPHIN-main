@@ -73,15 +73,6 @@ app.use(compression());
 
 // 2. USE COOKIE PARSER (Enables reading HTTP-only cookies for security)
 app.use(cookieParser());
-
-app.post("/test-cors", (req, res) => {
-  res.json({ message: "CORS working" });
-});
-// TEMPORARY TEST ROUTE - DELETE AFTER TESTING
-app.get('/api/posts/test-bypass', (req, res) => {
-  res.json({ message: 'Posts routing is working!' });
-});
-// TEMPORARY TEST ROUTE END
 // Make io accessible to routes (CRITICAL)
 app.set('socketio', io); 
 app.locals.tokenBlacklist = new Set();
@@ -111,8 +102,7 @@ app.use(helmet({
   },
 }));
 
-// Security middleware
-app.use(express.json()); 
+// Security middleware — single JSON parser with size limit
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -128,6 +118,15 @@ const limiter = rateLimit({
   },
 });
 app.use('/api/', limiter);
+
+// Add security headers for all API responses
+app.use('/api/', (req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Pragma', 'no-cache');
+  next();
+});
 
 // --- API ROUTES ---
 // Consolidated API routes here
