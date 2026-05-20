@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 import toast from 'react-hot-toast';
+import { KeyRound, CheckCircle2 } from '../shared/Icons';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -42,7 +43,9 @@ export default function ForgotPassword() {
         }}>
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔑</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
+              <KeyRound size={40} color="var(--primary, #84CC16)" />
+            </div>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary, #111827)', marginBottom: '0.5rem' }}>
               Forgot Password?
             </h1>
@@ -57,9 +60,9 @@ export default function ForgotPassword() {
               <div style={{
                 width: 64, height: 64, borderRadius: '50%',
                 background: '#D1FAE5', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', margin: '0 auto 1.25rem', fontSize: '1.75rem',
+                justifyContent: 'center', margin: '0 auto 1.25rem',
               }}>
-                ✅
+                <CheckCircle2 size={32} color="#059669" />
               </div>
               <h3 style={{ fontWeight: 700, color: 'var(--text-primary, #111827)', marginBottom: '0.5rem' }}>
                 Check your email

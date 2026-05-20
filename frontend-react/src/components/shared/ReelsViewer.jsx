@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Heart, MessageCircle } from './Icons';
 
 function getVideoUrl(post) {
   const vid = post.media?.find(m =>
@@ -233,9 +234,9 @@ export default function ReelsViewer({
                   disabled={stateLocks[post._id]}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: 0 }}
                 >
-                  <span style={{ fontSize: '1.8rem', filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.9))' }}>
-                    {post.isLikedByMe ? '❤️' : '🤍'}
-                  </span>
+                  {post.isLikedByMe
+                    ? <Heart size={28} fill="#EF4444" color="#EF4444" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.9))' }} />
+                    : <Heart size={28} color="white" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.9))' }} />}
                   <span style={{ color: 'white', fontSize: '0.72rem', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
                     {post.likeCount || 0}
                   </span>
@@ -257,9 +258,9 @@ export default function ReelsViewer({
                   connStatus === 'accepted' ? (
                     <button
                       onClick={() => { onClose(); window.location.hash = 'chat'; }}
-                      style={{ background: 'rgba(255,255,255,0.18)', border: '1.5px solid rgba(255,255,255,0.8)', borderRadius: 10, padding: '7px 12px', color: 'white', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', backdropFilter: 'blur(6px)', whiteSpace: 'nowrap' }}
+                      style={{ background: 'rgba(255,255,255,0.18)', border: '1.5px solid rgba(255,255,255,0.8)', borderRadius: 10, padding: '7px 12px', color: 'white', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', backdropFilter: 'blur(6px)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}
                     >
-                      💬 Chat
+                      <MessageCircle size={14} /> Chat
                     </button>
                   ) : connStatus === 'pending' ? (
                     <button disabled style={{ background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '7px 12px', color: 'rgba(255,255,255,0.55)', fontSize: '0.75rem', fontWeight: 700, cursor: 'not-allowed', whiteSpace: 'nowrap' }}>

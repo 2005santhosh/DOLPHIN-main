@@ -112,7 +112,6 @@ export default function Header({ onMenuToggle }) {
   const avatarUrl  = buildImageUrl(user?.profilePicture);
   const showImage  = !!avatarUrl && !imgError;
   const isProvider = user?.role === 'provider';
-  const statIcon   = isProvider ? '★' : '⭐';
   const statValue  = isProvider ? (providerRating ?? '—') : (user?.rewardPoints ?? 0);
   const statTitle  = isProvider ? 'Avg Rating' : 'Reward Points';
 
@@ -136,8 +135,12 @@ export default function Header({ onMenuToggle }) {
               <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#3B82F6', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.2rem', lineHeight: 1 }}>
-            🐬 <span>Dolphin</span>
+          <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#3B82F6', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.4rem', lineHeight: 1 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12c0 1.2-4 6-9 6s-9-4.8-9-6c0-1.2 4-6 9-6s9 4.8 9 6z"/>
+              <circle cx="12" cy="12" r="2"/>
+            </svg>
+            <span>Dolphin</span>
           </span>
         </div>
 
@@ -146,7 +149,9 @@ export default function Header({ onMenuToggle }) {
 
           {/* Stat (points / rating) */}
           <div title={statTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#6B7280', fontSize: '0.875rem', fontWeight: 500 }}>
-            <span style={{ fontSize: '0.95rem', color: isProvider ? '#F59E0B' : undefined }}>{statIcon}</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill={isProvider ? '#F59E0B' : '#6B7280'} stroke="none">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
             <span style={{ fontWeight: 700, color: '#374151' }}>{statValue}</span>
           </div>
 
@@ -219,7 +224,12 @@ export default function Header({ onMenuToggle }) {
                 <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
                   {notifications.length === 0 ? (
                     <div style={{ padding: '2rem', textAlign: 'center', color: '#9CA3AF', fontSize: '0.875rem' }}>
-                      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔔</div>
+                      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="1.5">
+                          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                      </div>
                       No notifications yet
                     </div>
                   ) : (

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LifeBuoy, Mail, MessageCircle, BookOpen, Lock, FileText, CreditCard, CheckCircle2 } from '../shared/Icons';
 
 const FAQS = [
   {
@@ -85,7 +86,7 @@ export default function SupportPage() {
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 64, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #E5E7EB', zIndex: 100, display: 'flex', alignItems: 'center', padding: '0 2rem' }}>
         <div style={{ maxWidth: 1200, width: '100%', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#111827', fontWeight: 700, fontSize: '1.25rem' }}>
-            <span style={{ fontSize: '1.5rem' }}>🐬</span> Dolphin
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12c0 1.2-4 6-9 6s-9-4.8-9-6c0-1.2 4-6 9-6s9 4.8 9 6z"/><circle cx="12" cy="12" r="2"/></svg> Dolphin
           </a>
           <button onClick={() => window.close()} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#6B7280', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500 }}
             onMouseEnter={e => e.target.style.color = '#0D9488'} onMouseLeave={e => e.target.style.color = '#6B7280'}>
@@ -100,7 +101,9 @@ export default function SupportPage() {
           <div style={{ position: 'absolute', top: -60, right: -60, width: 300, height: 300, background: 'rgba(255,255,255,0.05)', borderRadius: '50%', pointerEvents: 'none' }} />
           <div style={{ position: 'absolute', bottom: -80, left: -40, width: 250, height: 250, background: 'rgba(255,255,255,0.05)', borderRadius: '50%', pointerEvents: 'none' }} />
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ width: 72, height: 72, background: 'rgba(255,255,255,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', fontSize: '2rem' }}>🛟</div>
+            <div style={{ width: 72, height: 72, background: 'rgba(255,255,255,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+              <LifeBuoy size={36} color="white" />
+            </div>
             <h1 style={{ fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', fontWeight: 800, color: 'white', marginBottom: '1rem', letterSpacing: '-0.025em' }}>Support Center</h1>
             <p style={{ fontSize: 'clamp(0.95rem, 2.5vw, 1.125rem)', color: 'rgba(255,255,255,0.85)', maxWidth: '36rem', margin: '0 auto 2rem' }}>
               We're here to help. Find answers to common questions or reach out to our team.
@@ -108,12 +111,12 @@ export default function SupportPage() {
             {/* Quick contact cards */}
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', maxWidth: '48rem', margin: '0 auto' }}>
               {[
-                { icon: '📧', label: 'Email Us', value: 'support@pacificdev.in', sub: 'Response in 24h' },
-                { icon: '💬', label: 'Live Chat', value: 'In-app messaging', sub: '9am–6pm IST' },
-                { icon: '📖', label: 'Help Center', value: 'FAQs below', sub: 'Guides & tutorials' },
+                { icon: <Mail size={22} color="white" />, label: 'Email Us', value: 'support@pacificdev.in', sub: 'Response in 24h' },
+                { icon: <MessageCircle size={22} color="white" />, label: 'Live Chat', value: 'In-app messaging', sub: '9am–6pm IST' },
+                { icon: <BookOpen size={22} color="white" />, label: 'Help Center', value: 'FAQs below', sub: 'Guides & tutorials' },
               ].map(({ icon, label, value, sub }) => (
                 <div key={label} style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', borderRadius: 12, padding: '1rem 1.25rem', minWidth: 130, flex: '1 1 130px', border: '1px solid rgba(255,255,255,0.2)', textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{icon}</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}>{icon}</div>
                   <p style={{ color: 'white', fontWeight: 600, margin: '0 0 2px', fontSize: '0.9rem' }}>{label}</p>
                   <p style={{ color: 'rgba(255,255,255,0.75)', margin: 0, fontSize: '0.8rem' }}>{value}</p>
                   <p style={{ color: 'rgba(255,255,255,0.6)', margin: 0, fontSize: '0.75rem' }}>{sub}</p>
@@ -165,7 +168,9 @@ export default function SupportPage() {
 
               {submitted ? (
                 <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 12, padding: '2.5rem', textAlign: 'center' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                    <CheckCircle2 size={48} color="#059669" />
+                  </div>
                   <h3 style={{ color: '#065F46', fontWeight: 700, marginBottom: '0.5rem' }}>Message Sent!</h3>
                   <p style={{ color: '#047857', fontSize: '0.9rem' }}>Thank you for reaching out. Our support team will respond to <strong>{contactForm.email}</strong> within 24 hours. You can also reach us directly at <strong>support@pacificdev.in</strong>.</p>
                   <button onClick={() => setSubmitted(false)} style={{ marginTop: '1.5rem', padding: '0.625rem 1.5rem', background: '#0D9488', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem' }}>
@@ -217,13 +222,13 @@ export default function SupportPage() {
                 <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', marginBottom: '1rem' }}>Other Resources</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {[
-                    { icon: '🔒', label: 'Privacy Policy', href: '/privacy' },
-                    { icon: '📄', label: 'Terms of Service', href: '/terms' },
-                    { icon: '💳', label: 'Refund Policy', href: '/refund-policy' },
+                    { icon: <Lock size={16} />, label: 'Privacy Policy', href: '/privacy' },
+                    { icon: <FileText size={16} />, label: 'Terms of Service', href: '/terms' },
+                    { icon: <CreditCard size={16} />, label: 'Refund Policy', href: '/refund-policy' },
                   ].map(({ icon, label, href }) => (
                     <a key={label} href={href} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', background: 'white', borderRadius: 8, border: '1px solid #E5E7EB', textDecoration: 'none', color: '#374151', fontSize: '0.875rem', fontWeight: 500, transition: 'border-color 0.2s' }}
                       onMouseEnter={e => e.currentTarget.style.borderColor = '#0D9488'} onMouseLeave={e => e.currentTarget.style.borderColor = '#E5E7EB'}>
-                      <span>{icon}</span>{label}
+                      {icon}{label}
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" style={{ marginLeft: 'auto' }}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
                     </a>
                   ))}

@@ -5,6 +5,7 @@ import Modal from '../../shared/Modal';
 import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { founderAPI } from '../../../services/api';
+import { Lock, TrendingUp, Puzzle, Star } from '../../shared/Icons';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const Avatar = ({ src, name, size = 72 }) => {
@@ -139,7 +140,9 @@ export default function InvestorsProvidersPage({ startup }) {
         <PageHeader title="Investors & Providers" subtitle="Connect with investors and service providers" />
         <Card>
           <div style={{ textAlign: 'center', padding: '3rem 2rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+              <Lock size={48} color="#9CA3AF" />
+            </div>
             <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Content Locked</h3>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
               Complete validation stages to reach 70% validation score to unlock access to investors and providers.
@@ -161,16 +164,17 @@ export default function InvestorsProvidersPage({ startup }) {
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
         {[
-          { key: 'investors', label: '📈 Investors' },
-          { key: 'providers', label: '🧩 Service Providers' },
-        ].map(({ key, label }) => (
+          { key: 'investors', label: 'Investors', icon: <TrendingUp size={16} /> },
+          { key: 'providers', label: 'Service Providers', icon: <Puzzle size={16} /> },
+        ].map(({ key, label, icon }) => (
           <button key={key} onClick={() => setTab(key)} style={{
             padding: '0.75rem 1.5rem', background: 'transparent', border: 'none',
             borderBottom: tab === key ? '2px solid var(--primary)' : '2px solid transparent',
             color: tab === key ? 'var(--primary)' : 'var(--text-secondary)',
             fontWeight: tab === key ? 600 : 400, cursor: 'pointer', fontSize: '0.95rem',
+            display: 'flex', alignItems: 'center', gap: '0.4rem',
           }}>
-            {label}
+            {icon} {label}
           </button>
         ))}
       </div>
@@ -254,8 +258,8 @@ export default function InvestorsProvidersPage({ startup }) {
                     </div>
                     <VerifiedBadge state={profile.state} />
                     {profile.rating && parseFloat(profile.rating) > 0 && (
-                      <div style={{ fontSize: '0.82rem', color: '#F59E0B', marginTop: 4 }}>
-                        ★ {parseFloat(profile.rating).toFixed(1)}
+                      <div style={{ fontSize: '0.82rem', color: '#F59E0B', marginTop: 4, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <Star size={13} fill="#F59E0B" color="#F59E0B" /> {parseFloat(profile.rating).toFixed(1)}
                       </div>
                     )}
                   </div>
@@ -299,8 +303,8 @@ export default function InvestorsProvidersPage({ startup }) {
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
                   <VerifiedBadge state={detailProfile.state} />
                   {detailProfile.rating && parseFloat(detailProfile.rating) > 0 && (
-                    <span style={{ fontSize: '0.85rem', color: '#F59E0B', fontWeight: 600 }}>
-                      ★ {parseFloat(detailProfile.rating).toFixed(1)}
+                    <span style={{ fontSize: '0.85rem', color: '#F59E0B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      <Star size={14} fill="#F59E0B" color="#F59E0B" /> {parseFloat(detailProfile.rating).toFixed(1)}
                     </span>
                   )}
                 </div>

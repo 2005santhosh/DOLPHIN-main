@@ -5,13 +5,14 @@ import Modal from '../../shared/Modal';
 import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { founderAPI } from '../../../services/api';
+import { Lightbulb, Puzzle, Wrench, TrendingUp, Briefcase } from '../../shared/Icons';
 
 const VALIDATION_STAGES = [
-  { key: 'idea', title: '💡 Idea Validation', description: 'Answer 10 questions about your idea. AI will evaluate your responses.' },
-  { key: 'problem', title: '🧩 Problem Definition', description: 'Validate that the problem is real, painful, frequent, and backed by evidence.' },
-  { key: 'solution', title: '🛠️ Solution Development', description: 'Validate the solution approach, MVP scope, differentiators, and feasibility.' },
-  { key: 'market', title: '📈 Market Validation', description: 'Validate market size, distribution channels, competitors, and willingness-to-pay.' },
-  { key: 'business', title: '💼 Business Model Validation', description: 'Validate pricing, unit economics, margins, CAC/LTV assumptions, and scalability.' }
+  { key: 'idea',     title: 'Idea Validation',        icon: <Lightbulb size={18} />, description: 'Answer 10 questions about your idea. AI will evaluate your responses.' },
+  { key: 'problem',  title: 'Problem Definition',     icon: <Puzzle size={18} />,    description: 'Validate that the problem is real, painful, frequent, and backed by evidence.' },
+  { key: 'solution', title: 'Solution Development',   icon: <Wrench size={18} />,    description: 'Validate the solution approach, MVP scope, differentiators, and feasibility.' },
+  { key: 'market',   title: 'Market Validation',      icon: <TrendingUp size={18} />,description: 'Validate market size, distribution channels, competitors, and willingness-to-pay.' },
+  { key: 'business', title: 'Business Model Validation', icon: <Briefcase size={18} />, description: 'Validate pricing, unit economics, margins, CAC/LTV assumptions, and scalability.' }
 ];
 
 const StagesPage = () => {
@@ -183,7 +184,9 @@ const StagesPage = () => {
             <Card key={stage.key} style={{ marginBottom: '1.25rem' }}>
               <CardHeader>
                 <CardTitle>
-                  {stage.title}{' '}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {stage.icon} {stage.title}
+                  </span>{' '}
                   <span className={`list-item-status ${status.className}`} style={{ marginLeft: '10px' }}>
                     {status.text}
                   </span>

@@ -1,3 +1,5 @@
+import { Lock, FileText, CreditCard, LifeBuoy, ExternalLink } from './Icons';
+
 /**
  * LegalSections — reusable block for all dashboard Settings pages.
  * Shows Privacy Policy, Terms of Service, Refund Policy, and Support Center
@@ -7,25 +9,25 @@ export default function LegalSections() {
   const links = [
     {
       href: '/privacy',
-      icon: '🔒',
+      icon: <Lock size={22} />,
       title: 'Privacy Policy',
       desc: 'How we collect, use, and protect your personal information.',
     },
     {
       href: '/terms',
-      icon: '📄',
+      icon: <FileText size={22} />,
       title: 'Terms of Service',
       desc: 'Rules and guidelines for using the Dolphin platform.',
     },
     {
       href: '/refund-policy',
-      icon: '💳',
+      icon: <CreditCard size={22} />,
       title: 'Refund Policy',
       desc: 'Our no-refund policy for all digital services and subscriptions.',
     },
     {
       href: '/support',
-      icon: '🛟',
+      icon: <LifeBuoy size={22} />,
       title: 'Support Center',
       desc: 'FAQs, contact form, and resources to help you get started.',
     },
@@ -61,7 +63,7 @@ export default function LegalSections() {
             e.currentTarget.style.boxShadow = 'none';
           }}
         >
-          <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>{icon}</span>
+          <span style={{ fontSize: '1.5rem', flexShrink: 0, color: 'var(--text-secondary, #6B7280)', display: 'flex', alignItems: 'center' }}>{icon}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontWeight: 600, color: 'var(--text-primary, #111827)', fontSize: '0.9rem' }}>{title}</p>
             <p style={{ margin: '2px 0 0', color: 'var(--text-secondary, #6B7280)', fontSize: '0.8rem', lineHeight: 1.4 }}>{desc}</p>

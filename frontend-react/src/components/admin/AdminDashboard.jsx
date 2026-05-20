@@ -5,6 +5,10 @@ import Header from '../shared/Header';
 import toast from 'react-hot-toast';
 import Modal from '../shared/Modal';
 import LegalSections from '../shared/LegalSections';
+import {
+  BarChart2, Users, Rocket, Puzzle, Bell, Settings,
+  Clock, CheckCircle2, Eye, ShieldAlert, Star,
+} from '../shared/Icons';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -62,12 +66,12 @@ const StatCard = ({ icon, value, label, color = '#3B82F6', bg = '#DBEAFE' }) => 
 
 // ─── Sidebar nav items ─────────────────────────────────────────────────────────
 const NAV = [
-  { key: 'dashboard',     label: 'Dashboard',           icon: '📊' },
-  { key: 'users',         label: 'Users',               icon: '👥' },
-  { key: 'startups',      label: 'Startups',            icon: '🚀' },
-  { key: 'providers',     label: 'Providers',           icon: '🧩' },
-  { key: 'notifications', label: 'Send Notifications',  icon: '📢' },
-  { key: 'settings',      label: 'Settings',            icon: '⚙️' },
+  { key: 'dashboard',     label: 'Dashboard',           icon: <BarChart2 size={18} /> },
+  { key: 'users',         label: 'Users',               icon: <Users size={18} /> },
+  { key: 'startups',      label: 'Startups',            icon: <Rocket size={18} /> },
+  { key: 'providers',     label: 'Providers',           icon: <Puzzle size={18} /> },
+  { key: 'notifications', label: 'Send Notifications',  icon: <Bell size={18} /> },
+  { key: 'settings',      label: 'Settings',            icon: <Settings size={18} /> },
 ];
 
 export default function AdminDashboard() {
@@ -151,10 +155,10 @@ function DashboardPage() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        <StatCard icon="👥" value={stats?.users?.total ?? 0}       label="Total Users"         color="#3B82F6" bg="#DBEAFE" />
-        <StatCard icon="⏳" value={stats?.users?.pending ?? 0}     label="Pending Approvals"   color="#F59E0B" bg="#FEF3C7" />
-        <StatCard icon="🚀" value={stats?.startups?.validated ?? 0} label="Validated Startups" color="#10B981" bg="#D1FAE5" />
-        <StatCard icon="🧩" value={stats?.providers?.verified ?? 0} label="Active Providers"   color="#6366F1" bg="#E0E7FF" />
+        <StatCard icon={<Users size={24} color="#3B82F6" />}     value={stats?.users?.total ?? 0}       label="Total Users"         color="#3B82F6" bg="#DBEAFE" />
+        <StatCard icon={<Clock size={24} color="#F59E0B" />}     value={stats?.users?.pending ?? 0}     label="Pending Approvals"   color="#F59E0B" bg="#FEF3C7" />
+        <StatCard icon={<Rocket size={24} color="#10B981" />}    value={stats?.startups?.validated ?? 0} label="Validated Startups" color="#10B981" bg="#D1FAE5" />
+        <StatCard icon={<Puzzle size={24} color="#6366F1" />}    value={stats?.providers?.verified ?? 0} label="Active Providers"   color="#6366F1" bg="#E0E7FF" />
       </div>
 
       <div style={{ background: 'white', borderRadius: 12, border: '1px solid #E5E7EB', padding: '1.5rem' }}>
@@ -299,9 +303,9 @@ function UsersPage() {
                         {u.state !== 'BLOCKED' && u.state !== 'PENDING_APPROVAL' && (
                           <button className="btn btn-secondary btn-sm" disabled={busy[u._id]} onClick={() => advance(u._id)} style={{ padding: '3px 10px', fontSize: '0.75rem' }}>→ Advance</button>
                         )}
-                        <button className="btn btn-secondary btn-sm" onClick={() => setDetailUser(u)} style={{ padding: '3px 10px', fontSize: '0.75rem' }}>👁 View</button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => setDetailUser(u)} style={{ padding: '3px 10px', fontSize: '0.75rem' }}>View</button>
                         {u.state !== 'BLOCKED' && (
-                          <button className="btn btn-secondary btn-sm" disabled={busy[u._id]} onClick={() => block(u._id)} style={{ padding: '3px 10px', fontSize: '0.75rem', color: '#DC2626' }}>🚫 Block</button>
+                          <button className="btn btn-secondary btn-sm" disabled={busy[u._id]} onClick={() => block(u._id)} style={{ padding: '3px 10px', fontSize: '0.75rem', color: '#DC2626' }}>Block</button>
                         )}
                       </div>
                     </td>
@@ -474,7 +478,7 @@ function ProvidersPage() {
                         {p.verified ? 'Verified' : 'Pending'}
                       </span>
                     </td>
-                    <td style={{ padding: '0.75rem 1rem', color: '#6B7280' }}>{p.rating ? `⭐ ${Number(p.rating).toFixed(1)}` : 'N/A'}</td>
+                    <td style={{ padding: '0.75rem 1rem', color: '#6B7280' }}>{p.rating ? `${Number(p.rating).toFixed(1)} ★` : 'N/A'}</td>
                     <td style={{ padding: '0.75rem 1rem' }}>
                       <div style={{ display: 'flex', gap: '0.4rem' }}>
                         {!p.verified && (

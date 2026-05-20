@@ -4,6 +4,7 @@ import Card from '../../shared/Card';
 import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { providerAPI } from '../../../services/api';
+import { Inbox, CornerUpRight, MessageCircle } from '../../shared/Icons';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -132,7 +133,7 @@ const RequestsPage = ({ setRequestsCount }) => {
         borderBottom: '2px solid var(--border-color, #E5E7EB)',
       }}>
         <button style={tabStyle('incoming')} onClick={() => setActiveTab('incoming')}>
-          📥 Incoming
+          <Inbox size={15} style={{ marginRight: 4 }} /> Incoming
           {pendingIncomingCount > 0 && (
             <span style={{
               position: 'absolute', top: 8, right: 4,
@@ -145,7 +146,7 @@ const RequestsPage = ({ setRequestsCount }) => {
           )}
         </button>
         <button style={tabStyle('sent')} onClick={() => setActiveTab('sent')}>
-          📤 Sent
+          <CornerUpRight size={15} style={{ marginRight: 4 }} /> Sent
         </button>
       </div>
 
@@ -274,8 +275,9 @@ const RequestsPage = ({ setRequestsCount }) => {
                         <button
                           className="btn btn-primary btn-sm"
                           onClick={() => { window.location.hash = 'chat'; }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                         >
-                          💬 Chat
+                          <MessageCircle size={14} /> Chat
                         </button>
                       </div>
                     )}

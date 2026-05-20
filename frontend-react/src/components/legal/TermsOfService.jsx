@@ -1,10 +1,12 @@
+import { FileText, Mail, Globe } from '../shared/Icons';
+
 export default function TermsOfService() {
   return (
     <div style={{ minHeight: '100vh', background: '#F8FAFC', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
       <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #E5E7EB' }}>
         <div style={{ maxWidth: '56rem', margin: '0 auto', padding: '0 1.5rem', height: '4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#111827' }}>
-            <span style={{ fontSize: '1.5rem' }}>🐬</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12c0 1.2-4 6-9 6s-9-4.8-9-6c0-1.2 4-6 9-6s9 4.8 9 6z"/><circle cx="12" cy="12" r="2"/></svg>
             <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>Dolphin</span>
           </a>
           <button onClick={() => window.close()} style={{ fontSize: '0.875rem', fontWeight: 500, color: '#6B7280', background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem 1rem', borderRadius: 8 }}
@@ -16,7 +18,7 @@ export default function TermsOfService() {
 
       <main style={{ maxWidth: '42rem', margin: '0 auto', padding: '4rem 1.5rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <div style={{ width: 64, height: 64, background: '#EEF2FF', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', fontSize: '1.75rem' }}>📄</div>
+          <div style={{ width: 64, height: 64, background: '#EEF2FF', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}><FileText size={28} color="#4F46E5" /></div>
           <h1 style={{ fontSize: '2.25rem', fontWeight: 700, color: '#111827', marginBottom: '0.75rem', letterSpacing: '-0.025em' }}>Terms of Service</h1>
           <p style={{ fontSize: '1.125rem', color: '#6B7280', marginBottom: '1rem' }}>Please read these terms carefully before using Dolphin</p>
           <span style={{ display: 'inline-block', padding: '0.375rem 1rem', background: '#EEF2FF', color: '#4F46E5', borderRadius: 9999, fontSize: '0.875rem', fontWeight: 500 }}>Last updated: March 2026</span>
@@ -127,8 +129,8 @@ export default function TermsOfService() {
             <p>For questions about these Terms, contact us:</p>
             <div style={{ marginTop: '1rem', padding: '1.25rem', background: '#F9FAFB', borderRadius: 12, border: '1px solid #E5E7EB' }}>
               <p><strong>Dolphin Platform — Legal</strong></p>
-              <p style={{ marginTop: '0.5rem' }}>📧 Email: <a href="mailto:support@pacificdev.in" style={{ color: '#4F46E5' }}>support@pacificdev.in</a></p>
-              <p style={{ marginTop: '0.25rem' }}>🌐 Website: <a href="https://dolphinorg.in" style={{ color: '#4F46E5' }}>dolphinorg.in</a></p>
+              <p style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Mail size={14} /> Email: <a href="mailto:support@pacificdev.in" style={{ color: '#4F46E5' }}>support@pacificdev.in</a></p>
+              <p style={{ marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Globe size={14} /> Website: <a href="https://dolphinorg.in" style={{ color: '#4F46E5' }}>dolphinorg.in</a></p>
             </div>
           </Section>
         </div>

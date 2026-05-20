@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { postsAPI, connectionsAPI } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import ReelsViewer from '../../shared/ReelsViewer';
+import { Edit3, Heart, HeartOff, Eye, MessageCircle, Image } from '../../shared/Icons';
 
 // Helper functions
 const escapeXSS = (str) => {
@@ -400,8 +401,8 @@ const PostsPage = () => {
 
       {/* Create Post Button & Filters */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        <button className="btn btn-primary" onClick={() => setCreateModalOpen(true)}>
-          ✏️ Create Post
+        <button className="btn btn-primary" onClick={() => setCreateModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Edit3 size={16} /> Create Post
         </button>
 
         <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
@@ -463,9 +464,9 @@ const PostsPage = () => {
                 actionButtons = (
                   <button
                     onClick={() => { window.location.hash = 'chat'; }}
-                    style={{ padding: '8px 16px', background: '#84CC16', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '500', cursor: 'pointer' }}
+                    style={{ padding: '8px 16px', background: '#84CC16', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
-                    💬 Chat
+                    <MessageCircle size={16} /> Chat
                   </button>
                 );
               } else if (status === 'pending') {
@@ -597,26 +598,16 @@ const PostsPage = () => {
                   <button
                     onClick={() => toggleLike(post._id)}
                     disabled={stateLocks[post._id]}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      background: 'none',
-                      border: 'none',
-                      cursor: stateLocks[post._id] ? 'not-allowed' : 'pointer',
-                      fontSize: '1rem',
-                      color: '#6b7280',
-                      padding: '8px',
-                      borderRadius: '8px',
-                      transition: '0.2s',
-                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: stateLocks[post._id] ? 'not-allowed' : 'pointer', fontSize: '1rem', color: '#6b7280', padding: '8px', borderRadius: '8px', transition: '0.2s' }}
                   >
-                    <span style={{ fontSize: '1.2rem' }}>{post.isLikedByMe ? '❤️' : '🤍'}</span>
+                    {post.isLikedByMe
+                      ? <Heart size={20} fill="#EF4444" color="#EF4444" />
+                      : <Heart size={20} color="#9CA3AF" />}
                     <span style={{ fontWeight: '600' }}>{post.likeCount || 0}</span>
                   </button>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-                      👁️ {post.viewCount || post.views || 0}
+                      <Eye size={16} /> {post.viewCount || post.views || 0}
                     </div>
                     {actionButtons}
                   </div>
@@ -724,9 +715,9 @@ const PostsPage = () => {
               className="btn btn-secondary"
               onClick={() => document.getElementById('post-media-input').click()}
               disabled={uploading || selectedMediaFiles.length >= MAX_FILES}
-              style={{ width: '100%' }}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
             >
-              📷 Add Media ({selectedMediaFiles.length}/{MAX_FILES})
+              <Image size={16} /> Add Media ({selectedMediaFiles.length}/{MAX_FILES})
             </button>
           </div>
 

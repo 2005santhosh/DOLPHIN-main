@@ -4,6 +4,7 @@ import Card from '../../shared/Card';
 import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { founderAPI } from '../../../services/api';
+import { Inbox, CornerUpRight } from '../../shared/Icons';
 
 const timeAgo = (dateStr) => {
   const s = Math.floor((Date.now() - new Date(dateStr)) / 1000);
@@ -105,9 +106,9 @@ export default function RequestsPage({ setRequestsCount }) {
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
         {[
-          { key: 'incoming', label: '📥 Incoming', badge: pendingCount },
-          { key: 'sent', label: '📤 Sent' },
-        ].map(({ key, label, badge }) => (
+          { key: 'incoming', label: 'Incoming', icon: <Inbox size={16} />, badge: pendingCount },
+          { key: 'sent', label: 'Sent', icon: <CornerUpRight size={16} /> },
+        ].map(({ key, label, icon, badge }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -121,9 +122,12 @@ export default function RequestsPage({ setRequestsCount }) {
               cursor: 'pointer',
               position: 'relative',
               fontSize: '0.95rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
             }}
           >
-            {label}
+            {icon} {label}
             {badge > 0 && (
               <span style={{
                 marginLeft: '6px', background: 'var(--error)', color: 'white',

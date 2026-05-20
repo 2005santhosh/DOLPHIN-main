@@ -4,6 +4,7 @@ import Card from '../../shared/Card';
 import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { investorAPI } from '../../../services/api';
+import { CornerUpRight, Inbox, MessageCircle } from '../../shared/Icons';
 
 const timeAgo = (d) => {
   const s = Math.floor((Date.now() - new Date(d)) / 1000);
@@ -87,10 +88,10 @@ export default function RequestsPage({ setRequestsCount }) {
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '2px solid var(--border-color, #E5E7EB)', marginBottom: '1.5rem' }}>
         <button style={tabStyle('sent')} onClick={() => setTab('sent')}>
-          📤 Sent ({sent.length})
+          <CornerUpRight size={15} style={{ marginRight: 4 }} /> Sent ({sent.length})
         </button>
         <button style={tabStyle('incoming')} onClick={() => setTab('incoming')}>
-          📥 Incoming ({incoming.length})
+          <Inbox size={15} style={{ marginRight: 4 }} /> Incoming ({incoming.length})
         </button>
       </div>
 
@@ -146,8 +147,9 @@ export default function RequestsPage({ setRequestsCount }) {
                         <button
                           className="btn btn-primary btn-sm"
                           onClick={() => { window.location.hash = 'chat'; }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                         >
-                          💬 Chat with Founder
+                          <MessageCircle size={14} /> Chat with Founder
                         </button>
                       </div>
                     )}

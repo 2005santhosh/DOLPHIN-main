@@ -2,6 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import '../../styles/landing.css';
+import {
+  Users, TrendingUp, BarChart2, CheckCircle2, Clock,
+  Target, Puzzle, ShieldCheck, Lock, Map, Smartphone,
+  Download, Menu, X, Mail, Home, Zap,
+} from '../shared/Icons';
 
 const Landing = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -132,14 +137,18 @@ const Landing = () => {
       <header id="main-header" className={headerFloating ? 'floating' : ''}>
         <div className="logo">
           <span className="logo-dot"></span>
-          🐬 Dolphin
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '0.3rem' }}>
+            <path d="M21 12c0 1.2-4 6-9 6s-9-4.8-9-6c0-1.2 4-6 9-6s9 4.8 9 6z"/>
+            <circle cx="12" cy="12" r="2"/>
+          </svg>
+          Dolphin
         </div>
         <nav className="desktop-nav">
           <a href="#features" className="nav-link">Features</a>
           <a href="#how-it-works" className="nav-link">How It Works</a>
           {showInstallButton && (
-            <button id="install-btn" onClick={handleInstallClick}>
-              📥 Install
+            <button id="install-btn" onClick={handleInstallClick} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Download size={15} /> Install
             </button>
           )}
           {isAuthenticated ? (
@@ -176,7 +185,7 @@ const Landing = () => {
             <Link to="/login" className="btn btn-glass btn-sm mobile-login-btn">Log In</Link>
           )}
           <button className="menu-toggle" onClick={toggleMobileMenu} aria-label="Open Menu">
-            ☰
+            <Menu size={22} />
           </button>
         </div>
       </header>
@@ -184,26 +193,33 @@ const Landing = () => {
       {/* Mobile Menu */}
       <nav className={`mobile-nav ${mobileMenuOpen ? 'active' : ''}`}>
         <div className="mobile-nav-header">
-          <div className="logo"><span className="logo-dot"></span>🐬 Dolphin</div>
+          <div className="logo">
+            <span className="logo-dot"></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '0.3rem' }}>
+              <path d="M21 12c0 1.2-4 6-9 6s-9-4.8-9-6c0-1.2 4-6 9-6s9 4.8 9 6z"/>
+              <circle cx="12" cy="12" r="2"/>
+            </svg>
+            Dolphin
+          </div>
           <button className="menu-close" onClick={closeMobileMenu} aria-label="Close Menu">
-            ✕
+            <X size={22} />
           </button>
         </div>
         <div className="mobile-nav-links">
-          <a href="#features" className="mobile-nav-link" onClick={closeMobileMenu}>
-            📱 Features
+          <a href="#features" className="mobile-nav-link" onClick={closeMobileMenu} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Smartphone size={17} /> Features
           </a>
-          <a href="#how-it-works" className="mobile-nav-link" onClick={closeMobileMenu}>
-            🗺️ How It Works
+          <a href="#how-it-works" className="mobile-nav-link" onClick={closeMobileMenu} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Map size={17} /> How It Works
           </a>
-          <Link to="/support" className="mobile-nav-link" onClick={closeMobileMenu}>
-            🛟 Support
+          <Link to="/support" className="mobile-nav-link" onClick={closeMobileMenu} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Mail size={17} /> Support
           </Link>
         </div>
         <div className="mobile-nav-actions">
           {showInstallButton && (
-            <button id="install-btn-mobile" onClick={handleInstallClick}>
-              📥 Install App
+            <button id="install-btn-mobile" onClick={handleInstallClick} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Download size={15} /> Install App
             </button>
           )}
           <Link to="/login" className="btn btn-glass btn-block" onClick={closeMobileMenu}>Log In</Link>
@@ -219,7 +235,7 @@ const Landing = () => {
           <div className="hero-glow-2"></div>
           <div className="hero-content">
             <div className="hero-badge">
-              <span className="hero-badge-dot">⚡</span>
+              <span className="hero-badge-dot"><Zap size={12} /></span>
               Trusted by 50+ Founders
             </div>
             <h1>
@@ -246,23 +262,23 @@ const Landing = () => {
         <div className="trust-bar">
           <div className="trust-scroll">
             <div className="trust-chip stat-item">
-              <span className="trust-chip-icon lime-bg">👥</span>
+              <span className="trust-chip-icon lime-bg"><Users size={16} /></span>
               <span><span className="trust-chip-number stat-number">50</span>+ Founders</span>
             </div>
             <div className="trust-chip stat-item">
-              <span className="trust-chip-icon blue-bg">📈</span>
+              <span className="trust-chip-icon blue-bg"><TrendingUp size={16} /></span>
               <span><span className="trust-chip-number stat-number">2</span>L+ Raised</span>
             </div>
             <div className="trust-chip stat-item">
-              <span className="trust-chip-icon white-bg">📊</span>
+              <span className="trust-chip-icon white-bg"><BarChart2 size={16} /></span>
               <span><span className="trust-chip-number stat-number">4</span> Stages</span>
             </div>
             <div className="trust-chip stat-item">
-              <span className="trust-chip-icon lime-bg">✅</span>
+              <span className="trust-chip-icon lime-bg"><CheckCircle2 size={16} /></span>
               <span><span className="trust-chip-number stat-number">70</span>%+ Validation</span>
             </div>
             <div className="trust-chip">
-              <span className="trust-chip-icon blue-bg">⏱️</span>
+              <span className="trust-chip-icon blue-bg"><Clock size={16} /></span>
               <span>3x Faster to PMF</span>
             </div>
           </div>
@@ -301,7 +317,7 @@ const Landing = () => {
 
           <div className="bento-grid">
             <div className="bento-card wide reveal">
-              <div className="bento-card-icon lime">🎯</div>
+              <div className="bento-card-icon lime"><Target size={22} /></div>
               <h3>Validation Engine</h3>
               <p>Stage-gated roadmap with AI-powered verification to ensure product-market fit at every milestone. No more guessing.</p>
               <div className="bento-metric">
@@ -315,7 +331,7 @@ const Landing = () => {
             </div>
 
             <div className="bento-card reveal reveal-d1">
-              <div className="bento-card-icon blue">📈</div>
+              <div className="bento-card-icon blue"><TrendingUp size={22} /></div>
               <h3>Investor Discovery</h3>
               <p>Curated pipeline connecting VCs with funding-ready startups scoring 70%+ validation.</p>
               <div className="bento-card-visual">
@@ -327,7 +343,7 @@ const Landing = () => {
             </div>
 
             <div className="bento-card reveal reveal-d2">
-              <div className="bento-card-icon white">🧩</div>
+              <div className="bento-card-icon white"><Puzzle size={22} /></div>
               <h3>Freelancer Marketplace</h3>
               <p>Vetted legal, tech, and design professionals verified for quality and startup-fit. Connect with experts who understand your needs.</p>
               <div className="bento-card-visual">
@@ -351,19 +367,19 @@ const Landing = () => {
           <div className="benefits-grid">
             <div className="benefit-card reveal">
               <div className="benefit-card-glow lime"></div>
-              <div className="benefit-icon lime">🛡️</div>
+              <div className="benefit-icon lime"><ShieldCheck size={22} /></div>
               <h3>De-Risked Growth</h3>
               <p>Every milestone is AI-verified and admin-reviewed to protect against data falsification and ensure genuine progress.</p>
             </div>
             <div className="benefit-card reveal reveal-d1">
               <div className="benefit-card-glow blue"></div>
-              <div className="benefit-icon blue">🔒</div>
+              <div className="benefit-icon blue"><Lock size={22} /></div>
               <h3>Secure Interactions</h3>
               <p>Strict role-based access control and comprehensive interaction tracking ensure trust between all stakeholders.</p>
             </div>
             <div className="benefit-card reveal reveal-d2">
               <div className="benefit-card-glow lime"></div>
-              <div className="benefit-icon white">📊</div>
+              <div className="benefit-icon white"><BarChart2 size={22} /></div>
               <h3>Total Transparency</h3>
               <p>Complete audit trails for every startup profile, keeping all stakeholders aligned on metrics and validation status.</p>
             </div>
@@ -430,8 +446,8 @@ const Landing = () => {
           <div className="footer-brand">
             <div className="logo"><span className="logo-dot"></span> Dolphin</div>
             <p>The platform for meaningful connections between founders, freelancers, and investors.</p>
-            <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.7 }}>
-              📧 <a href="mailto:support@pacificdev.in" style={{ color: 'inherit' }}>support@pacificdev.in</a>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.7, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <Mail size={14} /> <a href="mailto:support@pacificdev.in" style={{ color: 'inherit' }}>support@pacificdev.in</a>
             </p>
           </div>
           <div className="footer-col">
@@ -463,14 +479,17 @@ const Landing = () => {
       </footer>
 
         <nav className="bottom-nav">
-          <a href="#features" className="bottom-nav-item active">
-            📱 Features
+          <a href="#features" className="bottom-nav-item active" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+            <Smartphone size={18} />
+            <span>Features</span>
           </a>
-          <a href="#how-it-works" className="bottom-nav-item">
-            🗺️ Roadmap
+          <a href="#how-it-works" className="bottom-nav-item" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+            <Map size={18} />
+            <span>Roadmap</span>
           </a>
-          <Link to="/register" className="bottom-nav-item cta-item">
-            → Start
+          <Link to="/register" className="bottom-nav-item cta-item" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+            <Zap size={18} />
+            <span>Start</span>
           </Link>
         </nav>
     </div>

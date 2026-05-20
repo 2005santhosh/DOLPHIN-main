@@ -5,6 +5,7 @@ import Modal from '../../shared/Modal';
 import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { investorAPI } from '../../../services/api';
+import { Star, StarOff } from '../../shared/Icons';
 
 const VERIFIED = ['APPROVED','STAGE_1','STAGE_2','STAGE_3','STAGE_4','STAGE_5','STAGE_6','STAGE_7'];
 
@@ -223,9 +224,11 @@ export default function StartupsPage() {
                       className="btn btn-secondary btn-sm"
                       disabled={busy[sid]}
                       onClick={e => toggleWatchlist(startup._id, e)}
-                      style={isWatched ? { background: '#FEF3C7', color: '#92400E', border: 'none' } : {}}
+                      style={isWatched ? { background: '#FEF3C7', color: '#92400E', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' } : { display: 'flex', alignItems: 'center', gap: '4px' }}
                     >
-                      {busy[sid] ? '…' : isWatched ? '★ Watching' : '☆ Watch'}
+                      {busy[sid] ? '…' : isWatched
+                        ? <><Star size={14} fill="#92400E" color="#92400E" /> Watching</>
+                        : <><StarOff size={14} /> Watch</>}
                     </button>
                     {actionBtn}
                   </div>
@@ -305,11 +308,13 @@ export default function StartupsPage() {
                 )}
                 <button
                   className="btn btn-secondary"
-                  style={{ flex: 1, ...(isWatched ? { background: '#FEF3C7', color: '#92400E', border: 'none' } : {}) }}
+                  style={{ flex: 1, ...(isWatched ? { background: '#FEF3C7', color: '#92400E', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' } : { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }) }}
                   disabled={busy[sid]}
                   onClick={e => toggleWatchlist(detail._id, e)}
                 >
-                  {busy[sid] ? '…' : isWatched ? '★ Watching' : '☆ Watch'}
+                  {busy[sid] ? '…' : isWatched
+                    ? <><Star size={14} fill="#92400E" color="#92400E" /> Watching</>
+                    : <><StarOff size={14} /> Watch</>}
                 </button>
               </div>
             </div>

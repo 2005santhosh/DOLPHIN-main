@@ -5,6 +5,7 @@ import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { chatAPI } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
+import { MessageSquare } from '../../shared/Icons';
 
 const msgTime = (d) => {
   const date = new Date(d);
@@ -220,7 +221,9 @@ export default function ChatPage({ setChatCount }) {
             {!selected ? (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💬</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                    <MessageSquare size={48} color="#D1D5DB" />
+                  </div>
                   <p>Select a conversation to start messaging</p>
                 </div>
               </div>
@@ -244,7 +247,7 @@ export default function ChatPage({ setChatCount }) {
                   {loadingMsgs ? (
                     <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>Loading…</div>
                   ) : messages.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No messages yet. Say hi! 👋</div>
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No messages yet. Say hi!</div>
                   ) : (
                     messages.map((msg) => {
                       const senderId = getSenderId(msg);

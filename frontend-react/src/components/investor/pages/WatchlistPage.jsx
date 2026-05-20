@@ -5,6 +5,7 @@ import Modal from '../../shared/Modal';
 import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { investorAPI } from '../../../services/api';
+import { Star } from '../../shared/Icons';
 
 const VERIFIED = ['APPROVED','STAGE_1','STAGE_2','STAGE_3','STAGE_4','STAGE_5','STAGE_6','STAGE_7'];
 
@@ -84,7 +85,9 @@ export default function WatchlistPage() {
       {watchlist.length === 0 ? (
         <Card>
           <div style={{ textAlign: 'center', padding: '3rem 2rem' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⭐</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+              <Star size={48} color="#D1D5DB" />
+            </div>
             <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Your watchlist is empty</h3>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
               Browse validated startups and click "Watch" to track them here.

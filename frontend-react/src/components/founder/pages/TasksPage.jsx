@@ -5,6 +5,7 @@ import LoadingSpinner from '../../shared/LoadingSpinner';
 import { useAuth } from '../../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { founderAPI } from '../../../services/api';
+import { Lock } from '../../shared/Icons';
 
 const TasksPage = () => {
   const { user, refreshProfile } = useAuth();
@@ -86,8 +87,8 @@ const TasksPage = () => {
 
       {locked && (
         <Card style={{ marginBottom: '1.5rem' }}>
-          <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-            🔒 Complete all 5 Validation Stages to unlock your Growth Roadmap.
+          <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+            <Lock size={18} /> Complete all 5 Validation Stages to unlock your Growth Roadmap.
           </p>
         </Card>
       )}

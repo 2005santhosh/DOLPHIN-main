@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { Eye, EyeOff, Lock, AlertTriangle, CheckCircle2 } from '../shared/Icons';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -77,7 +78,9 @@ export default function ResetPassword() {
           border: '1px solid var(--border-color, #E5E7EB)',
         }}>
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔐</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
+              <Lock size={40} color="var(--primary, #84CC16)" />
+            </div>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary, #111827)', marginBottom: '0.5rem' }}>
               Reset Password
             </h1>
@@ -89,7 +92,9 @@ export default function ResetPassword() {
           {!hasToken ? (
             /* No token */
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                <AlertTriangle size={48} color="#D97706" />
+              </div>
               <p style={{ color: 'var(--text-secondary, #6B7280)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
                 Invalid or missing reset token. Please request a new password reset link.
               </p>
@@ -103,9 +108,9 @@ export default function ResetPassword() {
               <div style={{
                 width: 64, height: 64, borderRadius: '50%',
                 background: '#D1FAE5', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', margin: '0 auto 1.25rem', fontSize: '1.75rem',
+                justifyContent: 'center', margin: '0 auto 1.25rem',
               }}>
-                ✅
+                <CheckCircle2 size={32} color="#059669" />
               </div>
               <h3 style={{ fontWeight: 700, color: 'var(--text-primary, #111827)', marginBottom: '0.5rem' }}>
                 Password Updated!
@@ -133,12 +138,10 @@ export default function ResetPassword() {
                     className="form-input"
                     style={{ width: '100%', paddingRight: '3rem', boxSizing: 'border-box' }}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPw(v => !v)}
-                    style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-tertiary, #9CA3AF)', cursor: 'pointer' }}
+                  <button type="button" onClick={() => setShowPw(v => !v)}
+                    style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-tertiary, #9CA3AF)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                   >
-                    {showPw ? '👁️' : '👁️‍🗨️'}
+                    {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>

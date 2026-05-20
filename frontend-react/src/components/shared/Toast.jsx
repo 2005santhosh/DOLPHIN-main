@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { CheckCircle2, XCircle, Info } from './Icons';
 
 const Toast = ({ message, type = 'info', onClose }) => {
   useEffect(() => {
@@ -10,9 +11,9 @@ const Toast = ({ message, type = 'info', onClose }) => {
   }, [onClose]);
 
   const icons = {
-    success: '✅',
-    error: '❌',
-    info: 'ℹ️'
+    success: <CheckCircle2 size={16} />,
+    error:   <XCircle size={16} />,
+    info:    <Info size={16} />,
   };
 
   return (

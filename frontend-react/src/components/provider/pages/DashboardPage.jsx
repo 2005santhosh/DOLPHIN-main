@@ -4,6 +4,7 @@ import Card, { CardHeader, CardTitle } from '../../shared/Card';
 import StatCard from '../../shared/StatCard';
 import LoadingSpinner from '../../shared/LoadingSpinner';
 import { providerAPI } from '../../../services/api';
+import { User } from '../../shared/Icons';
 
 const DashboardPage = () => {
   const [profile, setProfile] = useState(null);
@@ -107,7 +108,9 @@ const DashboardPage = () => {
           subtitle="Welcome to your provider dashboard"
         />
         <Card style={{ textAlign: 'center', padding: '3rem 2rem' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👤</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+            <User size={48} color="#D1D5DB" />
+          </div>
           <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
             Complete Your Profile First
           </h3>

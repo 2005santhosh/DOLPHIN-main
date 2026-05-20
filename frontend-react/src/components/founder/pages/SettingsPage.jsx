@@ -6,6 +6,7 @@ import { useAuth } from '../../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { authAPI } from '../../../services/api';
 import LegalSections from '../../shared/LegalSections';
+import { Eye, EyeOff, AlertTriangle, CheckCircle2 } from '../../shared/Icons';
 
 const SettingsPage = () => {
   const { user, logout, refreshProfile } = useAuth();
@@ -70,7 +71,7 @@ const SettingsPage = () => {
       const newUrl = result.profilePicture || result.url || '';
       setProfileData(prev => ({ ...prev, profilePicture: newUrl }));
       if (refreshProfile) await refreshProfile().catch(() => {});
-      toast.success('✅ Profile picture updated!');
+      toast.success('Profile picture updated!');
     } catch (error) {
       toast.error(error.message || 'Failed to upload image');
     } finally {
@@ -234,8 +235,9 @@ const SettingsPage = () => {
                 type="button"
                 className="password-toggle"
                 onClick={() => togglePasswordVisibility('current')}
+                style={{ display: 'flex', alignItems: 'center' }}
               >
-                {showPassword.current ? '👁️' : '👁️‍🗨️'}
+                {showPassword.current ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
@@ -253,8 +255,9 @@ const SettingsPage = () => {
                 type="button"
                 className="password-toggle"
                 onClick={() => togglePasswordVisibility('new')}
+                style={{ display: 'flex', alignItems: 'center' }}
               >
-                {showPassword.new ? '👁️' : '👁️‍🗨️'}
+                {showPassword.new ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
@@ -276,7 +279,9 @@ const SettingsPage = () => {
       {/* Danger Zone */}
       <Card className="danger-zone-card" style={{ border: '1px solid rgba(248,113,113,0.2)', background: 'rgba(248,113,113,0.03)' }}>
         <div className="card-header" style={{ background: 'rgba(248,113,113,0.06)', borderBottom: '1px solid rgba(248,113,113,0.12)' }}>
-          <CardTitle style={{ color: 'var(--error)' }}>⚠️ Danger Zone</CardTitle>
+        <CardTitle style={{ color: 'var(--error)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertTriangle size={18} /> Danger Zone
+          </CardTitle>
           <p style={{ fontSize: '0.85rem', color: 'var(--error)', margin: 0 }}>Irreversible and critical actions</p>
         </div>
         <div style={{ padding: '0 24px' }}>
