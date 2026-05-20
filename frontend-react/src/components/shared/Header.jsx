@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { notificationsAPI, providerAPI } from '../../services/api';
 import toast from 'react-hot-toast';
+import DolphinLogo from './DolphinLogo';
 
 const VERIFIED_STATES = ['APPROVED','STAGE_1','STAGE_2','STAGE_3','STAGE_4','STAGE_5','STAGE_6','STAGE_7'];
 
@@ -135,12 +136,8 @@ export default function Header({ onMenuToggle }) {
               <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#3B82F6', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.4rem', lineHeight: 1 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 12c0 1.2-4 6-9 6s-9-4.8-9-6c0-1.2 4-6 9-6s9 4.8 9 6z"/>
-              <circle cx="12" cy="12" r="2"/>
-            </svg>
-            <span>Dolphin</span>
+          <span style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}>
+            <DolphinLogo size={30} textColor="#111827" />
           </span>
         </div>
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { LifeBuoy, Mail, MessageCircle, BookOpen, Lock, FileText, CreditCard, CheckCircle2 } from '../shared/Icons';
+import DolphinLogo from '../shared/DolphinLogo';
 
 const FAQS = [
   {
@@ -86,7 +87,7 @@ export default function SupportPage() {
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 64, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #E5E7EB', zIndex: 100, display: 'flex', alignItems: 'center', padding: '0 2rem' }}>
         <div style={{ maxWidth: 1200, width: '100%', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#111827', fontWeight: 700, fontSize: '1.25rem' }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12c0 1.2-4 6-9 6s-9-4.8-9-6c0-1.2 4-6 9-6s9 4.8 9 6z"/><circle cx="12" cy="12" r="2"/></svg> Dolphin
+            <DolphinLogo size={28} textColor="#111827" />
           </a>
           <button onClick={() => window.close()} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#6B7280', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500 }}
             onMouseEnter={e => e.target.style.color = '#0D9488'} onMouseLeave={e => e.target.style.color = '#6B7280'}>

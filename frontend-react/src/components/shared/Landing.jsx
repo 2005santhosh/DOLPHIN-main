@@ -7,6 +7,7 @@ import {
   Target, Puzzle, ShieldCheck, Lock, Map, Smartphone,
   Download, Menu, X, Mail, Home, Zap,
 } from '../shared/Icons';
+import DolphinLogo from './DolphinLogo';
 
 const Landing = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -136,12 +137,7 @@ const Landing = () => {
       {/* Header */}
       <header id="main-header" className={headerFloating ? 'floating' : ''}>
         <div className="logo">
-          <span className="logo-dot"></span>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '0.3rem' }}>
-            <path d="M21 12c0 1.2-4 6-9 6s-9-4.8-9-6c0-1.2 4-6 9-6s9 4.8 9 6z"/>
-            <circle cx="12" cy="12" r="2"/>
-          </svg>
-          Dolphin
+          <DolphinLogo size={32} textColor="inherit" />
         </div>
         <nav className="desktop-nav">
           <a href="#features" className="nav-link">Features</a>
@@ -194,12 +190,7 @@ const Landing = () => {
       <nav className={`mobile-nav ${mobileMenuOpen ? 'active' : ''}`}>
         <div className="mobile-nav-header">
           <div className="logo">
-            <span className="logo-dot"></span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '0.3rem' }}>
-              <path d="M21 12c0 1.2-4 6-9 6s-9-4.8-9-6c0-1.2 4-6 9-6s9 4.8 9 6z"/>
-              <circle cx="12" cy="12" r="2"/>
-            </svg>
-            Dolphin
+            <DolphinLogo size={28} textColor="inherit" />
           </div>
           <button className="menu-close" onClick={closeMobileMenu} aria-label="Close Menu">
             <X size={22} />
@@ -444,7 +435,9 @@ const Landing = () => {
       <footer>
         <div className="footer-grid">
           <div className="footer-brand">
-            <div className="logo"><span className="logo-dot"></span> Dolphin</div>
+            <div className="logo" style={{ marginBottom: '0.75rem' }}>
+              <DolphinLogo size={30} textColor="inherit" />
+            </div>
             <p>The platform for meaningful connections between founders, freelancers, and investors.</p>
             <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.7, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <Mail size={14} /> <a href="mailto:support@pacificdev.in" style={{ color: 'inherit' }}>support@pacificdev.in</a>

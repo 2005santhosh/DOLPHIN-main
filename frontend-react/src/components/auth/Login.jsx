@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { Eye, EyeOff } from '../shared/Icons';
+import DolphinLogo from '../shared/DolphinLogo';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -44,8 +45,8 @@ export default function Login() {
       <div style={{ width: '100%', maxWidth: '420px' }}>
         <div style={{ background: 'var(--bg-surface)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', padding: '2.5rem', border: '1px solid var(--border-color)' }}>
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
-              <img src="/logo.png" alt="Dolphin" style={{ height: 48 }} onError={e => { e.target.style.display='none'; }} />
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+              <DolphinLogo size={52} iconOnly />
             </div>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Welcome Back</h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Sign in to your Dolphin account</p>

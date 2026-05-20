@@ -1,4 +1,5 @@
 import { FileText, Mail, Globe } from '../shared/Icons';
+import DolphinLogo from '../shared/DolphinLogo';
 
 export default function TermsOfService() {
   return (
@@ -6,8 +7,7 @@ export default function TermsOfService() {
       <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #E5E7EB' }}>
         <div style={{ maxWidth: '56rem', margin: '0 auto', padding: '0 1.5rem', height: '4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#111827' }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12c0 1.2-4 6-9 6s-9-4.8-9-6c0-1.2 4-6 9-6s9 4.8 9 6z"/><circle cx="12" cy="12" r="2"/></svg>
-            <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>Dolphin</span>
+            <DolphinLogo size={28} textColor="#111827" />
           </a>
           <button onClick={() => window.close()} style={{ fontSize: '0.875rem', fontWeight: 500, color: '#6B7280', background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem 1rem', borderRadius: 8 }}
             onMouseEnter={e => e.target.style.color = '#4F46E5'} onMouseLeave={e => e.target.style.color = '#6B7280'}>
