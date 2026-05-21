@@ -10,9 +10,41 @@ import LoadingSpinner from './LoadingSpinner';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STREAK_REWARDS = [
-  { milestone: 30, name: 'Dolphin Cap',    icon: '🧢', color: '#3B82F6', bg: '#DBEAFE', desc: 'Exclusive Dolphin branded cap' },
-  { milestone: 60, name: 'Dolphin Bottle', icon: '🍶', color: '#10B981', bg: '#D1FAE5', desc: 'Premium Dolphin water bottle' },
-  { milestone: 90, name: 'Dolphin Bag',    icon: '🎒', color: '#8B5CF6', bg: '#EDE9FE', desc: 'Stylish Dolphin backpack' },
+  {
+    milestone: 30,
+    name: 'Dolphin Cap',
+    icon: (
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    ),
+    color: '#3B82F6', bg: '#DBEAFE', desc: 'Exclusive Dolphin branded cap',
+  },
+  {
+    milestone: 60,
+    name: 'Dolphin Bottle',
+    icon: (
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8 2h8l1 4H7L8 2z"/>
+        <rect x="6" y="6" width="12" height="15" rx="2"/>
+        <path d="M10 11h4M10 15h4"/>
+      </svg>
+    ),
+    color: '#10B981', bg: '#D1FAE5', desc: 'Premium Dolphin water bottle',
+  },
+  {
+    milestone: 90,
+    name: 'Dolphin Bag',
+    icon: (
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <path d="M16 10a4 4 0 0 1-8 0"/>
+      </svg>
+    ),
+    color: '#8B5CF6', bg: '#EDE9FE', desc: 'Stylish Dolphin backpack',
+  },
 ];
 
 const ROLE_LABELS = { founder: 'Founder', investor: 'Investor', provider: 'Provider' };
@@ -67,7 +99,7 @@ function RewardCard({ reward, userReward, onClaim }) {
           padding: '2px 8px',
         }}>NEW</div>
       )}
-      <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem', textAlign: 'center' }}>{reward.icon}</div>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>{reward.icon}</div>
       <h3 style={{ margin: '0 0 4px', color: unlocked ? reward.color : '#9CA3AF', fontWeight: 700, textAlign: 'center', fontSize: '1rem' }}>
         {reward.name}
       </h3>
@@ -151,10 +183,19 @@ function LeaderboardTable({ data, currentUserId, loading }) {
               <div style={{ fontWeight: 600, color: '#111827', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {entry.name} {isMe && <span style={{ fontSize: '0.7rem', color: '#84CC16', fontWeight: 700 }}>(You)</span>}
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#6B7280', display: 'flex', gap: '0.75rem', marginTop: 2 }}>
-                <span>🔥 {entry.currentStreak}d streak</span>
-                <span>📝 {entry.totalPosts} posts</span>
-                <span>🤝 {entry.totalConnections} connections</span>
+              <div style={{ fontSize: '0.75rem', color: '#6B7280', display: 'flex', gap: '0.75rem', marginTop: 2, flexWrap: 'wrap' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="#EF4444"><path d="M12 2C12 2 8 7 8 11C8 13.2 9.8 15 12 15C14.2 15 16 13.2 16 11C16 7 12 2 12 2Z"/><path d="M12 15C9.8 15 8 16.8 8 19C8 21.2 9.8 23 12 23C14.2 23 16 21.2 16 19C16 16.8 14.2 15 12 15Z" opacity="0.65"/></svg>
+                  {entry.currentStreak}d
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  {entry.totalPosts}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  {entry.totalConnections}
+                </span>
               </div>
             </div>
 
@@ -308,16 +349,16 @@ export default function GamificationPage() {
               </div>
 
               {/* Stats pills */}
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                 {[
-                  { label: 'Posts',       value: stats?.totalPosts || 0,       icon: '📝' },
-                  { label: 'Connections', value: stats?.totalConnections || 0, icon: '🤝' },
-                  { label: 'Points',      value: stats?.rewardPoints || 0,     icon: '⭐' },
+                  { label: 'Posts',       value: stats?.totalPosts || 0,       icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+                  { label: 'Connections', value: stats?.totalConnections || 0, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+                  { label: 'Points',      value: stats?.rewardPoints || 0,     icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> },
                 ].map(({ label, value, icon }) => (
-                  <div key={label} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '0.625rem 1rem', textAlign: 'center', minWidth: 80 }}>
-                    <div style={{ fontSize: '1.1rem', marginBottom: 2 }}>{icon}</div>
-                    <div style={{ color: 'white', fontWeight: 800, fontSize: '1.1rem', lineHeight: 1 }}>{value}</div>
-                    <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', marginTop: 2 }}>{label}</div>
+                  <div key={label} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '0.625rem 0.875rem', textAlign: 'center', minWidth: 72 }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 3 }}>{icon}</div>
+                    <div style={{ color: 'white', fontWeight: 800, fontSize: '1rem', lineHeight: 1 }}>{value}</div>
+                    <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.68rem', marginTop: 2 }}>{label}</div>
                   </div>
                 ))}
               </div>
@@ -342,14 +383,29 @@ export default function GamificationPage() {
           {/* How to earn streak */}
           <Card style={{ marginBottom: '1.5rem' }}>
             <CardHeader><CardTitle>How to Maintain Your Streak</CardTitle></CardHeader>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
               {[
-                { icon: '📝', title: 'Post Content',       desc: 'Share updates, insights, or opportunities',  points: '+10 pts' },
-                { icon: '🤝', title: 'Make Connections',   desc: 'Accept or send connection requests',          points: '+15 pts' },
-                { icon: '🔑', title: 'Daily Login',        desc: 'Simply log in and engage with the platform', points: '+5 pts' },
+                {
+                  icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+                  title: 'Post Content',
+                  desc: 'Share updates, insights, or opportunities',
+                  points: '+10 pts',
+                },
+                {
+                  icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+                  title: 'Make Connections',
+                  desc: 'Accept or send connection requests',
+                  points: '+15 pts',
+                },
+                {
+                  icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+                  title: 'Daily Login',
+                  desc: 'Simply log in and engage with the platform',
+                  points: '+5 pts',
+                },
               ].map(({ icon, title, desc, points }) => (
                 <div key={title} style={{ padding: '1rem', background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
-                  <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{icon}</div>
+                  <div style={{ marginBottom: '0.5rem' }}>{icon}</div>
                   <div style={{ fontWeight: 600, color: '#111827', fontSize: '0.9rem', marginBottom: '0.25rem' }}>{title}</div>
                   <div style={{ color: '#6B7280', fontSize: '0.8rem', lineHeight: 1.4, marginBottom: '0.5rem' }}>{desc}</div>
                   <span style={{ background: '#D1FAE5', color: '#065F46', padding: '2px 8px', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700 }}>{points}</span>
@@ -459,7 +515,7 @@ export default function GamificationPage() {
         maxWidth="480px"
       >
         <div style={{ marginBottom: '1rem', padding: '1rem', background: claimReward?.bg || '#F9FAFB', borderRadius: 10, textAlign: 'center' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{claimReward?.icon}</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}>{claimReward?.icon}</div>
           <p style={{ margin: 0, color: claimReward?.color || '#111827', fontWeight: 600 }}>{claimReward?.desc}</p>
         </div>
         <p style={{ color: '#6B7280', fontSize: '0.875rem', marginBottom: '1.25rem', lineHeight: 1.5 }}>

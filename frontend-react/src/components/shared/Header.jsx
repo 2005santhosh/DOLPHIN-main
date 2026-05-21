@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { notificationsAPI, providerAPI } from '../../services/api';
+import { notificationsAPI, providerAPI, gamificationAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import DolphinLogo from './DolphinLogo';
 
@@ -17,19 +17,61 @@ function buildImageUrl(pic) {
   return `${window.location.origin}${pic}`;
 }
 
+/** Flame icon — colour shifts with streak length */
+function StreakBadge({ streak }) {
+  if (streak === undefined || streak === null) return null;
+  const color =
+    streak >= 30 ? '#F59E0B' :
+    streak >= 7  ? '#EF4444' :
+    streak > 0   ? '#FB923C' :
+                   '#9CA3AF';
+
+  return (
+    <button
+      onClick={() => { window.location.hash = 'gamification'; }}
+      title={`${streak}-day streak — click to view`}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '3px',
+        background: streak > 0 ? `${color}18` : '#F3F4F6',
+        border: `1.5px solid ${streak > 0 ? `${color}55` : '#E5E7EB'}`,
+        borderRadius: 9999,
+        padding: '3px 9px',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        flexShrink: 0,
+      }}
+      aria-label={`${streak}-day streak`}
+    >
+      {/* Flame SVG */}
+      <svg
+        width="14" height="14" viewBox="0 0 24 24" fill={color}
+        style={{ filter: streak > 0 ? `drop-shadow(0 0 4px ${color}99)` : 'none', flexShrink: 0 }}
+      >
+        <path d="M12 2C12 2 8 7 8 11C8 13.2 9.8 15 12 15C14.2 15 16 13.2 16 11C16 7 12 2 12 2Z"/>
+        <path d="M12 15C9.8 15 8 16.8 8 19C8 21.2 9.8 23 12 23C14.2 23 16 21.2 16 19C16 16.8 14.2 15 12 15Z" opacity="0.65"/>
+      </svg>
+      <span style={{ fontWeight: 700, fontSize: '0.78rem', color, lineHeight: 1 }}>
+        {streak}
+      </span>
+    </button>
+  );
+}
+
 export default function Header({ onMenuToggle }) {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications]   = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [imgError, setImgError] = useState(false);
+  const [unreadCount, setUnreadCount]       = useState(0);
+  const [imgError, setImgError]             = useState(false);
   const [providerRating, setProviderRating] = useState(null);
-  const notifRef = useRef(null);
-  const bellRef = useRef(null);
-  const [dropdownStyle, setDropdownStyle] = useState({});
+  const [streak, setStreak]                 = useState(null);
+  const notifRef    = useRef(null);
+  const bellRef     = useRef(null);
+  const [dropdownStyle, setDropdownStyle]   = useState({});
 
   useEffect(() => { setImgError(false); }, [user?.profilePicture]);
 
+  // Provider rating
   useEffect(() => {
     if (user?.role === 'provider') {
       providerAPI.getMyProfile()
@@ -38,13 +80,26 @@ export default function Header({ onMenuToggle }) {
     }
   }, [user?.role]);
 
+  // Notifications
   useEffect(() => {
     loadNotifications();
-    const interval = setInterval(loadNotifications, 60000); // every 60s
+    const interval = setInterval(loadNotifications, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // Close on outside click
+  // Streak — fetch once on mount, refresh every 5 min
+  useEffect(() => {
+    const fetchStreak = () => {
+      gamificationAPI.getMyStats()
+        .then(data => setStreak(data?.currentStreak ?? 0))
+        .catch(() => {});
+    };
+    fetchStreak();
+    const interval = setInterval(fetchStreak, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Close notifications on outside click
   useEffect(() => {
     const handler = (e) => {
       if (notifRef.current && !notifRef.current.contains(e.target)) {
@@ -55,23 +110,14 @@ export default function Header({ onMenuToggle }) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Recalculate dropdown position so it never overflows the viewport
   const openNotifications = () => {
     if (!bellRef.current) { setShowNotifications(v => !v); return; }
     const rect = bellRef.current.getBoundingClientRect();
     const dropW = Math.min(340, window.innerWidth - 16);
-    // Try to align right edge of dropdown with right edge of bell button
     let left = rect.right - dropW;
-    // Clamp so it doesn't go off the left edge
     if (left < 8) left = 8;
-    // Clamp so it doesn't go off the right edge
     if (left + dropW > window.innerWidth - 8) left = window.innerWidth - dropW - 8;
-    setDropdownStyle({
-      position: 'fixed',
-      top: rect.bottom + 8,
-      left,
-      width: dropW,
-    });
+    setDropdownStyle({ position: 'fixed', top: rect.bottom + 8, left, width: dropW });
     setShowNotifications(v => !v);
   };
 
@@ -103,10 +149,7 @@ export default function Header({ onMenuToggle }) {
     } catch { toast.error('Failed to clear notifications'); }
   };
 
-  // Navigate to profile page (hash-based routing)
-  const goToProfile = () => {
-    window.location.hash = 'profile';
-  };
+  const goToProfile = () => { window.location.hash = 'profile'; };
 
   // Derived
   const isVerified = VERIFIED_STATES.includes(user?.state);
@@ -117,39 +160,42 @@ export default function Header({ onMenuToggle }) {
   const statTitle  = isProvider ? 'Avg Rating' : 'Reward Points';
 
   return (
-    <header style={{
-      position: 'sticky', top: 0, zIndex: 1000,
-      background: 'white', borderBottom: '1px solid #E5E7EB',
-      padding: '0.75rem 1rem',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+    <header className="app-header">
+      <div className="app-header__inner">
 
-        {/* Left: hamburger + logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+        {/* ── Left: hamburger + logo ── */}
+        <div className="app-header__left">
           <button
             onClick={onMenuToggle}
-            className="mobile-menu-btn"
-            style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: '0.375rem', color: '#6B7280', flexShrink: 0 }}
+            className="app-header__hamburger"
             aria-label="Toggle menu"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          <span style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}>
+          <a href="#dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
             <DolphinLogo size={30} textColor="#111827" />
-          </span>
+          </a>
         </div>
 
-        {/* Right: stat + bell + avatar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+        {/* ── Right: streak + points + bell + avatar + name ── */}
+        <div className="app-header__right">
 
-          {/* Stat (points / rating) */}
-          <div title={statTitle} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#6B7280', fontSize: '0.875rem', fontWeight: 500 }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill={isProvider ? '#F59E0B' : '#6B7280'} stroke="none">
+          {/* Streak badge — always visible */}
+          {streak !== null && <StreakBadge streak={streak} />}
+
+          {/* Points / Rating — hidden on very small screens */}
+          <div
+            title={statTitle}
+            className="app-header__stat"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill={isProvider ? '#F59E0B' : '#9CA3AF'} stroke="none">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
             </svg>
-            <span style={{ fontWeight: 700, color: '#374151' }}>{statValue}</span>
+            <span style={{ fontWeight: 700, color: '#374151', fontSize: '0.82rem' }}>{statValue}</span>
           </div>
 
           {/* Bell */}
@@ -157,26 +203,21 @@ export default function Header({ onMenuToggle }) {
             <button
               ref={bellRef}
               onClick={openNotifications}
-              style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: '0.375rem', color: '#6B7280', display: 'flex', alignItems: 'center' }}
+              className="app-header__icon-btn"
               aria-label="Notifications"
             >
-              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
               {unreadCount > 0 && (
-                <span style={{
-                  position: 'absolute', top: '1px', right: '1px',
-                  background: '#EF4444', color: 'white', borderRadius: '9999px',
-                  fontSize: '0.58rem', fontWeight: 700, padding: '1px 4px',
-                  minWidth: '15px', textAlign: 'center', lineHeight: 1.4,
-                }}>
+                <span className="app-header__badge">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
             </button>
 
-            {/* Notifications dropdown — position: fixed, viewport-aware */}
+            {/* Notifications dropdown */}
             {showNotifications && (
               <div style={{
                 ...dropdownStyle,
@@ -187,7 +228,7 @@ export default function Header({ onMenuToggle }) {
                 zIndex: 9999,
                 overflow: 'hidden',
               }}>
-                {/* Header */}
+                {/* Dropdown header */}
                 <div style={{
                   padding: '0.875rem 1rem',
                   borderBottom: '1px solid #E5E7EB',
@@ -217,7 +258,7 @@ export default function Header({ onMenuToggle }) {
                   </div>
                 </div>
 
-                {/* List */}
+                {/* Notification list */}
                 <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
                   {notifications.length === 0 ? (
                     <div style={{ padding: '2rem', textAlign: 'center', color: '#9CA3AF', fontSize: '0.875rem' }}>
@@ -231,13 +272,15 @@ export default function Header({ onMenuToggle }) {
                     </div>
                   ) : (
                     notifications.map(n => (
-                      <div key={n._id} style={{
-                        padding: '0.75rem 1rem',
-                        borderBottom: '1px solid #F3F4F6',
-                        background: n.read ? 'white' : '#EFF6FF',
-                        cursor: 'pointer',
-                        transition: 'background 0.15s',
-                      }}
+                      <div
+                        key={n._id}
+                        style={{
+                          padding: '0.75rem 1rem',
+                          borderBottom: '1px solid #F3F4F6',
+                          background: n.read ? 'white' : '#EFF6FF',
+                          cursor: 'pointer',
+                          transition: 'background 0.15s',
+                        }}
                         onMouseEnter={e => e.currentTarget.style.background = '#F9FAFB'}
                         onMouseLeave={e => e.currentTarget.style.background = n.read ? 'white' : '#EFF6FF'}
                       >
@@ -255,19 +298,11 @@ export default function Header({ onMenuToggle }) {
             )}
           </div>
 
-          {/* Avatar — click goes to profile */}
+          {/* Avatar */}
           <button
             onClick={goToProfile}
             title={`${user?.name || 'Profile'} — Go to profile`}
-            style={{
-              position: 'relative',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 0,
-              borderRadius: '50%',
-              flexShrink: 0,
-            }}
+            className="app-header__avatar-btn"
             aria-label="Go to profile"
           >
             {showImage ? (
@@ -275,14 +310,14 @@ export default function Header({ onMenuToggle }) {
                 src={avatarUrl}
                 alt={user?.name || 'Profile'}
                 onError={() => setImgError(true)}
-                style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E5E7EB', display: 'block' }}
+                style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E5E7EB', display: 'block' }}
               />
             ) : (
               <div style={{
-                width: 36, height: 36, borderRadius: '50%',
+                width: 34, height: 34, borderRadius: '50%',
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontWeight: 700, fontSize: '0.8rem',
+                color: 'white', fontWeight: 700, fontSize: '0.78rem',
                 border: '2px solid #E5E7EB',
               }}>
                 {getInitials(user?.name)}
@@ -291,27 +326,162 @@ export default function Header({ onMenuToggle }) {
             {isVerified && (
               <span style={{
                 position: 'absolute', bottom: '-1px', right: '-1px',
-                width: 14, height: 14, background: '#22C55E',
+                width: 13, height: 13, background: '#22C55E',
                 borderRadius: '50%', border: '2px solid white',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" style={{ width: 7, height: 7 }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" style={{ width: 6, height: 6 }}>
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </span>
             )}
           </button>
 
-          {/* Name (desktop only) */}
-          <span className="user-name-desktop" style={{ fontSize: '0.85rem', fontWeight: 600, color: '#111827', display: 'none', whiteSpace: 'nowrap' }}>
+          {/* Name — desktop only */}
+          <span className="app-header__name">
             {user?.name}
           </span>
         </div>
       </div>
 
       <style>{`
-        @media (min-width: 768px) { .user-name-desktop { display: block !important; } }
-        @media (max-width: 768px) { .mobile-menu-btn { display: flex !important; } }
+        /* ── Header base ── */
+        .app-header {
+          position: sticky;
+          top: 0;
+          z-index: 1000;
+          background: white;
+          border-bottom: 1px solid #E5E7EB;
+          padding: 0 1rem;
+          height: 60px;
+        }
+        .app-header__inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          height: 100%;
+          gap: 0.5rem;
+          max-width: 100%;
+        }
+
+        /* ── Left ── */
+        .app-header__left {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          flex-shrink: 0;
+        }
+        .app-header__hamburger {
+          display: none;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 0.375rem;
+          color: #6B7280;
+          flex-shrink: 0;
+          border-radius: 6px;
+          transition: background 0.15s;
+        }
+        .app-header__hamburger:hover { background: #F3F4F6; }
+
+        /* ── Right ── */
+        .app-header__right {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          flex-shrink: 0;
+        }
+
+        /* Points/rating pill */
+        .app-header__stat {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          color: #6B7280;
+          font-size: 0.82rem;
+          font-weight: 500;
+          padding: 3px 8px;
+          border-radius: 9999px;
+          background: #F9FAFB;
+          border: 1px solid #E5E7EB;
+          flex-shrink: 0;
+        }
+
+        /* Icon buttons (bell) */
+        .app-header__icon-btn {
+          position: relative;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 0.375rem;
+          color: #6B7280;
+          display: flex;
+          align-items: center;
+          border-radius: 8px;
+          transition: background 0.15s;
+        }
+        .app-header__icon-btn:hover { background: #F3F4F6; }
+
+        /* Notification badge */
+        .app-header__badge {
+          position: absolute;
+          top: 1px;
+          right: 1px;
+          background: #EF4444;
+          color: white;
+          border-radius: 9999px;
+          font-size: 0.55rem;
+          font-weight: 700;
+          padding: 1px 4px;
+          min-width: 14px;
+          text-align: center;
+          line-height: 1.4;
+        }
+
+        /* Avatar button */
+        .app-header__avatar-btn {
+          position: relative;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 0;
+          border-radius: 50%;
+          flex-shrink: 0;
+          transition: opacity 0.15s;
+        }
+        .app-header__avatar-btn:hover { opacity: 0.85; }
+
+        /* Name — desktop only */
+        .app-header__name {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: #111827;
+          white-space: nowrap;
+          display: none;
+          max-width: 120px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        /* ── Desktop (≥ 768px) ── */
+        @media (min-width: 768px) {
+          .app-header { padding: 0 1.5rem; height: 64px; }
+          .app-header__name { display: block; }
+          .app-header__right { gap: 0.75rem; }
+        }
+
+        /* ── Mobile (< 768px) ── */
+        @media (max-width: 767px) {
+          .app-header__hamburger { display: flex !important; }
+          /* Hide points pill on very small screens to save space */
+          .app-header__stat { display: none; }
+          .app-header__right { gap: 0.375rem; }
+        }
+
+        /* ── Extra small (< 380px) ── */
+        @media (max-width: 379px) {
+          .app-header { padding: 0 0.625rem; }
+        }
       `}</style>
     </header>
   );
