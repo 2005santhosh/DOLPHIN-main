@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const rateLimit = require('express-rate-limit');
 const Connection = require('../models/Connection');
+const { recordActivity } = require('../services/gamificationService');
 
 const connectLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 20 });
 
@@ -78,6 +79,12 @@ router.put('/:id', protect, async (req, res) => {
 
         if (!connection) {
             return res.status(404).json({ message: 'Request not found or already handled' });
+        }
+
+        // Award gamification points when a connection is accepted
+        if (status === 'accepted') {
+            recordActivity(req.user._id, 'connection').catch(e => console.error('Gamification connection error:', e));
+            recordActivity(connection.from.toString(), 'connection').catch(e => console.error('Gamification connection error:', e));
         }
 
         res.json({ message: `Request ${status}` });

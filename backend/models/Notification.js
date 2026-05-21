@@ -16,19 +16,28 @@ const NotificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-     type: {
-    type: String,
     enum: [
-      'INFO', 
-      'WARNING', 
-      'SUCCESS', 
-      'ERROR', 
-      'INTRODUCTION_REQUEST', 
-      'STAGE_UNLOCKED', // ✅ ADD THIS
-      'TASK_COMPLETED'  // Optional: add this if you use it elsewhere
+      'INFO',
+      'WARNING',
+      'SUCCESS',
+      'ERROR',
+      'INTRODUCTION_REQUEST',
+      'STAGE_UNLOCKED',
+      'TASK_COMPLETED',
+      'VALIDATION_COMPLETE',
+      'TASK_APPROVED',
+      'TASK_REJECTED',
+      'MILESTONE_VERIFIED',
+      'CUSTOM_ADMIN_MESSAGE',
+      // Gamification types
+      'STREAK_MILESTONE',
+      'STREAK_LOST',
+      'REWARD_UNLOCKED',
+      'LEADERBOARD_RANK_CHANGE',
+      'POINTS_EARNED'
     ],
     default: 'INFO'
-  }},
+  },
   read: {
     type: Boolean,
     default: false

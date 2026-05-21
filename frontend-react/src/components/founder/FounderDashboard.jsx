@@ -18,6 +18,7 @@ import PostsPage from './pages/PostsPage';
 import RequestsPage from './pages/RequestsPage';
 import ChatPage from './pages/ChatPage';
 import SettingsPage from './pages/SettingsPage';
+import GamificationPage from '../shared/GamificationPage';
 
 export default function FounderDashboard() {
   const { user } = useAuth();
@@ -76,6 +77,8 @@ export default function FounderDashboard() {
           return <ChatPage {...pageProps} setChatCount={setChatCount} />;
         case 'settings':
           return <SettingsPage {...pageProps} />;
+        case 'gamification':
+          return <GamificationPage />;
         default:
           return <DashboardPage {...pageProps} />;
       }

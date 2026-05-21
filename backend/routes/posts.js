@@ -5,6 +5,7 @@ const IntroRequest = require('../models/IntroRequest');
 const { protect } = require('../middleware/authMiddleware');
 const { uploadPostMedia, cloudinary } = require('../config/cloudinary');
 const rateLimit = require('express-rate-limit');
+const { recordActivity } = require('../services/gamificationService');
 
 const feedLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 300 });
 const createLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 30 });
@@ -56,6 +57,9 @@ router.post('/', protect, createLimiter, uploadPostMedia.array('media', 10), asy
             media,
             mediaCount: media.length
         });
+
+        // Award gamification points for posting
+        recordActivity(user._id, 'post').catch(e => console.error('Gamification post error:', e));
 
         res.status(201).json(newPost);
     } catch (error) {

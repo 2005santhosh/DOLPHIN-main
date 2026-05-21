@@ -13,6 +13,7 @@ import PostsPage from '../founder/pages/PostsPage'; // Reuse
 import RequestsPage from './pages/RequestsPage';
 import ChatPage from '../founder/pages/ChatPage'; // Reuse
 import SettingsPage from '../founder/pages/SettingsPage'; // Reuse
+import GamificationPage from '../shared/GamificationPage';
 
 export default function ProviderDashboard() {
   const { user } = useAuth();
@@ -39,12 +40,13 @@ export default function ProviderDashboard() {
     {
       section: 'Main',
       items: [
-        { path: '#dashboard', icon: 'home', label: 'Dashboard' },
-        { path: '#profile', icon: 'profile', label: 'Profile' },
-        { path: '#founders', icon: 'users', label: 'Founders' },
-        { path: '#posts', icon: 'posts', label: 'Posts' },
-        { path: '#requests', icon: 'requests', label: 'Requests', badge: requestsCount },
-        { path: '#chat', icon: 'chat', label: 'Chat', badge: chatCount },
+        { path: '#dashboard',    icon: 'home',         label: 'Dashboard' },
+        { path: '#profile',      icon: 'profile',      label: 'Profile' },
+        { path: '#founders',     icon: 'users',        label: 'Founders' },
+        { path: '#posts',        icon: 'posts',        label: 'Posts' },
+        { path: '#requests',     icon: 'requests',     label: 'Requests', badge: requestsCount },
+        { path: '#chat',         icon: 'chat',         label: 'Chat', badge: chatCount },
+        { path: '#gamification', icon: 'gamification', label: 'Streaks & Rewards' },
       ]
     },
     {
@@ -74,6 +76,8 @@ export default function ProviderDashboard() {
         return <ChatPage {...pageProps} />;
       case 'settings':
         return <SettingsPage />;
+      case 'gamification':
+        return <GamificationPage />;
       default:
         return <DashboardPage />;
     }

@@ -53,6 +53,35 @@ const userSchema = new mongoose.Schema({
     comment: { type: String },
     createdAt: { type: Date, default: Date.now }
   }],
+
+  // ── Gamification ──────────────────────────────────────────────────────────────
+  // Streak tracking
+  currentStreak:    { type: Number, default: 0 },
+  longestStreak:    { type: Number, default: 0 },
+  lastActivityDate: { type: Date, default: null },
+
+  // Leaderboard score (computed: connections*15 + posts*10 + dailyActivity*5)
+  leaderboardScore: { type: Number, default: 0 },
+
+  // Rewards claimed at streak milestones
+  rewards: [{
+    milestone:   { type: Number },          // 30, 60, 90
+    name:        { type: String },          // 'Dolphin Cap', etc.
+    unlockedAt:  { type: Date },
+    claimed:     { type: Boolean, default: false },
+    claimedAt:   { type: Date },
+    deliveryInfo: {
+      fullName:  { type: String },
+      phone:     { type: String },
+      address:   { type: String }
+    }
+  }],
+
+  // Activity counters for leaderboard
+  totalPosts:       { type: Number, default: 0 },
+  totalConnections: { type: Number, default: 0 },
+  totalDaysActive:  { type: Number, default: 0 },
+
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   verificationToken: String,

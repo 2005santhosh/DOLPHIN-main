@@ -196,6 +196,15 @@ export const connectionsAPI = {
   sendConnectionRequest: async (toUserId) => api.post('/connections/request', { toUserId }),
 };
 
+// ─── GAMIFICATION ──────────────────────────────────────────────────────────────
+export const gamificationAPI = {
+  getMyStats:    async () => api.get('/gamification/me'),
+  recordLogin:   async () => api.post('/gamification/activity'),
+  getLeaderboard: async (role) => api.get(`/gamification/leaderboard/${role}`),
+  claimReward:   async (milestone, fullName, phone, address) =>
+    api.post('/gamification/claim-reward', { milestone, fullName, phone, address }),
+};
+
 // ─── CHAT ──────────────────────────────────────────────────────────────────────
 export const chatAPI = {
   getConversations: async () => {

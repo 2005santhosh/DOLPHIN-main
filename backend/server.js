@@ -142,6 +142,7 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/admin/admin-notifications', require('./routes/admin-notifications'));
 app.use('/api/posts', postRoutes);
 app.use('/api/connections', connectionRoutes);
+app.use('/api/gamification', require('./routes/gamification'));
 // --- PUBLIC HTML ROUTES ---
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
@@ -216,6 +217,37 @@ setInterval(async () => {
     console.error('Error cleaning up notifications:', error);
   }
 }, 24 * 60 * 60 * 1000);
+
+// Daily streak loss processing — runs at 2am UTC
+const { processStreakLosses } = require('./services/gamificationService');
+const scheduleStreakCron = () => {
+  const now = new Date();
+  const next2am = new Date();
+  next2am.setUTCHours(2, 0, 0, 0);
+  if (next2am <= now) next2am.setUTCDate(next2am.getUTCDate() + 1);
+  const msUntil2am = next2am - now;
+
+  setTimeout(async () => {
+    try {
+      const count = await processStreakLosses();
+      console.log(`[Gamification] Daily streak cron: reset ${count} streaks`);
+    } catch (e) {
+      console.error('[Gamification] Streak cron error:', e);
+    }
+    // Re-schedule for next day
+    setInterval(async () => {
+      try {
+        const count = await processStreakLosses();
+        console.log(`[Gamification] Daily streak cron: reset ${count} streaks`);
+      } catch (e) {
+        console.error('[Gamification] Streak cron error:', e);
+      }
+    }, 24 * 60 * 60 * 1000);
+  }, msUntil2am);
+
+  console.log(`[Gamification] Streak cron scheduled in ${Math.round(msUntil2am / 60000)} minutes`);
+};
+scheduleStreakCron();
 
 // --- CRITICAL FIX: LISTEN ON 0.0.0.0 ---
 const PORT = process.env.PORT || 8080;

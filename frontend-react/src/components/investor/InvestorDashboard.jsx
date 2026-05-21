@@ -11,6 +11,7 @@ import PostsPage from '../founder/pages/PostsPage';
 import RequestsPage from './pages/RequestsPage';
 import ChatPage from '../founder/pages/ChatPage';
 import SettingsPage from '../founder/pages/SettingsPage';
+import GamificationPage from '../shared/GamificationPage';
 
 export default function InvestorDashboard() {
   const { user } = useAuth();
@@ -34,12 +35,13 @@ export default function InvestorDashboard() {
     {
       section: 'Main',
       items: [
-        { path: '#dashboard',  icon: 'home',     label: 'Dashboard' },
-        { path: '#startups',   icon: 'users',    label: 'Startups' },
-        { path: '#watchlist',  icon: 'check',    label: 'Watchlist' },
-        { path: '#posts',      icon: 'posts',    label: 'Posts' },
-        { path: '#requests',   icon: 'requests', label: 'Requests', badge: requestsCount },
-        { path: '#chat',       icon: 'chat',     label: 'Chat',     badge: chatCount },
+        { path: '#dashboard',     icon: 'home',         label: 'Dashboard' },
+        { path: '#startups',      icon: 'users',        label: 'Startups' },
+        { path: '#watchlist',     icon: 'check',        label: 'Watchlist' },
+        { path: '#posts',         icon: 'posts',        label: 'Posts' },
+        { path: '#requests',      icon: 'requests',     label: 'Requests', badge: requestsCount },
+        { path: '#chat',          icon: 'chat',         label: 'Chat',     badge: chatCount },
+        { path: '#gamification',  icon: 'gamification', label: 'Streaks & Rewards' },
       ],
     },
     {
@@ -52,14 +54,15 @@ export default function InvestorDashboard() {
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'dashboard':  return <DashboardPage />;
-      case 'startups':   return <StartupsPage />;
-      case 'watchlist':  return <WatchlistPage />;
-      case 'posts':      return <PostsPage />;
-      case 'requests':   return <RequestsPage setRequestsCount={setRequestsCount} />;
-      case 'chat':       return <ChatPage setChatCount={setChatCount} />;
-      case 'settings':   return <SettingsPage />;
-      default:           return <DashboardPage />;
+      case 'dashboard':     return <DashboardPage />;
+      case 'startups':      return <StartupsPage />;
+      case 'watchlist':     return <WatchlistPage />;
+      case 'posts':         return <PostsPage />;
+      case 'requests':      return <RequestsPage setRequestsCount={setRequestsCount} />;
+      case 'chat':          return <ChatPage setChatCount={setChatCount} />;
+      case 'settings':      return <SettingsPage />;
+      case 'gamification':  return <GamificationPage />;
+      default:              return <DashboardPage />;
     }
   };
 
