@@ -71,14 +71,13 @@ router.get('/leaderboard/:role', protect, async (req, res) => {
       return res.status(400).json({ message: 'Invalid role. Must be founder, investor, or provider.' });
     }
 
-    const leaderboard = await getLeaderboard(role, 20);
-
-    // Find current user's rank
-    const myRank = leaderboard.findIndex(u => u._id.toString() === req.user._id.toString()) + 1;
+    const { topN, myRank, myEntry, totalUsers } = await getLeaderboard(role, 50, req.user._id);
 
     res.json({
-      leaderboard,
-      myRank: myRank > 0 ? myRank : null,
+      leaderboard: topN,
+      myRank,
+      myEntry,   // the current user's own leaderboard entry (even if outside top 50)
+      totalUsers,
       role,
     });
   } catch (err) {

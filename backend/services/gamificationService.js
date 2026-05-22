@@ -194,31 +194,62 @@ function computeLeaderboardScore(user) {
 // ─── Leaderboard Query ────────────────────────────────────────────────────────
 
 /**
- * Get top N users for a given role, ranked by leaderboard score.
+ * Get top N users for a given role, ranked by computed leaderboard score.
+ * Includes ALL non-blocked users regardless of state or startup creation.
+ * Score is computed on-the-fly from actual fields so it's always accurate.
+ *
+ * @param {string} role
+ * @param {number} limit  - number of top entries to return
+ * @param {string} [currentUserId] - if provided, also returns this user's rank among ALL users
  */
-async function getLeaderboard(role, limit = 20) {
-  const users = await User.find({
+async function getLeaderboard(role, limit = 50, currentUserId = null) {
+  // Fetch ALL non-blocked users of this role — no state filter
+  const allUsers = await User.find({
     role,
-    state: { $nin: ['PENDING_APPROVAL', 'BLOCKED'] },
+    state: { $ne: 'BLOCKED' },
   })
-    .select('name profilePicture currentStreak longestStreak leaderboardScore totalPosts totalConnections totalDaysActive rewardPoints')
-    .sort({ leaderboardScore: -1 })
-    .limit(limit)
+    .select('name profilePicture currentStreak longestStreak totalPosts totalConnections totalDaysActive rewardPoints leaderboardScore')
     .lean();
 
-  return users.map((u, i) => ({
-    rank:             i + 1,
+  // Compute score on-the-fly for every user (fixes stale leaderboardScore)
+  const scored = allUsers.map(u => ({
     _id:              u._id,
     name:             u.name,
     profilePicture:   u.profilePicture || '',
     currentStreak:    u.currentStreak || 0,
     longestStreak:    u.longestStreak || 0,
-    leaderboardScore: u.leaderboardScore || 0,
     totalPosts:       u.totalPosts || 0,
     totalConnections: u.totalConnections || 0,
     totalDaysActive:  u.totalDaysActive || 0,
     rewardPoints:     u.rewardPoints || 0,
+    // Compute fresh score — don't rely on stored leaderboardScore
+    leaderboardScore: computeLeaderboardScore(u),
   }));
+
+  // Sort descending by score, then by streak as tiebreaker
+  scored.sort((a, b) => {
+    if (b.leaderboardScore !== a.leaderboardScore) return b.leaderboardScore - a.leaderboardScore;
+    return b.currentStreak - a.currentStreak;
+  });
+
+  // Assign ranks
+  scored.forEach((u, i) => { u.rank = i + 1; });
+
+  // Find current user's rank across ALL users (not just top N)
+  let myRank = null;
+  let myEntry = null;
+  if (currentUserId) {
+    const idx = scored.findIndex(u => u._id.toString() === currentUserId.toString());
+    if (idx !== -1) {
+      myRank = idx + 1;
+      myEntry = scored[idx];
+    }
+  }
+
+  // Return top N for display
+  const topN = scored.slice(0, limit);
+
+  return { topN, myRank, myEntry, totalUsers: scored.length };
 }
 
 // ─── Streak Lost (Daily Cron) ─────────────────────────────────────────────────

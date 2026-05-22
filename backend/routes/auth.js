@@ -240,7 +240,11 @@ router.post('/login', loginLimiter, sanitizeBody(['email']), async (req, res) =>
     }
 
     // Block login if email not verified — user must complete OTP first
-    if (!user.emailVerified) {
+    // Exception: admin accounts bypass OTP (they are created directly in DB)
+    const ADMIN_EMAILS = (process.env.ADMIN_EMAIL || 'adminpacific@dolphin.com')
+      .split(',').map(e => e.trim().toLowerCase());
+
+    if (!user.emailVerified && !ADMIN_EMAILS.includes(user.email.toLowerCase())) {
       // Re-send a fresh OTP so they can complete verification
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
@@ -261,6 +265,12 @@ router.post('/login', loginLimiter, sanitizeBody(['email']), async (req, res) =>
         requiresVerification: true,
         email: user.email,
       });
+    }
+
+    // Auto-verify admin emails on first login
+    if (!user.emailVerified && ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+      user.emailVerified = true;
+      await user.save();
     }
 
     sendTokenResponse(user, 200, req, res);

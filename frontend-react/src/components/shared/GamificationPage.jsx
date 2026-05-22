@@ -221,6 +221,8 @@ export default function GamificationPage() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [lbLoading, setLbLoading]   = useState(false);
   const [myRank, setMyRank]         = useState(null);
+  const [myEntry, setMyEntry]       = useState(null);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [activeTab, setActiveTab]   = useState('streak');
 
   // Claim modal
@@ -250,6 +252,8 @@ export default function GamificationPage() {
       const data = await gamificationAPI.getLeaderboard(role);
       setLeaderboard(data.leaderboard || []);
       setMyRank(data.myRank);
+      setMyEntry(data.myEntry || null);
+      setTotalUsers(data.totalUsers || 0);
     } catch (e) {
       console.error('Leaderboard error:', e);
     } finally {
@@ -481,7 +485,7 @@ export default function GamificationPage() {
             }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="#84CC16"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               <span style={{ fontWeight: 700, color: '#166534' }}>
-                Your rank: #{myRank} among {ROLE_LABELS[lbRole]}s
+                Your rank: #{myRank} out of {totalUsers} {ROLE_LABELS[lbRole]}s
               </span>
             </div>
           )}
@@ -491,6 +495,16 @@ export default function GamificationPage() {
               <CardTitle>{ROLE_LABELS[lbRole]} Leaderboard</CardTitle>
             </CardHeader>
             <LeaderboardTable data={leaderboard} currentUserId={user?._id} loading={lbLoading} />
+
+            {/* Show current user's entry if they're outside the top list */}
+            {myEntry && myRank && !leaderboard.some(e => e._id?.toString() === user?._id?.toString()) && (
+              <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '2px dashed #E5E7EB' }}>
+                <p style={{ fontSize: '0.75rem', color: '#9CA3AF', marginBottom: '0.5rem', textAlign: 'center' }}>
+                  Your position
+                </p>
+                <LeaderboardTable data={[myEntry]} currentUserId={user?._id} loading={false} />
+              </div>
+            )}
           </Card>
 
           {/* Scoring explanation */}
