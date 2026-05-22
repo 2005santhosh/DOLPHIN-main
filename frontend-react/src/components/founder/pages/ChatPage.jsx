@@ -105,11 +105,13 @@ export default function ChatPage({ setChatCount, openUserId }) {
   const [search, setSearch] = useState('');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showWindow, setShowWindow] = useState(false);
+  const [isAtBottom, setIsAtBottom] = useState(true); // track if user is at bottom
 
   const endRef = useRef(null);
   const pollRef = useRef(null);
   const textareaRef = useRef(null);
   const messagesRef = useRef(null);
+  const isAtBottomRef = useRef(true); // ref version for use inside callbacks
   const openUserIdRef = useRef(openUserId);
   openUserIdRef.current = openUserId;
 
@@ -126,12 +128,31 @@ export default function ChatPage({ setChatCount, openUserId }) {
     return () => clearInterval(pollRef.current);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Auto-scroll to bottom ───────────────────────────────────────────────────
+  // ── Auto-scroll to bottom — only when user is already near bottom ──────────
   useEffect(() => {
-    if (messagesRef.current) {
-      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+    const el = messagesRef.current;
+    if (!el) return;
+    if (isAtBottomRef.current) {
+      el.scrollTop = el.scrollHeight;
     }
   }, [messages]);
+
+  // ── Scroll handler — track whether user is near bottom ─────────────────────
+  const handleMessagesScroll = () => {
+    const el = messagesRef.current;
+    if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distFromBottom < 80;
+    isAtBottomRef.current = atBottom;
+    setIsAtBottom(atBottom);
+  };
+
+  const scrollToBottom = () => {
+    const el = messagesRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    setIsAtBottom(true);
+    isAtBottomRef.current = true;
+  };
 
   // ── Poll messages every 4s when a conversation is open ─────────────────────
   useEffect(() => {
@@ -206,6 +227,8 @@ export default function ChatPage({ setChatCount, openUserId }) {
   const openConv = useCallback((conv) => {
     setSelected(conv);
     setMessages([]);
+    setIsAtBottom(true);
+    isAtBottomRef.current = true;
     loadMsgs(conv._id);
     if (window.innerWidth < 768) setShowWindow(true);
     setTimeout(() => textareaRef.current?.focus(), 150);
@@ -407,7 +430,7 @@ export default function ChatPage({ setChatCount, openUserId }) {
             </div>
           </div>
         ) : (
-          <>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, position: 'relative' }}>
             {/* ── Chat header ── */}
             <div style={{
               padding: '0.75rem 1rem',
@@ -443,14 +466,15 @@ export default function ChatPage({ setChatCount, openUserId }) {
             {/* ── Messages area ── */}
             <div
               ref={messagesRef}
+              onScroll={handleMessagesScroll}
               style={{
                 flex: 1, overflowY: 'auto',
                 padding: '1rem 0.75rem',
                 display: 'flex', flexDirection: 'column', gap: 0,
                 background: '#F0F2F5',
-                // WhatsApp-style subtle pattern
                 backgroundImage: 'radial-gradient(circle, #E5E7EB 1px, transparent 1px)',
                 backgroundSize: '20px 20px',
+                position: 'relative',
               }}
             >
               {loadingMsgs ? (
@@ -522,7 +546,7 @@ export default function ChatPage({ setChatCount, openUserId }) {
                             }}>
                               <div style={{
                                 maxWidth: isMobile ? '78%' : '60%',
-                                padding: '0.5rem 0.75rem',
+                                padding: '0.5rem 0.75rem 0.375rem',
                                 borderRadius: isOwn
                                   ? `16px 16px ${isLastInGroup ? '4px' : '16px'} 16px`
                                   : `16px 16px 16px ${isLastInGroup ? '4px' : '16px'}`,
@@ -532,27 +556,39 @@ export default function ChatPage({ setChatCount, openUserId }) {
                                 lineHeight: 1.5,
                                 boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                                 wordBreak: 'break-word',
+                                overflowWrap: 'break-word',
                                 position: 'relative',
                                 opacity: msg.optimistic ? 0.75 : 1,
                                 transition: 'opacity 0.2s',
                               }}>
+                                {/* Message text */}
                                 <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
-                                {/* Timestamp — only on last message in group */}
+
+                                {/* Timestamp row — only on last message in group, always on its own line */}
                                 {isLastInGroup && (
                                   <div style={{
-                                    fontSize: '0.65rem',
-                                    color: isOwn ? 'rgba(15,23,42,0.5)' : '#9CA3AF',
-                                    textAlign: 'right',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'flex-end',
+                                    gap: '4px',
                                     marginTop: '3px',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px',
+                                    // Negative margin trick: pulls the timestamp row tight
+                                    // without affecting the bubble width
+                                    lineHeight: 1,
                                   }}>
-                                    {msgTime(msg.createdAt)}
+                                    <span style={{
+                                      fontSize: '0.65rem',
+                                      color: isOwn ? 'rgba(15,23,42,0.5)' : '#9CA3AF',
+                                      whiteSpace: 'nowrap',
+                                    }}>
+                                      {msgTime(msg.createdAt)}
+                                    </span>
                                     {isOwn && (
                                       <span style={{
                                         fontSize: '0.6rem',
                                         fontWeight: 600,
-                                        color: msg.optimistic ? 'rgba(15,23,42,0.35)' : 'rgba(15,23,42,0.5)',
-                                        letterSpacing: '0.01em',
+                                        color: msg.optimistic ? 'rgba(15,23,42,0.3)' : 'rgba(15,23,42,0.5)',
+                                        whiteSpace: 'nowrap',
                                       }}>
                                         {msg.optimistic ? 'Sending…' : 'Sent'}
                                       </span>
@@ -571,6 +607,34 @@ export default function ChatPage({ setChatCount, openUserId }) {
               <div ref={endRef} style={{ height: 4 }} />
             </div>
 
+            {/* ── Scroll-to-bottom button ── */}
+            {!isAtBottom && (
+              <button
+                onClick={scrollToBottom}
+                aria-label="Scroll to latest messages"
+                style={{
+                  position: 'absolute',
+                  bottom: isMobile ? 80 : 76,
+                  right: 16,
+                  zIndex: 20,
+                  width: 38, height: 38,
+                  borderRadius: '50%',
+                  background: 'white',
+                  border: '1px solid #E5E7EB',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'box-shadow 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)'; }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)'; }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+            )}
+
             {/* ── Input bar ── */}
             <div style={{
               padding: '0.625rem 0.75rem',
@@ -579,8 +643,7 @@ export default function ChatPage({ setChatCount, openUserId }) {
               display: 'flex', alignItems: 'flex-end', gap: '0.5rem',
               flexShrink: 0,
               paddingBottom: isMobile ? 'max(0.625rem, env(safe-area-inset-bottom))' : '0.625rem',
-            }}>
-              {/* Text input */}
+            }}>              {/* Text input */}
               <div style={{
                 flex: 1, background: 'white', borderRadius: 24,
                 border: '1px solid #E5E7EB',
@@ -639,7 +702,7 @@ export default function ChatPage({ setChatCount, openUserId }) {
                 </svg>
               </button>
             </div>
-          </>
+          </div>
         )}
       </div>
     );
