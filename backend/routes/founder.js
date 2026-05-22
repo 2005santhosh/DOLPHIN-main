@@ -173,7 +173,7 @@ router.post('/send-request', protect, async (req, res) => {
     // ✅ NOTIFY PROVIDER
     const notification = await Notification.create({
       userId: providerId,
-      type: 'new_request',
+      type: 'INTRODUCTION_REQUEST',
       title: 'New Connection Request',
       message: `${req.user.name} wants to connect with you!`,
       relatedId: newRequest._id

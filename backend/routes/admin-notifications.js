@@ -42,7 +42,7 @@ router.post('/send-by-role', protect, authorize('admin', 'investor'), async (req
       priority,
       actionUrl,
       actionText,
-      type: 'system'
+      type: 'CUSTOM_ADMIN_MESSAGE'
     }));
     await Notification.insertMany(notifications);
 
@@ -97,7 +97,7 @@ router.post('/send-to-all', protect, authorize('admin', 'investor'), async (req,
       priority,
       actionUrl,
       actionText,
-      type: 'system'
+      type: 'CUSTOM_ADMIN_MESSAGE'
     }));
 
     await Notification.insertMany(notifications);
@@ -146,7 +146,7 @@ router.post('/send-to-users', protect, authorize('admin', 'investor'), async (re
       title,
       message,
       priority,
-      type: 'system'
+      type: 'CUSTOM_ADMIN_MESSAGE'
     }));
 
     await Notification.insertMany(notifications);

@@ -34,6 +34,14 @@ export default function Login() {
       };
       navigate(routes[response.user?.role] || '/');
     } catch (err) {
+      // Email not verified — backend re-sent OTP, redirect to OTP screen
+      if (err.data?.requiresVerification || (err.status === 403 && err.message?.includes('not verified'))) {
+        toast('A new OTP has been sent to your email. Please verify to continue.', { icon: '📧' });
+        navigate('/register', {
+          state: { step: 'otp', email: formData.email },
+        });
+        return;
+      }
       toast.error(err.message || 'Login failed. Check your credentials.');
     } finally {
       setIsLoading(false);

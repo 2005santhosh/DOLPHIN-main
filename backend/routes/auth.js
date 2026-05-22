@@ -239,6 +239,30 @@ router.post('/login', loginLimiter, sanitizeBody(['email']), async (req, res) =>
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    // Block login if email not verified — user must complete OTP first
+    if (!user.emailVerified) {
+      // Re-send a fresh OTP so they can complete verification
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+      user.verificationToken = hashedOtp;
+      user.verificationExpire = Date.now() + 10 * 60 * 1000; // 10 min
+      await user.save();
+
+      // Fire-and-forget — don't block the response
+      const { getOtpEmail } = require('../utils/emailTemplates');
+      sendEmail({
+        email: user.email,
+        subject: getOtpEmail(user.name, otp).subject,
+        message: getOtpEmail(user.name, otp).html,
+      }).catch(e => console.error('OTP resend error:', e));
+
+      return res.status(403).json({
+        message: 'Email not verified. A new OTP has been sent to your email.',
+        requiresVerification: true,
+        email: user.email,
+      });
+    }
+
     sendTokenResponse(user, 200, req, res);
 
   } catch (error) {
@@ -318,6 +342,44 @@ router.post('/send-verification-email', async (req, res) => {
   } catch (error) {
     console.error('Send verification email error:', error);
     res.status(500).json({ message: 'Error sending verification email' });
+  }
+});
+
+// @route   POST /api/auth/resend-otp
+// @desc    Resend OTP to an unverified account
+router.post('/resend-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email is required' });
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      // Don't reveal whether the email exists
+      return res.status(200).json({ message: 'If that email is registered and unverified, a new OTP has been sent.' });
+    }
+
+    if (user.emailVerified) {
+      return res.status(400).json({ message: 'This email is already verified. Please log in.' });
+    }
+
+    // Generate fresh OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+    user.verificationToken = hashedOtp;
+    user.verificationExpire = Date.now() + 10 * 60 * 1000;
+    await user.save();
+
+    const { getOtpEmail } = require('../utils/emailTemplates');
+    sendEmail({
+      email: user.email,
+      subject: getOtpEmail(user.name, otp).subject,
+      message: getOtpEmail(user.name, otp).html,
+    }).catch(e => console.error('OTP resend error:', e));
+
+    res.status(200).json({ message: 'A new OTP has been sent to your email.' });
+  } catch (error) {
+    console.error('Resend OTP error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

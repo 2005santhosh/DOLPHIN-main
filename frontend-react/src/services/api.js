@@ -46,6 +46,7 @@ export const authAPI = {
   },
   forgotPassword: async (email) => api.post('/auth/forgot-password', { email }),
   resetPassword: async (token, password) => api.post(`/auth/reset-password/${token}`, { password }),
+  resendOtp: async (email) => api.post('/auth/resend-otp', { email }),
   deleteAccount: async () => api.delete('/auth/account'),
   uploadProfilePicture: async (formData) => api.post('/auth/upload-profile-picture', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },

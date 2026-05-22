@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../services/api';
 import toast from 'react-hot-toast';
@@ -8,11 +8,14 @@ import DolphinLogo from '../shared/DolphinLogo';
 
 export default function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { verifyOtp } = useAuth();
 
-  const [step, setStep] = useState('register');
+  // If redirected from Login with requiresVerification, start on OTP step
+  const locationState = location.state || {};
+  const [step, setStep] = useState(locationState.step === 'otp' ? 'otp' : 'register');
   const [formData, setFormData] = useState({
-    name: '', email: '', password: '', confirmPassword: '',
+    name: '', email: locationState.email || '', password: '', confirmPassword: '',
     role: 'founder', acceptTerms: false,
   });
   const [otp, setOtp] = useState('');
@@ -70,39 +73,120 @@ export default function Register() {
     }
   };
 
+  const handleResendOtp = async () => {
+    if (!formData.email) return;
+    setIsLoading(true);
+    try {
+      await authAPI.resendOtp(formData.email);
+      toast.success('New OTP sent to your email!');
+      setOtp('');
+    } catch (err) {
+      toast.error(err.message || 'Failed to resend OTP');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // ─── OTP step ────────────────────────────────────────────────────────────────
   if (step === 'otp') {
+    const cameFromLogin = locationState.step === 'otp'; // redirected from login page
+
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: '1rem' }}>
         <div style={{ width: '100%', maxWidth: '420px' }}>
           <div style={{ background: 'var(--bg-surface)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', padding: '2.5rem', border: '1px solid var(--border-color)' }}>
+
+            {/* Header */}
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
-                <Mail size={40} color="var(--primary, #84CC16)" />
+              <div style={{
+                width: 64, height: 64, borderRadius: '50%',
+                background: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 1rem',
+              }}>
+                <Mail size={32} color="#84CC16" />
               </div>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Verify Email</h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                We sent a 6-digit OTP to <strong>{formData.email}</strong>
+              <h1 style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+                Verify your email
+              </h1>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                We sent a 6-digit code to<br />
+                <strong style={{ color: 'var(--text-primary)' }}>{formData.email}</strong>
+              </p>
+              <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                Check your inbox and spam folder. The code expires in 10 minutes.
               </p>
             </div>
+
+            {/* OTP form */}
             <form onSubmit={handleVerifyOtp}>
               <div style={{ marginBottom: '1.5rem' }}>
-                <label className="form-label">Enter OTP</label>
+                <label className="form-label" style={{ textAlign: 'center', display: 'block' }}>
+                  Enter 6-digit code
+                </label>
                 <input
-                  type="text" value={otp} onChange={e => setOtp(e.target.value)}
-                  placeholder="123456" maxLength={6} className="form-input"
-                  style={{ textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.5rem' }}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={otp}
+                  onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  maxLength={6}
+                  className="form-input"
+                  style={{
+                    textAlign: 'center',
+                    fontSize: '2rem',
+                    letterSpacing: '0.75rem',
+                    fontWeight: 700,
+                    padding: '0.75rem',
+                  }}
                   autoFocus
+                  autoComplete="one-time-code"
                 />
               </div>
-              <button type="submit" disabled={isLoading} className="btn btn-primary"
-                style={{ width: '100%', padding: '0.75rem', fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>
+
+              <button
+                type="submit"
+                disabled={isLoading || otp.length < 6}
+                className="btn btn-primary"
+                style={{ width: '100%', padding: '0.75rem', fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}
+              >
                 {isLoading ? 'Verifying…' : 'Verify & Continue'}
               </button>
-              <button type="button" onClick={() => setStep('register')}
-                style={{ width: '100%', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.875rem' }}>
-                ← Back to registration
+
+              {/* Resend OTP */}
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={isLoading}
+                style={{
+                  width: '100%', background: 'none', border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--radius-md)', padding: '0.625rem',
+                  color: 'var(--text-secondary)', cursor: isLoading ? 'not-allowed' : 'pointer',
+                  fontSize: '0.875rem', marginBottom: '0.75rem',
+                  transition: 'border-color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+              >
+                {isLoading ? 'Sending…' : '↺ Resend code'}
               </button>
+
+              {/* Back link */}
+              {cameFromLogin ? (
+                <p style={{ textAlign: 'center', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                  <Link to="/login" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}>
+                    ← Back to login
+                  </Link>
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setStep('register')}
+                  style={{ width: '100%', background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: '0.875rem' }}
+                >
+                  ← Back to registration
+                </button>
+              )}
             </form>
           </div>
         </div>
