@@ -219,6 +219,7 @@ export const chatAPI = {
     return Array.isArray(data) ? data : [];
   },
   sendMessage: async (receiverId, content) => api.post('/chat/send', { receiverId, content }),
+  getUserProfile: async (userId) => api.get(`/chat/user/${userId}`),
 };
 
 // ─── RESOURCES ─────────────────────────────────────────────────────────────────
