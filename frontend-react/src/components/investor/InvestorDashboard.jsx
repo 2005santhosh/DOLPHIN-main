@@ -22,14 +22,22 @@ export default function InvestorDashboard() {
 
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '') || 'dashboard';
-      setCurrentPage(hash);
+      const full = window.location.hash.replace('#', '');
+      const [page] = full.split('?');
+      setCurrentPage(page || 'dashboard');
       setSidebarOpen(false);
     };
     handleHashChange();
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  const getOpenUserId = () => {
+    const full = window.location.hash.replace('#', '');
+    const [, query] = full.split('?');
+    if (!query) return null;
+    return new URLSearchParams(query).get('userId') || null;
+  };
 
   const sidebarItems = [
     {
@@ -59,7 +67,7 @@ export default function InvestorDashboard() {
       case 'watchlist':     return <WatchlistPage />;
       case 'posts':         return <PostsPage />;
       case 'requests':      return <RequestsPage setRequestsCount={setRequestsCount} />;
-      case 'chat':          return <ChatPage setChatCount={setChatCount} />;
+      case 'chat':          return <ChatPage setChatCount={setChatCount} openUserId={getOpenUserId()} />;
       case 'settings':      return <SettingsPage />;
       case 'gamification':  return <GamificationPage />;
       default:              return <DashboardPage />;

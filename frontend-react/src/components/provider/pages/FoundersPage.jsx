@@ -179,7 +179,10 @@ const FoundersPage = () => {
           </button>
           <button
             className="btn btn-primary btn-sm"
-            onClick={() => { window.location.hash = 'chat'; }}
+            onClick={() => {
+              const userId = founder.founderId?._id || founder.founderId;
+              window.location.hash = `chat?userId=${userId}`;
+            }}
           >
             Chat
           </button>

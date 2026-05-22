@@ -477,7 +477,7 @@ const PostsPage = () => {
               if (status === 'accepted') {
                 actionButtons = (
                   <button
-                    onClick={() => { window.location.hash = 'chat'; }}
+                    onClick={() => { window.location.hash = `chat?userId=${post.authorId}`; }}
                     style={{ padding: '8px 16px', background: '#84CC16', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     <MessageCircle size={16} /> Chat

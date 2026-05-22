@@ -35,18 +35,28 @@ export default function FounderDashboard() {
     retry: 1,
   });
 
-  // Handle hash navigation
+  // Handle hash navigation — supports #chat?userId=xxx
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '') || 'dashboard';
-      setCurrentPage(hash);
-      setSidebarOpen(false); // Close sidebar on mobile when navigating
+      const full = window.location.hash.replace('#', '');
+      const [page, query] = full.split('?');
+      setCurrentPage(page || 'dashboard');
+      setSidebarOpen(false);
     };
 
-    handleHashChange(); // Initial load
+    handleHashChange();
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  // Parse openUserId from hash query string
+  const getOpenUserId = () => {
+    const full = window.location.hash.replace('#', '');
+    const [, query] = full.split('?');
+    if (!query) return null;
+    const params = new URLSearchParams(query);
+    return params.get('userId') || null;
+  };
 
   // Calculate points from user, not startup
   const points = user?.rewardPoints || 0;
@@ -74,7 +84,7 @@ export default function FounderDashboard() {
         case 'requests':
           return <RequestsPage {...pageProps} setRequestsCount={setRequestsCount} />;
         case 'chat':
-          return <ChatPage {...pageProps} setChatCount={setChatCount} />;
+          return <ChatPage {...pageProps} setChatCount={setChatCount} openUserId={getOpenUserId()} />;
         case 'settings':
           return <SettingsPage {...pageProps} />;
         case 'gamification':

@@ -315,7 +315,7 @@ export default function ReelsViewer({
                 {!isOwn && (
                   connStatus === 'accepted' ? (
                     <button
-                      onClick={() => { onClose(); window.location.hash = 'chat'; }}
+                      onClick={() => { onClose(); window.location.hash = `chat?userId=${post.authorId}`; }}
                       style={{ background: 'rgba(255,255,255,0.18)', border: '1.5px solid rgba(255,255,255,0.8)', borderRadius: 10, padding: '7px 12px', color: 'white', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', backdropFilter: 'blur(6px)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}
                     >
                       <MessageCircle size={14} /> Chat

@@ -308,7 +308,7 @@ const RequestsPage = ({ setRequestsCount }) => {
                       <div style={{ marginTop: '0.75rem' }}>
                         <button
                           className="btn btn-primary btn-sm"
-                          onClick={() => { window.location.hash = 'chat'; }}
+                          onClick={() => { window.location.hash = `chat?userId=${req.founderId?._id || req.founderId}`; }}
                           style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                         >
                           <MessageCircle size={14} /> Chat

@@ -22,11 +22,12 @@ export default function ProviderDashboard() {
   const [requestsCount, setRequestsCount] = useState(0);
   const [chatCount, setChatCount] = useState(0);
 
-  // Handle hash navigation
+  // Handle hash navigation — supports #chat?userId=xxx
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '') || 'dashboard';
-      setCurrentPage(hash);
+      const full = window.location.hash.replace('#', '');
+      const [page] = full.split('?');
+      setCurrentPage(page || 'dashboard');
       setSidebarOpen(false);
     };
 
@@ -34,6 +35,13 @@ export default function ProviderDashboard() {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  const getOpenUserId = () => {
+    const full = window.location.hash.replace('#', '');
+    const [, query] = full.split('?');
+    if (!query) return null;
+    return new URLSearchParams(query).get('userId') || null;
+  };
 
   // Sidebar items for provider
   const sidebarItems = [
@@ -73,8 +81,7 @@ export default function ProviderDashboard() {
       case 'requests':
         return <RequestsPage {...pageProps} />;
       case 'chat':
-        return <ChatPage {...pageProps} />;
-      case 'settings':
+        return <ChatPage {...pageProps} setChatCount={setChatCount} openUserId={getOpenUserId()} />;      case 'settings':
         return <SettingsPage />;
       case 'gamification':
         return <GamificationPage />;
