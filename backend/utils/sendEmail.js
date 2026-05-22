@@ -1,22 +1,22 @@
 const sendEmail = async (options) => {
-  const apiKey = process.env.BREVO_API_KEY;
-  
+  const apiKey = (process.env.BREVO_API_KEY || '').trim();
+
   if (!apiKey) {
-    console.error("BREVO_API_KEY is missing in environment variables");
-    throw new Error("Email service not configured");
+    console.error('BREVO_API_KEY is missing or empty in environment variables');
+    throw new Error('Email service not configured');
   }
+
+  const senderEmail = (process.env.SMTP_USER || 'support@pacificdev.in').trim();
 
   const data = {
     sender: {
-      // USE SPECIFIC SENDER IF PROVIDED, OTHERWISE DEFAULT TO ENV VARIABLE
-      email: options.senderEmail || process.env.SMTP_USER || 'support@pacificdev.in', 
-      name: options.senderName || options.name || 'Dolphin Support'
+      email: options.senderEmail || senderEmail,
+      name: options.senderName || options.name || 'Dolphin',
     },
     to: [{ email: options.email }],
     subject: options.subject,
     htmlContent: options.message,
-    // Handle Reply-To
-    replyTo: options.replyTo ? { email: options.replyTo } : undefined
+    ...(options.replyTo ? { replyTo: { email: options.replyTo } } : {}),
   };
 
   try {
@@ -25,24 +25,23 @@ const sendEmail = async (options) => {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'api-key': apiKey
+        'api-key': apiKey,
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Brevo API Error: ${response.status} - ${errorText}`);
-      throw new Error(`Failed to send email: ${errorText}`);
+      const errorText = await response.text().catch(() => response.statusText);
+      console.error(`Brevo API Error ${response.status}:`, errorText);
+      throw new Error(`Failed to send email (${response.status}): ${errorText}`);
     }
 
     const result = await response.json();
-    console.log(`✅ Email sent to ${options.email} via Brevo API. MessageID: ${result.messageId}`);
+    console.log(`✅ Email sent to ${options.email} — MessageID: ${result.messageId}`);
     return result;
-
   } catch (error) {
-    console.error("Error sending email via Brevo:", error);
-    throw error; 
+    console.error('sendEmail error:', error.message);
+    throw error;
   }
 };
 

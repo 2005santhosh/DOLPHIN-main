@@ -553,12 +553,13 @@ const submitStageValidation = async (stageKey, req, res) => {
       const newStage = Math.min(MAX_STAGE, stageOrder + 1);
       if (newStage > (startup.currentStage || 1)) {
         startup.currentStage = newStage;
-        
-        // Send notification for unlocked stage
+
+        // Fire-and-forget: notify stage unlocked (don't block response)
         if (newStage <= MAX_STAGE) {
           const nextKey = VALIDATION_STAGE_KEYS[newStage - 1];
           if (nextKey) {
-            await notifyStageUnlocked(req.user.id, nextKey, startup._id);
+            notifyStageUnlocked(req.user.id, nextKey, startup._id)
+              .catch(e => console.error('notifyStageUnlocked error:', e));
           }
         }
       }
@@ -568,7 +569,8 @@ const submitStageValidation = async (stageKey, req, res) => {
     startup.updatedAt = completedAt;
     await startup.save();
 
-    await Log.create({
+    // Fire-and-forget: log + notify (don't block the response)
+    Log.create({
       userId: req.user.id,
       action: `${stageKey}_validation_completed`,
       details: {
@@ -580,11 +582,12 @@ const submitStageValidation = async (stageKey, req, res) => {
         startupId: startup._id,
         aiEngine: 'gemini'
       }
-    });
+    }).catch(e => console.error('Log.create error:', e));
 
-    // Send notification
-    await notifyValidationComplete(req.user.id, stageKey, stageScore, isValidated, startup._id);
+    notifyValidationComplete(req.user.id, stageKey, stageScore, isValidated, startup._id)
+      .catch(e => console.error('notifyValidationComplete error:', e));
 
+    // Send response immediately — don't wait for notifications/emails
     res.json({
       success: true,
       stage: stageKey,
@@ -595,6 +598,7 @@ const submitStageValidation = async (stageKey, req, res) => {
       totalValidationScore: startup.validationScore,
       isValidated,
       overallFeedback,
+      processedAnswers,
       aiGenerated: true
     });
   } catch (error) {

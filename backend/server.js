@@ -22,8 +22,14 @@ const connectionRoutes = require('./routes/connections');
 dotenv.config();
 if (!process.env.JWT_SECRET) {
   console.error('FATAL ERROR: JWT_SECRET is not defined in environment variables.');
-  process.exit(1); // Hard crash the server
+  process.exit(1);
 }
+
+// Startup diagnostics — log key env var presence (never log values)
+console.log('[Config] JWT_SECRET:', process.env.JWT_SECRET ? '✓ set' : '✗ MISSING');
+console.log('[Config] BREVO_API_KEY:', process.env.BREVO_API_KEY?.trim() ? '✓ set' : '✗ MISSING');
+console.log('[Config] GEMINI_API_KEY:', process.env.GEMINI_API_KEY?.trim() ? '✓ set' : '✗ MISSING');
+console.log('[Config] MONGO_URI:', process.env.MONGO_URI ? '✓ set' : '✗ MISSING');
 // --- CRITICAL FIX: GLOBAL ERROR HANDLERS ---
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION! 💥');

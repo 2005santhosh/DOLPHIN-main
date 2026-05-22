@@ -1,5 +1,5 @@
 // backend/services/geminiValidationService.js
-// AI-powered validation using Google Gemini API (FREE with generous limits)
+// AI-powered validation using Google Gemini API
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -8,387 +8,183 @@ if (!GEMINI_API_KEY) {
 }
 
 /**
- * Applies a category-based floor to the score to ensure specific areas aren't penalized too harshly.
- * @param {Number} score - The calculated score.
- * @param {String} category - The question category.
- * @returns {Number} - The adjusted score.
- */
-function applyCategoryFloor(score, category) {
-  const floors = {
-    'commitment': 70,
-    'feasibility': 65,
-    'domain_expertise': 65,
-    'business_model': 60
-  };
-
-  const floor = floors[category];
-  if (!floor) return score;
-
-  return Math.max(score, floor);
-}
-
-/**
- * Validates and scores a single answer using Google Gemini AI
- * Gemini API is FREE with 15 requests/minute (900/hour) and 1500 requests/day
- * @param {Object} question - The question object
- * @param {String} answer - The founder's answer
- * @returns {Promise<Object>} { score, feedback, strengths, improvements }
- */
-async function scoreAnswer(question, answer) {
-  if (!answer || answer.trim().length < 10) {
-    return {
-      score: 0,
-      feedback: 'Answer is too short or missing. Please provide a detailed response.',
-      strengths: [],
-      improvements: ['Provide a more detailed answer']
-    };
-  }
-
-  // If no API key, use fallback scoring
-  if (!GEMINI_API_KEY) {
-    return fallbackScoring(question, answer);
-  }
-
-  try {
-    // FIX 1: Updated Prompt with Founder Stage Context
-    const prompt = `You are an expert startup advisor evaluating an EARLY-STAGE startup founder.
-Assume this is an idea-stage or MVP-stage company, not a growth-stage startup.
-Score based on clarity of thinking, realism, and progress relative to stage.
-Do NOT penalize lack of revenue, users, or large datasets if reasoning is sound.
-
-**Question**: ${question.question}
-**Hint/Context**: ${question.hint}
-**Category**: ${question.category}
-
-**Founder's Answer**:
- ${answer}
-
-Please evaluate this answer and provide:
-1. A score from 0-100 based on:
-   - Specificity and concrete details (not vague)
-   - Evidence or data provided
-   - Depth of thinking and insight
-   - Relevance to the question
-   - Feasibility and realism
-
-2. Brief feedback (2-3 sentences)
-3. Key strengths (1-3 bullet points)
-4. Areas for improvement (1-3 bullet points)
-
-Respond ONLY with valid JSON in this exact format:
-{
-  "score": <number 0-100>,
-  "feedback": "<string>",
-  "strengths": ["<string>", ...],
-  "improvements": ["<string>", ...]
-}`;
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.4,
-            topK: 32,
-            topP: 1,
-            maxOutputTokens: 1024
-          },
-          safetySettings: [
-            {
-              category: 'HARM_CATEGORY_HARASSMENT',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-            },
-            {
-              category: 'HARM_CATEGORY_HATE_SPEECH',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-            },
-            {
-              category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-            },
-            {
-              category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-            }
-          ]
-        })
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Gemini API error:', response.status, errorData);
-      return fallbackScoring(question, answer);
-    }
-
-    const data = await response.json();
-    
-    // Extract text from Gemini response
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    if (!text) {
-      console.error('No text in Gemini response');
-      return fallbackScoring(question, answer);
-    }
-
-    // Extract JSON from response (remove markdown code fences if present)
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error('No JSON found in Gemini response');
-      return fallbackScoring(question, answer);
-    }
-
-    const result = JSON.parse(jsonMatch[0]);
-    
-    // Validate response structure
-    if (typeof result.score !== 'number' || result.score < 0 || result.score > 100) {
-      console.error('Invalid score in Gemini response');
-      return fallbackScoring(question, answer);
-    }
-
-    // FIX 2: Apply Category-Based Score Floor
-    let finalScore = Math.round(result.score);
-    finalScore = applyCategoryFloor(finalScore, question.category);
-
-    return {
-      score: finalScore,
-      feedback: result.feedback || 'No feedback provided',
-      strengths: Array.isArray(result.strengths) ? result.strengths : [],
-      improvements: Array.isArray(result.improvements) ? result.improvements : []
-    };
-
-  } catch (error) {
-    console.error('Gemini validation error:', error);
-    return fallbackScoring(question, answer);
-  }
-}
-
-/**
- * Fallback scoring when AI is unavailable
- * Uses heuristics: length, keywords, structure
+ * Fallback scoring when AI is unavailable — heuristic based on answer quality
  */
 function fallbackScoring(question, answer) {
   const words = answer.trim().split(/\s+/).length;
   const hasNumbers = /\d+/.test(answer);
-  const hasSpecifics = /\b(because|specifically|example|data|evidence|tested|validated|measured)\b/i.test(answer);
-  
-  // FIX 3: Improve Base Score and Ceiling
-  let score = 40; // Base score for attempting (increased from 30)
-  
-  // Length bonus (up to 20 points)
-  if (words >= 50) score += 20;
-  else if (words >= 30) score += 15;
+  const hasSpecifics = /\b(because|specifically|example|data|evidence|tested|validated|measured|customers?|users?|market|revenue|growth)\b/i.test(answer);
+
+  let score = 45;
+  if (words >= 60) score += 20;
+  else if (words >= 40) score += 15;
   else if (words >= 20) score += 10;
   else if (words >= 10) score += 5;
-  
-  // Specificity bonus (up to 30 points)
-  if (hasNumbers) score += 15;
-  if (hasSpecifics) score += 15;
-  
-  // FIX 3: Added Structure Bonus
-  const hasStructure =
-    answer.includes('\n') ||
-    answer.includes('-') ||
-    answer.match(/\b(Q1|Q2|Yes|No)\b/i);
 
-  if (hasStructure) score += 10;
+  if (hasNumbers) score += 12;
+  if (hasSpecifics) score += 13;
+  if (answer.includes('\n') || answer.includes('-')) score += 5;
+  if (words > 100) score += 5;
 
-  // Detail bonus
-  if (answer.includes('\n') || answer.includes('.')) score += 10; 
-  if (words > 100) score += 10;
-  
-  score = Math.min(score, 85); // Raised cap from 100 to 85 for fallback
-  
-  const feedback = score >= 70 
-    ? 'Good answer with reasonable detail.'
-    : score >= 50
-    ? 'Answer needs more specifics and evidence.'
-    : 'Answer is too vague. Provide concrete examples and data.';
-  
+  score = Math.min(score, 82);
+
   return {
     score,
-    feedback,
-    strengths: score >= 70 ? ['Answer provides some detail'] : [],
-    improvements: score < 70 ? ['Add more specific examples', 'Include data or evidence'] : []
+    feedback: score >= 70
+      ? 'Good answer with reasonable detail.'
+      : score >= 50
+      ? 'Answer needs more specifics and evidence.'
+      : 'Answer is too vague. Provide concrete examples and data.',
+    strengths: score >= 70 ? ['Provides some detail'] : [],
+    improvements: score < 70 ? ['Add specific examples', 'Include data or evidence'] : [],
   };
 }
 
 /**
- * Validates all answers for a stage with rate limiting
- * Gemini free tier: 15 RPM, 1500 RPD
- * @param {Array} questions - Array of question objects
- * @param {Array} answers - Array of answer objects
- * @returns {Promise<Object>} { stageScore, processedAnswers, overallFeedback }
+ * Score ALL answers for a stage in a SINGLE Gemini API call.
+ * This avoids the per-question delay and stays well within the 30s timeout.
  */
-async function validateStage(questions, answers) {
+async function batchValidateStage(questions, answers) {
+  // Build a combined prompt for all questions at once
+  const qaList = answers.map((ans, i) => {
+    const q = questions.find(q => q.id === ans.id) || questions[i];
+    return `Q${ans.id} [${q?.category || 'general'}] (weight: ${q?.weight || 1.0}): ${q?.question || ''}
+Hint: ${q?.hint || ''}
+Answer: ${ans.answer || '(no answer)'}`;
+  }).join('\n\n');
+
+  const prompt = `You are an expert startup advisor evaluating an EARLY-STAGE startup founder.
+Assume this is an idea-stage or MVP-stage company. Score based on clarity of thinking, realism, and progress relative to stage.
+Do NOT penalize lack of revenue, users, or large datasets if reasoning is sound.
+
+Evaluate ALL ${answers.length} answers below and return a JSON array with one object per answer.
+
+${qaList}
+
+For each answer provide:
+- score: 0-100 (specificity, evidence, depth, relevance, feasibility)
+- feedback: 1-2 sentence evaluation
+- strengths: array of 1-2 strings (what was good)
+- improvements: array of 1-2 strings (what to improve)
+
+Respond ONLY with valid JSON array, no markdown, no explanation:
+[{"id": <question_id>, "score": <0-100>, "feedback": "<string>", "strengths": [...], "improvements": [...]}, ...]`;
+
+  let aiResults = null;
+
+  if (GEMINI_API_KEY) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.3,
+              topK: 32,
+              topP: 1,
+              maxOutputTokens: 4096,
+            },
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        // Strip markdown fences if present
+        const cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+        const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            aiResults = parsed;
+            console.log(`✓ Gemini batch scored ${parsed.length} answers`);
+          }
+        }
+      } else {
+        const errText = await response.text().catch(() => '');
+        console.error(`Gemini API error ${response.status}:`, errText);
+      }
+    } catch (err) {
+      console.error('Gemini batch validation error:', err.message);
+    }
+  }
+
+  // Build processedAnswers — use AI results if available, fallback otherwise
   const processedAnswers = [];
   let weightedSum = 0;
   let totalWeight = 0;
 
-  // Process answers with delay to respect rate limits (15 RPM)
-  // Add 5 second delay between requests to be safe
-  for (const answerObj of answers) {
-    const question = questions.find(q => q.id === answerObj.id);
-    if (!question) {
-      continue;
+  for (const ans of answers) {
+    const question = questions.find(q => q.id === ans.id);
+    if (!question) continue;
+
+    const weight = question.weight || 1.0;
+    let scored;
+
+    if (aiResults) {
+      const aiItem = aiResults.find(r => r.id === ans.id || r.id === String(ans.id));
+      if (aiItem && typeof aiItem.score === 'number') {
+        scored = {
+          score: Math.max(0, Math.min(100, Math.round(aiItem.score))),
+          feedback: aiItem.feedback || '',
+          strengths: Array.isArray(aiItem.strengths) ? aiItem.strengths : [],
+          improvements: Array.isArray(aiItem.improvements) ? aiItem.improvements : [],
+        };
+      }
     }
 
-    const result = await scoreAnswer(question, answerObj.answer);
-    const weight = question.weight || 1.0;
+    if (!scored) {
+      scored = fallbackScoring(question, ans.answer || '');
+    }
 
-    weightedSum += result.score * weight;
+    weightedSum += scored.score * weight;
     totalWeight += weight;
 
     processedAnswers.push({
       question: question.question,
-      answer: answerObj.answer,
-      score: result.score,
+      answer: ans.answer || '',
+      score: scored.score,
       weight,
       category: question.category,
-      feedback: result.feedback,
-      strengths: result.strengths,
-      improvements: result.improvements
+      feedback: scored.feedback,
+      strengths: scored.strengths,
+      improvements: scored.improvements,
     });
-
-    // Add delay between API calls (only if using Gemini API)
-    if (GEMINI_API_KEY && answers.indexOf(answerObj) < answers.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second delay
-    }
   }
 
-  const rawStageScore = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+  const rawScore = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
 
-  // FIX 4: Normalize Stage Score (Soft Curve Adjustment)
-  let normalizedScore = rawStageScore;
+  // Soft curve: slightly boost scores in the 60-79 range
+  let stageScore = rawScore;
+  if (rawScore >= 60 && rawScore < 70) stageScore = Math.min(rawScore + 5, 69);
+  else if (rawScore >= 70 && rawScore < 80) stageScore = Math.min(rawScore + 3, 100);
+  stageScore = Math.min(stageScore, 100);
 
-  if (rawStageScore >= 60 && rawStageScore < 70) {
-    normalizedScore += 5;
-  }
+  const overallFeedback =
+    stageScore >= 80 ? 'Excellent responses! You have clearly thought through this stage.' :
+    stageScore >= 70 ? 'Good work! Your answers demonstrate solid understanding.' :
+    stageScore >= 50 ? 'Your idea shows promise. Strengthen a few answers with clearer examples or validation to move forward.' :
+    'Your answers need significant improvement. Focus on providing concrete examples and evidence.';
 
-  if (rawStageScore >= 70 && rawStageScore < 80) {
-    normalizedScore += 3;
-  }
+  console.log(`Stage score: ${stageScore}% (raw: ${rawScore}%, ${aiResults ? 'AI' : 'fallback'})`);
 
-  normalizedScore = Math.min(normalizedScore, 100);
-  const stageScore = normalizedScore;
-
-  // FIX 5: Improve Overall Feedback
-  const overallFeedback = stageScore >= 80
-    ? 'Excellent responses! You have clearly thought through this stage.'
-    : stageScore >= 70
-    ? 'Good work! Your answers demonstrate solid understanding.'
-    : stageScore >= 50
-    ? 'Your idea shows promise. Strengthen a few answers with clearer examples or validation to move forward.'
-    : 'Your answers need significant improvement. Focus on providing concrete examples and evidence.';
-
-  return {
-    stageScore,
-    processedAnswers,
-    overallFeedback
-  };
+  return { stageScore, processedAnswers, overallFeedback };
 }
 
-/**
- * Batch validate with better rate limiting
- * Processes 10 questions in ~50 seconds (respecting 15 RPM)
- */
-async function batchValidateStage(questions, answers) {
-  const BATCH_SIZE = 3; // Process 3 at a time
-  const BATCH_DELAY = 15000; // 15 seconds between batches (4 batches per minute = 12 requests/min)
-  
-  const processedAnswers = [];
-  let weightedSum = 0;
-  let totalWeight = 0;
-
-  // Split into batches
-  const batches = [];
-  for (let i = 0; i < answers.length; i += BATCH_SIZE) {
-    batches.push(answers.slice(i, i + BATCH_SIZE));
+// Keep legacy exports for backward compatibility
+async function scoreAnswer(question, answer) {
+  if (!answer || answer.trim().length < 10) {
+    return { score: 0, feedback: 'Answer too short.', strengths: [], improvements: ['Provide a detailed answer'] };
   }
-
-  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-    const batch = batches[batchIndex];
-    
-    // Process batch in parallel
-    const batchPromises = batch.map(async (answerObj) => {
-      const question = questions.find(q => q.id === answerObj.id);
-      if (!question) return null;
-
-      const result = await scoreAnswer(question, answerObj.answer);
-      const weight = question.weight || 1.0;
-
-      return {
-        question: question.question,
-        answer: answerObj.answer,
-        score: result.score,
-        weight,
-        category: question.category,
-        feedback: result.feedback,
-        strengths: result.strengths,
-        improvements: result.improvements
-      };
-    });
-
-    const batchResults = await Promise.all(batchPromises);
-    
-    batchResults.forEach(result => {
-      if (result) {
-        processedAnswers.push(result);
-        weightedSum += result.score * result.weight;
-        totalWeight += result.weight;
-      }
-    });
-
-    // Delay between batches (except for last batch)
-    if (batchIndex < batches.length - 1) {
-      console.log(`Processed batch ${batchIndex + 1}/${batches.length}, waiting ${BATCH_DELAY/1000}s before next batch...`);
-      await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
-    }
-  }
-
-  const rawStageScore = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
-
-  // FIX 4: Normalize Stage Score (Soft Curve Adjustment)
-  let normalizedScore = rawStageScore;
-
-  if (rawStageScore >= 60 && rawStageScore < 70) {
-    normalizedScore += 5;
-  }
-
-  if (rawStageScore >= 70 && rawStageScore < 80) {
-    normalizedScore += 3;
-  }
-
-  normalizedScore = Math.min(normalizedScore, 100);
-  const stageScore = normalizedScore;
-
-  // FIX 5: Improve Overall Feedback
-  const overallFeedback = stageScore >= 80
-    ? 'Excellent responses! You have clearly thought through this stage.'
-    : stageScore >= 70
-    ? 'Good work! Your answers demonstrate solid understanding.'
-    : stageScore >= 50
-    ? 'Your idea shows promise. Strengthen a few answers with clearer examples or validation to move forward.'
-    : 'Your answers need significant improvement. Focus on providing concrete examples and evidence.';
-
-  return {
-    stageScore,
-    processedAnswers,
-    overallFeedback
-  };
+  return fallbackScoring(question, answer);
 }
 
-module.exports = {
-  scoreAnswer,
-  validateStage,
-  batchValidateStage
-};
+async function validateStage(questions, answers) {
+  return batchValidateStage(questions, answers);
+}
+
+module.exports = { scoreAnswer, validateStage, batchValidateStage };

@@ -76,20 +76,28 @@ export const AuthProvider = ({ children }) => {
   // ── refreshProfile ─────────────────────────────────────────────────────────
   // Updates user data (rewardPoints, profilePicture, etc.) from server.
   // NEVER clears auth — even on 401. Only explicit logout() clears auth.
-  // Reason: a background refresh failing should never log the user out.
   const refreshProfile = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!token) return null;
 
     try {
       const data = await apiFetch('/auth/profile');
-      // Backend: { success: true, profile: { _id, name, rewardPoints, profilePicture, ... } }
       const profile = data.profile || data;
       _setAuth(profile);
+
+      // Also refresh streak in the navbar immediately
+      apiFetch('/gamification/me')
+        .then(g => {
+          if (g?.currentStreak !== undefined) {
+            window.dispatchEvent(new CustomEvent('streak-updated', {
+              detail: { currentStreak: g.currentStreak }
+            }));
+          }
+        })
+        .catch(() => {});
+
       return profile;
     } catch (err) {
-      // Silently ignore ALL errors — network, CORS, 401, 5xx
-      // The user stays logged in with cached data
       console.warn('[Auth] refreshProfile error (ignored):', err.message);
       return null;
     }

@@ -91,7 +91,11 @@ export const founderAPI = {
   updateStartup: async (data) => api.put('/founder/my-startup', data),
 
   getStageQuestions: async (stageKey) => api.get(`/founder/validate-stage/${stageKey}/questions`),
-  submitStageValidation: async (stageKey, answers) => api.post(`/founder/validate-stage/${stageKey}`, { answers }),
+  submitStageValidation: async (stageKey, answers) => api.post(
+    `/founder/validate-stage/${stageKey}`,
+    { answers },
+    { timeout: 60000 } // 60s — Gemini batch call can take up to 30s
+  ),
 
   getInvestors: async (search = '', sort = '') => {
     const params = {};

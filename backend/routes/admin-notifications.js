@@ -46,14 +46,16 @@ router.post('/send-by-role', protect, authorize('admin', 'investor'), async (req
     }));
     await Notification.insertMany(notifications);
 
-    // 2. Send Emails (Run in background to avoid delay)
-    users.forEach(user => {
-      const emailTemplate = getAdminNotificationEmail(title, message);
-      sendEmail({
-        email: user.email,
-        subject: emailTemplate.subject,
-        message: emailTemplate.html
-      }).catch(err => console.error(`Email failed for ${user.email}:`, err));
+    // 2. Send Emails — fire-and-forget, don't block the response
+    setImmediate(() => {
+      users.forEach(user => {
+        const emailTemplate = getAdminNotificationEmail(title, message);
+        sendEmail({
+          email: user.email,
+          subject: emailTemplate.subject,
+          message: emailTemplate.html
+        }).catch(err => console.error(`Email failed for ${user.email}:`, err));
+      });
     });
 
     // 3. Real-time Socket emission
@@ -100,18 +102,17 @@ router.post('/send-to-all', protect, authorize('admin', 'investor'), async (req,
 
     await Notification.insertMany(notifications);
 
-    // 3. Send Emails (Sequentially for better debugging/reliability)
-    for (const user of users) {
-      console.log(`Sending email to: ${user.email}`); // Debug: Check loop progress
-      
-      const emailTemplate = getAdminNotificationEmail(title, message);
-      
-      await sendEmail({
-        email: user.email,
-        subject: emailTemplate.subject,
-        message: emailTemplate.html
-      }).catch(err => console.error(`Email failed for ${user.email}:`, err));
-    }
+    // 3. Send Emails — fire-and-forget
+    setImmediate(() => {
+      for (const user of users) {
+        const emailTemplate = getAdminNotificationEmail(title, message);
+        sendEmail({
+          email: user.email,
+          subject: emailTemplate.subject,
+          message: emailTemplate.html
+        }).catch(err => console.error(`Email failed for ${user.email}:`, err));
+      }
+    });
 
     // 4. Real-time emission
     const io = getSocketIO(req);
@@ -150,14 +151,16 @@ router.post('/send-to-users', protect, authorize('admin', 'investor'), async (re
 
     await Notification.insertMany(notifications);
 
-    // Send Emails
-    users.forEach(user => {
-      const emailTemplate = getAdminNotificationEmail(title, message);
-      sendEmail({
-        email: user.email,
-        subject: emailTemplate.subject,
-        message: emailTemplate.html
-      }).catch(err => console.error(`Email failed for ${user.email}:`, err));
+    // Send Emails — fire-and-forget
+    setImmediate(() => {
+      users.forEach(user => {
+        const emailTemplate = getAdminNotificationEmail(title, message);
+        sendEmail({
+          email: user.email,
+          subject: emailTemplate.subject,
+          message: emailTemplate.html
+        }).catch(err => console.error(`Email failed for ${user.email}:`, err));
+      });
     });
 
     // Real-time emission
