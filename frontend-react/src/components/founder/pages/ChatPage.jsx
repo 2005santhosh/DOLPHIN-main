@@ -266,7 +266,9 @@ export default function ChatPage({ setChatCount, openUserId }) {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // On mobile, never intercept Enter — let the keyboard handle it naturally
+    // On desktop, Enter sends; Shift+Enter inserts newline
+    if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
       e.preventDefault();
       send();
     }
@@ -539,23 +541,21 @@ export default function ChatPage({ setChatCount, openUserId }) {
                                 {isLastInGroup && (
                                   <div style={{
                                     fontSize: '0.65rem',
-                                    color: isOwn ? 'rgba(15,23,42,0.55)' : '#9CA3AF',
+                                    color: isOwn ? 'rgba(15,23,42,0.5)' : '#9CA3AF',
                                     textAlign: 'right',
-                                    marginTop: '2px',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px',
+                                    marginTop: '3px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px',
                                   }}>
                                     {msgTime(msg.createdAt)}
-                                    {/* Double tick for own messages */}
-                                    {isOwn && !msg.optimistic && (
-                                      <svg width="14" height="10" viewBox="0 0 16 11" fill="none">
-                                        <path d="M1 5.5L5 9.5L15 1.5" stroke="rgba(15,23,42,0.55)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                                        <path d="M5 5.5L9 9.5" stroke="rgba(15,23,42,0.55)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                                      </svg>
-                                    )}
-                                    {isOwn && msg.optimistic && (
-                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(15,23,42,0.4)" strokeWidth="2">
-                                        <circle cx="12" cy="12" r="10"/>
-                                      </svg>
+                                    {isOwn && (
+                                      <span style={{
+                                        fontSize: '0.6rem',
+                                        fontWeight: 600,
+                                        color: msg.optimistic ? 'rgba(15,23,42,0.35)' : 'rgba(15,23,42,0.5)',
+                                        letterSpacing: '0.01em',
+                                      }}>
+                                        {msg.optimistic ? 'Sending…' : 'Sent'}
+                                      </span>
                                     )}
                                   </div>
                                 )}
@@ -588,6 +588,8 @@ export default function ChatPage({ setChatCount, openUserId }) {
                 padding: '0.5rem 0.875rem',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                 minHeight: 42,
+                minWidth: 0,
+                overflow: 'hidden',
               }}>
                 <textarea
                   ref={textareaRef}
@@ -598,11 +600,15 @@ export default function ChatPage({ setChatCount, openUserId }) {
                   rows={1}
                   disabled={sending}
                   style={{
+                    width: '100%',
                     flex: 1, border: 'none', outline: 'none', resize: 'none',
                     fontSize: '0.9rem', lineHeight: 1.5, background: 'transparent',
                     color: '#111827', fontFamily: 'inherit',
                     maxHeight: 120, overflowY: 'auto',
                     padding: 0, margin: 0,
+                    display: 'block',
+                    wordBreak: 'break-word',
+                    overflowWrap: 'break-word',
                   }}
                 />
               </div>
