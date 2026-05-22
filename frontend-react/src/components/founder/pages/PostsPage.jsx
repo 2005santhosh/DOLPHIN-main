@@ -292,20 +292,34 @@ const PostsPage = () => {
     setStateLocks((prev) => ({ ...prev, [userId]: true }));
 
     try {
-      await connectionsAPI.sendConnectionRequest(userId);
+      const result = await connectionsAPI.sendConnectionRequest(userId);
       toast.success('Connection request sent!');
 
       // Update connectionStatus on ALL posts by this author
       setPosts((prev) =>
         prev.map((post) => {
           if (post.authorId?.toString() === userId?.toString()) {
-            return { ...post, connectionStatus: 'pending' };
+            return { ...post, connectionStatus: result.status || 'pending' };
           }
           return post;
         })
       );
     } catch (error) {
-      toast.error(error.message || 'Failed to send request');
+      // If already connected/pending, update the UI to reflect the real status
+      if (error.status === 400 && error.data?.status) {
+        const existingStatus = error.data.status;
+        setPosts((prev) =>
+          prev.map((post) => {
+            if (post.authorId?.toString() === userId?.toString()) {
+              return { ...post, connectionStatus: existingStatus };
+            }
+            return post;
+          })
+        );
+        toast.error(error.data.message || 'Connection already exists');
+      } else {
+        toast.error(error.message || 'Failed to send request');
+      }
     } finally {
       setStateLocks((prev) => {
         const newLocks = { ...prev };

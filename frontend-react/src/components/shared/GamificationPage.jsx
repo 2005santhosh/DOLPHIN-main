@@ -233,6 +233,10 @@ export default function GamificationPage() {
     try {
       const data = await gamificationAPI.getMyStats();
       setStats(data);
+      // Notify the Header to update the streak badge immediately
+      window.dispatchEvent(new CustomEvent('streak-updated', {
+        detail: { currentStreak: data?.currentStreak ?? 0 }
+      }));
     } catch (e) {
       console.error('Gamification stats error:', e);
     } finally {
@@ -255,8 +259,10 @@ export default function GamificationPage() {
 
   useEffect(() => {
     loadStats();
-    // Record daily login activity
-    gamificationAPI.recordLogin().catch(() => {});
+    // Record daily login activity, then refresh stats to reflect any streak change
+    gamificationAPI.recordLogin()
+      .then(() => loadStats())
+      .catch(() => {});
   }, [loadStats]);
 
   useEffect(() => {

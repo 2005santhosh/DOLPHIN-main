@@ -3,7 +3,7 @@ import PageHeader from '../../shared/PageHeader';
 import Card from '../../shared/Card';
 import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { investorAPI } from '../../../services/api';
+import { investorAPI, connectionsAPI } from '../../../services/api';
 import { CornerUpRight, Inbox, MessageCircle } from '../../shared/Icons';
 
 const timeAgo = (d) => {
@@ -40,20 +40,57 @@ const Avatar = ({ src, name, size = 52 }) => {
 
 export default function RequestsPage({ setRequestsCount }) {
   const [tab, setTab]       = useState('sent');
-  const [all, setAll]       = useState([]);
+  const [incoming, setIncoming] = useState([]);
+  const [sent, setSent]     = useState([]);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy]     = useState({});
 
   useEffect(() => { load(); }, []);
 
   const load = async () => {
     setLoading(true);
     try {
-      const data = await investorAPI.getMyRequests();
-      setAll(data);
-      // Investors don't receive incoming requests in the same way — they send them
-      // But update badge for any pending sent requests
+      const [connData, introRequests] = await Promise.all([
+        connectionsAPI.getConnections().catch(() => ({ incoming: [], sent: [] })),
+        investorAPI.getMyRequests().catch(() => []),
+      ]);
+
+      // Connection model entries
+      const connIncoming = (connData.incoming || []).map(c => ({
+        _id: c._id, type: 'connection', status: c.status, createdAt: c.createdAt,
+        message: c.message || '', otherUser: c.otherUser || {},
+      }));
+      const connSent = (connData.sent || []).map(c => ({
+        _id: c._id, type: 'connection', status: c.status, createdAt: c.createdAt,
+        message: c.message || '', otherUser: c.otherUser || {},
+      }));
+
+      // IntroRequest model entries
+      const introArr = Array.isArray(introRequests) ? introRequests : [];
+      const introSent = introArr.filter(r => r.initiator === 'investor').map(r => ({
+        _id: r._id, type: 'intro', status: r.status, createdAt: r.createdAt,
+        message: r.message || '',
+        otherUser: r.founderId || {},
+        startupName: (r.startupId?.name) || '',
+        startupIndustry: (r.startupId?.industry) || '',
+      }));
+      const introIncoming = introArr.filter(r => r.initiator === 'founder').map(r => ({
+        _id: r._id, type: 'intro', status: r.status, createdAt: r.createdAt,
+        message: r.message || '',
+        otherUser: r.founderId || {},
+        startupName: (r.startupId?.name) || '',
+      }));
+
+      const allIncoming = [...connIncoming, ...introIncoming]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const allSent = [...connSent, ...introSent]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      setIncoming(allIncoming);
+      setSent(allSent);
+
       if (setRequestsCount) {
-        setRequestsCount(data.filter(r => r.initiator === 'investor' && r.status === 'pending').length);
+        setRequestsCount(allIncoming.filter(r => r.status === 'pending').length);
       }
     } catch (err) {
       toast.error('Failed to load requests');
@@ -62,12 +99,31 @@ export default function RequestsPage({ setRequestsCount }) {
     }
   };
 
+  const acceptConn = async (req) => {
+    setBusy(p => ({ ...p, [req._id]: true }));
+    try {
+      await connectionsAPI.updateConnection(req._id, 'accepted');
+      toast.success('Request accepted!');
+      load();
+    } catch (err) { toast.error(err.message || 'Failed'); }
+    finally { setBusy(p => ({ ...p, [req._id]: false })); }
+  };
+
+  const rejectConn = async (req) => {
+    if (!window.confirm('Reject this request?')) return;
+    setBusy(p => ({ ...p, [req._id]: true }));
+    try {
+      await connectionsAPI.updateConnection(req._id, 'rejected');
+      toast.success('Request rejected');
+      load();
+    } catch (err) { toast.error(err.message || 'Failed'); }
+    finally { setBusy(p => ({ ...p, [req._id]: false })); }
+  };
+
   if (loading) return <LoadingSpinner message="Loading requests…" />;
 
-  // Investors send requests as 'investor' initiator; incoming = 'founder' initiator
-  const sent     = all.filter(r => r.initiator === 'investor');
-  const incoming = all.filter(r => r.initiator === 'founder');
-  const list     = tab === 'sent' ? sent : incoming;
+  const list = tab === 'sent' ? sent : incoming;
+  const pendingIncoming = incoming.filter(r => r.status === 'pending').length;
 
   const tabStyle = (t) => ({
     padding: '0.75rem 1.5rem',
@@ -79,19 +135,26 @@ export default function RequestsPage({ setRequestsCount }) {
     cursor: 'pointer',
     fontSize: '0.95rem',
     marginBottom: '-2px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.4rem',
   });
 
   return (
     <div>
       <PageHeader title="Connection Requests" subtitle="Manage your sent and incoming requests" />
 
-      {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '2px solid var(--border-color, #E5E7EB)', marginBottom: '1.5rem' }}>
         <button style={tabStyle('sent')} onClick={() => setTab('sent')}>
-          <CornerUpRight size={15} style={{ marginRight: 4 }} /> Sent ({sent.length})
+          <CornerUpRight size={15} /> Sent ({sent.length})
         </button>
         <button style={tabStyle('incoming')} onClick={() => setTab('incoming')}>
-          <Inbox size={15} style={{ marginRight: 4 }} /> Incoming ({incoming.length})
+          <Inbox size={15} /> Incoming ({incoming.length})
+          {pendingIncoming > 0 && (
+            <span style={{ marginLeft: 4, background: '#EF4444', color: 'white', borderRadius: 9999, padding: '1px 6px', fontSize: '0.68rem', fontWeight: 700 }}>
+              {pendingIncoming}
+            </span>
+          )}
         </button>
       </div>
 
@@ -107,23 +170,22 @@ export default function RequestsPage({ setRequestsCount }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {list.map(req => {
-            const founder = req.founderId || {};
-            const startup = req.startupId || {};
+            const other = req.otherUser || {};
+            const otherName = other.name || 'Unknown';
 
             return (
-              <Card key={req._id} style={{ padding: '1.5rem' }}>
+              <Card key={`${req.type}-${req._id}`} style={{ padding: '1.5rem' }}>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                  <Avatar src={founder.profilePicture} name={founder.name} />
-
+                  <Avatar src={other.profilePicture} name={otherName} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
                       <div>
                         <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-                          {startup.name || 'Unknown Startup'}
+                          {req.startupName || otherName}
                         </h4>
                         <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                          {tab === 'sent' ? `Founder: ${founder.name || 'Unknown'}` : `From: ${founder.name || 'Unknown'}`}
-                          {startup.industry ? ` · ${startup.industry}` : ''}
+                          {req.startupName ? `Founder: ${otherName}` : (other.role || '')}
+                          {req.startupIndustry ? ` · ${req.startupIndustry}` : ''}
                         </p>
                         <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
                           {timeAgo(req.createdAt)}
@@ -142,6 +204,18 @@ export default function RequestsPage({ setRequestsCount }) {
                       </p>
                     )}
 
+                    {/* Accept/Reject for incoming connection requests */}
+                    {tab === 'incoming' && req.type === 'connection' && req.status === 'pending' && (
+                      <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
+                        <button className="btn btn-primary btn-sm" onClick={() => acceptConn(req)} disabled={busy[req._id]} style={{ flex: 1 }}>
+                          {busy[req._id] ? 'Processing…' : '✓ Accept'}
+                        </button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => rejectConn(req)} disabled={busy[req._id]} style={{ flex: 1 }}>
+                          {busy[req._id] ? 'Processing…' : '✕ Reject'}
+                        </button>
+                      </div>
+                    )}
+
                     {req.status === 'accepted' && (
                       <div style={{ marginTop: '0.75rem' }}>
                         <button
@@ -149,7 +223,7 @@ export default function RequestsPage({ setRequestsCount }) {
                           onClick={() => { window.location.hash = 'chat'; }}
                           style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                         >
-                          <MessageCircle size={14} /> Chat with Founder
+                          <MessageCircle size={14} /> Chat
                         </button>
                       </div>
                     )}

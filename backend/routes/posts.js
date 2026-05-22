@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Post = require('../models/Post');
 const IntroRequest = require('../models/IntroRequest');
+const Connection = require('../models/Connection');
 const { protect } = require('../middleware/authMiddleware');
 const { uploadPostMedia, cloudinary } = require('../config/cloudinary');
 const rateLimit = require('express-rate-limit');
@@ -156,7 +157,7 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
         }));
 
         // Enrich with connection status for each post author
-        // Batch lookup: find all IntroRequests involving the current user and any of the post authors
+        // Check BOTH Connection model (direct connect) and IntroRequest model (founder/provider flow)
         const authorIds = [...new Set(
             formattedPosts
                 .filter(p => p.authorId?.toString() !== req.user._id.toString())
@@ -166,25 +167,50 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
 
         let connectionMap = {};
         if (authorIds.length > 0) {
-            const requests = await IntroRequest.find({
+            // Check Connection model (used by connect button in posts/investors/providers)
+            const connections = await Connection.find({
                 $or: [
-                    { founderId: req.user.id, providerId: { $in: authorIds } },
-                    { providerId: req.user.id, founderId: { $in: authorIds } },
+                    { from: req.user._id, to: { $in: authorIds } },
+                    { from: { $in: authorIds }, to: req.user._id },
                 ]
-            }).select('founderId providerId status').lean();
+            }).select('from to status').lean();
 
-            requests.forEach(req2 => {
-                const otherId = req2.founderId?.toString() === req.user.id.toString()
-                    ? req2.providerId?.toString()
-                    : req2.founderId?.toString();
+            connections.forEach(conn => {
+                const otherId = conn.from?.toString() === req.user._id.toString()
+                    ? conn.to?.toString()
+                    : conn.from?.toString();
                 if (otherId) {
-                    // Prefer accepted > pending > rejected
                     const priority = { accepted: 3, pending: 2, rejected: 1 };
-                    if (!connectionMap[otherId] || (priority[req2.status] || 0) > (priority[connectionMap[otherId]] || 0)) {
-                        connectionMap[otherId] = req2.status;
+                    if (!connectionMap[otherId] || (priority[conn.status] || 0) > (priority[connectionMap[otherId]] || 0)) {
+                        connectionMap[otherId] = conn.status;
                     }
                 }
             });
+
+            // Also check IntroRequest model (founder/provider flow) — only if not already found
+            const missingIds = authorIds.filter(id => !connectionMap[id]);
+            if (missingIds.length > 0) {
+                const requests = await IntroRequest.find({
+                    $or: [
+                        { founderId: req.user._id, providerId: { $in: missingIds } },
+                        { providerId: req.user._id, founderId: { $in: missingIds } },
+                        { founderId: { $in: missingIds }, providerId: req.user._id },
+                        { providerId: { $in: missingIds }, founderId: req.user._id },
+                    ]
+                }).select('founderId providerId status').lean();
+
+                requests.forEach(req2 => {
+                    const otherId = req2.founderId?.toString() === req.user._id.toString()
+                        ? req2.providerId?.toString()
+                        : req2.founderId?.toString();
+                    if (otherId) {
+                        const priority = { accepted: 3, pending: 2, rejected: 1 };
+                        if (!connectionMap[otherId] || (priority[req2.status] || 0) > (priority[connectionMap[otherId]] || 0)) {
+                            connectionMap[otherId] = req2.status;
+                        }
+                    }
+                });
+            }
         }
 
         const enrichedPosts = formattedPosts.map(p => ({

@@ -88,6 +88,7 @@ export default function Header({ onMenuToggle }) {
   }, []);
 
   // Streak — fetch once on mount, refresh every 5 min
+  // Also listen for a custom 'streak-updated' event fired by GamificationPage
   useEffect(() => {
     const fetchStreak = () => {
       gamificationAPI.getMyStats()
@@ -96,7 +97,21 @@ export default function Header({ onMenuToggle }) {
     };
     fetchStreak();
     const interval = setInterval(fetchStreak, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+
+    // Listen for immediate refresh requests (e.g. after recording activity)
+    const onStreakUpdated = (e) => {
+      if (e.detail?.currentStreak !== undefined) {
+        setStreak(e.detail.currentStreak);
+      } else {
+        fetchStreak();
+      }
+    };
+    window.addEventListener('streak-updated', onStreakUpdated);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('streak-updated', onStreakUpdated);
+    };
   }, []);
 
   // Close notifications on outside click

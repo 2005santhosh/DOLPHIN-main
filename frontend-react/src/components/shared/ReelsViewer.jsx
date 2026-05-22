@@ -6,7 +6,12 @@ function getVideoUrl(post) {
     typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video'
   );
   const url = typeof vid === 'string' ? vid : vid?.url;
-  return url?.includes('cloudinary') ? url.replace('/upload/', '/upload/f_auto,q_auto/') : url;
+  if (!url) return null;
+  // Apply Cloudinary optimisation but preserve the URL structure
+  if (url.includes('cloudinary') && url.includes('/upload/')) {
+    return url.replace('/upload/', '/upload/f_auto,q_auto/');
+  }
+  return url;
 }
 
 export default function ReelsViewer({
@@ -24,16 +29,16 @@ export default function ReelsViewer({
   );
   const total = videoPosts.length;
 
-  // We render TWO copies: [videoPosts, videoPosts]
-  // User starts at `startIndex` in the first copy.
-  // When they reach the second copy (idx >= total), we silently jump back to the first copy.
   const [currentIdx, setCurrentIdx] = useState(startIndex < total ? startIndex : 0);
   const [muted, setMuted] = useState(false);
+  const [videoErrors, setVideoErrors] = useState({});
   const containerRef = useRef(null);
+  // videoRefs[listIdx] = <video element>
   const videoRefs = useRef({});
   const jumping = useRef(false);
+  const lastPlayedIdx = useRef(-1);
 
-  // Lock body scroll + Escape
+  // Lock body scroll + Escape key
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -56,21 +61,39 @@ export default function ReelsViewer({
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Play current, pause others
+  // Play current video, pause ALL others (including both copies)
   useEffect(() => {
     if (total === 0) return;
+    const realCurrent = currentIdx % total;
+
     Object.entries(videoRefs.current).forEach(([key, vid]) => {
       if (!vid) return;
       const k = Number(key);
-      // Both copies: key k and k+total map to the same real video
-      const realCurrent = currentIdx % total;
       const realKey = k % total;
+
       if (realKey === realCurrent) {
-        vid.muted = muted;
-        vid.play().catch(() => {});
+        // Only play the copy that matches the current scroll position
+        // If currentIdx < total → play copy 0 (listIdx 0..total-1)
+        // If currentIdx >= total → play copy 1 (listIdx total..2*total-1)
+        const isCorrectCopy = (currentIdx < total) ? (k < total) : (k >= total);
+        if (isCorrectCopy) {
+          vid.muted = muted;
+          if (vid.paused) {
+            vid.play().catch(() => {});
+          }
+        } else {
+          // Wrong copy — pause it
+          if (!vid.paused) {
+            vid.pause();
+            vid.currentTime = 0;
+          }
+        }
       } else {
-        vid.pause();
-        vid.currentTime = 0;
+        // Different video — always pause
+        if (!vid.paused) {
+          vid.pause();
+          vid.currentTime = 0;
+        }
       }
     });
   }, [currentIdx, muted, total]);
@@ -84,12 +107,23 @@ export default function ReelsViewer({
     const idx = Math.round(el.scrollTop / vh);
 
     if (idx >= total) {
-      // User scrolled into the second copy — jump back to first copy silently
+      // User scrolled into the second copy — pause ALL second-copy videos first, then jump
       jumping.current = true;
       const newIdx = idx - total;
+
+      // Pause every video in the second copy before jumping
+      for (let i = total; i < total * 2; i++) {
+        const vid = videoRefs.current[i];
+        if (vid && !vid.paused) {
+          vid.pause();
+          vid.currentTime = 0;
+        }
+      }
+
       el.style.scrollSnapType = 'none';
       el.scrollTop = newIdx * vh;
       setCurrentIdx(newIdx);
+
       requestAnimationFrame(() => {
         if (el) el.style.scrollSnapType = 'y mandatory';
         jumping.current = false;
@@ -101,7 +135,8 @@ export default function ReelsViewer({
 
   if (total === 0) return null;
 
-  const renderList = [...videoPosts, ...videoPosts]; // double list
+  // Render TWO copies for seamless infinite loop
+  const renderList = [...videoPosts, ...videoPosts];
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: '#000' }}>
@@ -164,6 +199,7 @@ export default function ReelsViewer({
           const connStatus = post.connectionStatus;
           const avatarSrc = post.authorImage ||
             `https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'U')}&background=84CC16&color=fff&size=80`;
+          const hasError = videoErrors[listIdx];
 
           return (
             <div
@@ -178,17 +214,38 @@ export default function ReelsViewer({
               }}
             >
               {/* Video */}
-              <video
-                ref={el => { videoRefs.current[listIdx] = el; }}
-                src={videoUrl}
-                playsInline
-                muted={muted}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                onClick={() => {
-                  const vid = videoRefs.current[listIdx];
-                  if (vid) { vid.paused ? vid.play() : vid.pause(); }
-                }}
-              />
+              {videoUrl && !hasError ? (
+                <video
+                  ref={el => { videoRefs.current[listIdx] = el; }}
+                  src={videoUrl}
+                  playsInline
+                  loop
+                  muted={muted}
+                  preload="auto"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  onClick={() => {
+                    const vid = videoRefs.current[listIdx];
+                    if (vid) { vid.paused ? vid.play().catch(() => {}) : vid.pause(); }
+                  }}
+                  onError={() => {
+                    setVideoErrors(prev => ({ ...prev, [listIdx]: true }));
+                  }}
+                />
+              ) : (
+                // Fallback for broken/missing video
+                <div style={{
+                  width: '100%', height: '100%',
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center',
+                  background: '#111',
+                }}>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="1.5">
+                    <polygon points="23 7 16 12 23 17 23 7" />
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                  </svg>
+                  <p style={{ color: '#555', fontSize: '0.85rem', marginTop: '0.75rem' }}>Video unavailable</p>
+                </div>
+              )}
 
               {/* Bottom gradient */}
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, transparent 45%)', pointerEvents: 'none' }} />
@@ -202,6 +259,7 @@ export default function ReelsViewer({
                     src={avatarSrc}
                     alt={post.authorName}
                     style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid white', flexShrink: 0 }}
+                    onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'U')}&background=84CC16&color=fff&size=80`; }}
                   />
                   <div>
                     <p style={{ margin: 0, color: 'white', fontWeight: 700, fontSize: '0.9rem', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
@@ -283,8 +341,7 @@ export default function ReelsViewer({
       </div>
 
       <style>{`
-        /* Hide scrollbar in webkit */
-        div[data-reels-container]::-webkit-scrollbar { display: none; }
+        div[style*="overflow-y: scroll"]::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
   );

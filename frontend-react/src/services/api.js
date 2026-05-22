@@ -194,6 +194,9 @@ export const notificationsAPI = {
 // ─── CONNECTIONS ───────────────────────────────────────────────────────────────
 export const connectionsAPI = {
   sendConnectionRequest: async (toUserId) => api.post('/connections/request', { toUserId }),
+  getConnections: async () => api.get('/connections'),
+  getStatus: async (userId) => api.get(`/connections/status/${userId}`),
+  updateConnection: async (id, status) => api.put(`/connections/${id}`, { status }),
 };
 
 // ─── GAMIFICATION ──────────────────────────────────────────────────────────────

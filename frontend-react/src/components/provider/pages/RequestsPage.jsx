@@ -3,7 +3,7 @@ import PageHeader from '../../shared/PageHeader';
 import Card from '../../shared/Card';
 import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { providerAPI } from '../../../services/api';
+import { providerAPI, connectionsAPI } from '../../../services/api';
 import { Inbox, CornerUpRight, MessageCircle } from '../../shared/Icons';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -67,16 +67,42 @@ const RequestsPage = ({ setRequestsCount }) => {
   const loadRequests = async () => {
     setLoading(true);
     try {
-      const all = await providerAPI.getMyRequests();
+      const [connData, introAll] = await Promise.all([
+        connectionsAPI.getConnections().catch(() => ({ incoming: [], sent: [] })),
+        providerAPI.getMyRequests().catch(() => []),
+      ]);
 
-      const incomingList = all.filter(r => r.initiator === 'founder');
-      const sentList     = all.filter(r => r.initiator === 'provider');
+      // Connection model entries
+      const connIncoming = (connData.incoming || []).map(c => ({
+        _id: c._id, type: 'connection', initiator: 'other', status: c.status,
+        createdAt: c.createdAt, message: c.message || '',
+        founderId: c.otherUser || {},
+      }));
+      const connSent = (connData.sent || []).map(c => ({
+        _id: c._id, type: 'connection', initiator: 'provider', status: c.status,
+        createdAt: c.createdAt, message: c.message || '',
+        founderId: c.otherUser || {},
+      }));
 
-      setIncoming(incomingList);
-      setSent(sentList);
+      // IntroRequest model entries
+      const introArr = Array.isArray(introAll) ? introAll : [];
+      const introIncoming = introArr.filter(r => r.initiator === 'founder').map(r => ({
+        ...r, type: 'intro',
+      }));
+      const introSent = introArr.filter(r => r.initiator === 'provider').map(r => ({
+        ...r, type: 'intro',
+      }));
+
+      const allIncoming = [...connIncoming, ...introIncoming]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const allSent = [...connSent, ...introSent]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      setIncoming(allIncoming);
+      setSent(allSent);
 
       if (setRequestsCount) {
-        setRequestsCount(incomingList.filter(r => r.status === 'pending').length);
+        setRequestsCount(allIncoming.filter(r => r.status === 'pending').length);
       }
     } catch (error) {
       console.error('Error loading requests:', error);
@@ -86,10 +112,14 @@ const RequestsPage = ({ setRequestsCount }) => {
     }
   };
 
-  const handleUpdate = async (requestId, status) => {
+  const handleUpdate = async (requestId, status, type) => {
     setProcessing(prev => ({ ...prev, [requestId]: true }));
     try {
-      await providerAPI.updateIntroRequest(requestId, status);
+      if (type === 'connection') {
+        await connectionsAPI.updateConnection(requestId, status);
+      } else {
+        await providerAPI.updateIntroRequest(requestId, status);
+      }
       toast.success(`Request ${status}!`);
       loadRequests();
     } catch (error) {
@@ -184,14 +214,18 @@ const RequestsPage = ({ setRequestsCount }) => {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {currentList.map((req) => {
-            const isIncoming = req.initiator === 'founder';
+            // For Connection model entries: isIncoming = we're in the incoming tab
+            // For IntroRequest entries: isIncoming = initiator is 'founder'
+            const isIncoming = req.type === 'connection'
+              ? activeTab === 'incoming'
+              : req.initiator === 'founder';
             const person     = req.founderId;
             const startup    = req.startupId;
             const personName = person?.name || 'Unknown';
             const personPic  = person?.profilePicture;
 
             return (
-              <Card key={req._id} style={{ padding: '1.5rem' }}>
+              <Card key={`${req.type || 'intro'}-${req._id}`} style={{ padding: '1.5rem' }}>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                   {/* Avatar */}
                   <img
@@ -253,7 +287,7 @@ const RequestsPage = ({ setRequestsCount }) => {
                       <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
                         <button
                           className="btn btn-primary btn-sm"
-                          onClick={() => handleUpdate(req._id, 'accepted')}
+                          onClick={() => handleUpdate(req._id, 'accepted', req.type)}
                           disabled={processing[req._id]}
                           style={{ flex: 1 }}
                         >
@@ -261,7 +295,7 @@ const RequestsPage = ({ setRequestsCount }) => {
                         </button>
                         <button
                           className="btn btn-secondary btn-sm"
-                          onClick={() => handleUpdate(req._id, 'rejected')}
+                          onClick={() => handleUpdate(req._id, 'rejected', req.type)}
                           disabled={processing[req._id]}
                           style={{ flex: 1 }}
                         >
