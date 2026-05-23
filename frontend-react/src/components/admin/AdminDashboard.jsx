@@ -125,6 +125,7 @@ export default function AdminDashboard() {
 function DashboardPage() {
   const [stats, setStats] = useState(null);
   const [recent, setRecent] = useState([]);
+  const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { load(); }, []);
@@ -132,12 +133,14 @@ function DashboardPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [dash, pending] = await Promise.all([
+      const [dash, recentUsers, pendingUsers] = await Promise.all([
         adminFetch('/admin/dashboard'),
+        adminFetch('/admin/recent-users?limit=8'),
         adminFetch('/admin/pending-users'),
       ]);
       setStats(dash);
-      setRecent(pending.slice(0, 5));
+      setRecent(Array.isArray(recentUsers) ? recentUsers : []);
+      setPending(Array.isArray(pendingUsers) ? pendingUsers : []);
     } catch (err) {
       toast.error('Failed to load dashboard');
     } finally {
@@ -154,6 +157,7 @@ function DashboardPage() {
         <p style={{ color: '#6B7280', margin: '4px 0 0', fontSize: '0.9rem' }}>Platform overview and quick actions</p>
       </div>
 
+      {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         <StatCard icon={<Users size={24} color="#3B82F6" />}     value={stats?.users?.total ?? 0}       label="Total Users"         color="#3B82F6" bg="#DBEAFE" />
         <StatCard icon={<Clock size={24} color="#F59E0B" />}     value={stats?.users?.pending ?? 0}     label="Pending Approvals"   color="#F59E0B" bg="#FEF3C7" />
@@ -161,29 +165,80 @@ function DashboardPage() {
         <StatCard icon={<Puzzle size={24} color="#6366F1" />}    value={stats?.providers?.verified ?? 0} label="Active Providers"   color="#6366F1" bg="#E0E7FF" />
       </div>
 
-      <div style={{ background: 'white', borderRadius: 12, border: '1px solid #E5E7EB', padding: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Recent Registrations</h3>
-          <button onClick={load} className="btn btn-secondary btn-sm">↻ Refresh</button>
-        </div>
-        {recent.length === 0 ? (
-          <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '1.5rem' }}>No pending users</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {recent.map(u => (
-              <div key={u._id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: '#F9FAFB', borderRadius: 8 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#DBEAFE', color: '#1D4ED8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
-                  {u.name?.charAt(0).toUpperCase()}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: '#111827' }}>{u.name}</p>
-                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#6B7280' }}>{u.email} · {timeAgo(u.createdAt)}</p>
-                </div>
-                <RoleBadge role={u.role} />
-              </div>
-            ))}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
+
+        {/* Recent Registrations */}
+        <div style={{ background: 'white', borderRadius: 12, border: '1px solid #E5E7EB', padding: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Recent Registrations</h3>
+            <button onClick={load} className="btn btn-secondary btn-sm">↻ Refresh</button>
           </div>
-        )}
+          {recent.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '1.5rem' }}>No users yet</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              {recent.map(u => {
+                const s = getStatusClass(u.state);
+                return (
+                  <div key={u._id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.75rem', background: '#F9FAFB', borderRadius: 8 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#DBEAFE', color: '#1D4ED8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
+                      {u.name?.charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontWeight: 600, fontSize: '0.875rem', color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</p>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: '#6B7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email} · {timeAgo(u.createdAt)}</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0, alignItems: 'center' }}>
+                      <RoleBadge role={u.role} />
+                      <span style={{ padding: '2px 8px', background: s.bg, color: s.color, borderRadius: 9999, fontSize: '0.7rem', fontWeight: 600 }}>{s.label}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Pending Approvals */}
+        <div style={{ background: 'white', borderRadius: 12, border: '1px solid #E5E7EB', padding: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
+              Pending Approvals
+              {pending.length > 0 && (
+                <span style={{ marginLeft: 8, background: '#FEF3C7', color: '#92400E', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700, padding: '2px 8px' }}>
+                  {pending.length}
+                </span>
+              )}
+            </h3>
+          </div>
+          {pending.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '1.5rem' }}>
+              <span style={{ fontSize: '1.5rem', display: 'block', marginBottom: '0.5rem' }}>✅</span>
+              All caught up — no pending approvals
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              {pending.slice(0, 6).map(u => (
+                <div key={u._id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.75rem', background: '#FFFBEB', borderRadius: 8, border: '1px solid #FDE68A' }}>
+                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#FEF3C7', color: '#92400E', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
+                    {u.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontWeight: 600, fontSize: '0.875rem', color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</p>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#6B7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email} · {timeAgo(u.createdAt)}</p>
+                  </div>
+                  <RoleBadge role={u.role} />
+                </div>
+              ))}
+              {pending.length > 6 && (
+                <p style={{ textAlign: 'center', fontSize: '0.8rem', color: '#6B7280', margin: '0.25rem 0 0' }}>
+                  +{pending.length - 6} more — go to Users tab to manage
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );

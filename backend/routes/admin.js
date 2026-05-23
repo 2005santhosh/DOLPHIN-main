@@ -837,10 +837,26 @@ router.get('/dashboard', protect, authorize('admin', 'investor'), async (req, re
     res.status(500).json({ message: 'Server error' });
   }
 });
-// Get pending users samesite
+// Get pending users
 router.get('/pending-users', protect, authorize('admin', 'investor'), async (req, res) => {
   try {
-    const users = await User.find({ state: 'PENDING_APPROVAL' }).select('-password');
+    const users = await User.find({ state: 'PENDING_APPROVAL' })
+      .select('-password')
+      .sort({ createdAt: -1 });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get recent registrations (newest users regardless of state)
+router.get('/recent-users', protect, authorize('admin', 'investor'), async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const users = await User.find()
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .limit(limit);
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });

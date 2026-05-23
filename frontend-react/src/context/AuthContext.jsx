@@ -103,14 +103,14 @@ export const AuthProvider = ({ children }) => {
     }
   }, [_setAuth]);
 
-  // ── on mount ───────────────────────────────────────────────────────────────
+  // ── on mount: refresh profile + streak immediately ────────────────────────
   useEffect(() => {
-    // Kick off background refresh to get fresh rewardPoints, profilePicture
     if (localStorage.getItem('token')) {
+      // Fire immediately — don't wait
       refreshProfile();
     }
 
-    // Refresh every 2 minutes — enough to keep points/picture fresh without hammering the API
+    // Refresh every 2 minutes
     timerRef.current = setInterval(() => {
       if (localStorage.getItem('token')) refreshProfile();
     }, 120_000);

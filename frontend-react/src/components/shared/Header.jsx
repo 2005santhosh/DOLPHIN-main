@@ -87,32 +87,35 @@ export default function Header({ onMenuToggle }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Streak — fetch once on mount, refresh every 5 min
-  // Also listen for a custom 'streak-updated' event fired by GamificationPage
+  // Streak — listen for streak-updated events from AuthContext (fires on mount + every 2min)
+  // Also do one direct fetch as a fallback in case the event fires before this effect runs
   useEffect(() => {
-    const fetchStreak = () => {
-      gamificationAPI.getMyStats()
-        .then(data => setStreak(data?.currentStreak ?? 0))
-        .catch(() => {});
-    };
-    fetchStreak();
-    const interval = setInterval(fetchStreak, 5 * 60 * 1000);
+    let mounted = true;
 
-    // Listen for immediate refresh requests (e.g. after recording activity)
+    // Fallback fetch — only if streak is still null after 2 seconds
+    // (means the streak-updated event was missed)
+    const fallbackTimer = setTimeout(() => {
+      if (mounted && streak === null) {
+        gamificationAPI.getMyStats()
+          .then(data => { if (mounted) setStreak(data?.currentStreak ?? 0); })
+          .catch(() => { if (mounted) setStreak(0); });
+      }
+    }, 2000);
+
     const onStreakUpdated = (e) => {
+      if (!mounted) return;
       if (e.detail?.currentStreak !== undefined) {
         setStreak(e.detail.currentStreak);
-      } else {
-        fetchStreak();
       }
     };
     window.addEventListener('streak-updated', onStreakUpdated);
 
     return () => {
-      clearInterval(interval);
+      mounted = false;
+      clearTimeout(fallbackTimer);
       window.removeEventListener('streak-updated', onStreakUpdated);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close notifications on outside click
   useEffect(() => {

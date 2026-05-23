@@ -195,61 +195,110 @@ function computeLeaderboardScore(user) {
 
 /**
  * Get top N users for a given role, ranked by computed leaderboard score.
- * Includes ALL non-blocked users regardless of state or startup creation.
- * Score is computed on-the-fly from actual fields so it's always accurate.
- *
- * @param {string} role
- * @param {number} limit  - number of top entries to return
- * @param {string} [currentUserId] - if provided, also returns this user's rank among ALL users
+ * Counts actual Post and Connection documents for accuracy — not stale counters.
  */
 async function getLeaderboard(role, limit = 50, currentUserId = null) {
-  // Fetch ALL non-blocked users of this role — no state filter
+  const Post       = require('../models/Post');
+  const Connection = require('../models/Connection');
+
+  // Fetch ALL non-blocked users of this role
   const allUsers = await User.find({
     role,
     state: { $ne: 'BLOCKED' },
   })
-    .select('name profilePicture currentStreak longestStreak totalPosts totalConnections totalDaysActive rewardPoints leaderboardScore')
+    .select('name profilePicture currentStreak longestStreak totalPosts totalConnections totalDaysActive rewardPoints')
     .lean();
 
-  // Compute score on-the-fly for every user (fixes stale leaderboardScore)
-  const scored = allUsers.map(u => ({
-    _id:              u._id,
-    name:             u.name,
-    profilePicture:   u.profilePicture || '',
-    currentStreak:    u.currentStreak || 0,
-    longestStreak:    u.longestStreak || 0,
-    totalPosts:       u.totalPosts || 0,
-    totalConnections: u.totalConnections || 0,
-    totalDaysActive:  u.totalDaysActive || 0,
-    rewardPoints:     u.rewardPoints || 0,
-    // Compute fresh score — don't rely on stored leaderboardScore
-    leaderboardScore: computeLeaderboardScore(u),
-  }));
+  if (allUsers.length === 0) return { topN: [], myRank: null, myEntry: null, totalUsers: 0 };
 
-  // Sort descending by score, then by streak as tiebreaker
+  const userIds = allUsers.map(u => u._id);
+
+  // Count actual posts per user (all-time, not just today)
+  const postCounts = await Post.aggregate([
+    { $match: { authorId: { $in: userIds } } },
+    { $group: { _id: '$authorId', count: { $sum: 1 } } },
+  ]);
+  const postMap = {};
+  postCounts.forEach(p => { postMap[p._id.toString()] = p.count; });
+
+  // Count actual accepted connections per user (all-time)
+  const connCounts = await Connection.aggregate([
+    {
+      $match: {
+        status: 'accepted',
+        $or: [
+          { from: { $in: userIds } },
+          { to:   { $in: userIds } },
+        ],
+      },
+    },
+    // Each accepted connection counts for BOTH users
+    {
+      $facet: {
+        asSender:   [{ $group: { _id: '$from', count: { $sum: 1 } } }],
+        asReceiver: [{ $group: { _id: '$to',   count: { $sum: 1 } } }],
+      },
+    },
+  ]);
+
+  const connMap = {};
+  (connCounts[0]?.asSender   || []).forEach(c => {
+    const id = c._id.toString();
+    connMap[id] = (connMap[id] || 0) + c.count;
+  });
+  (connCounts[0]?.asReceiver || []).forEach(c => {
+    const id = c._id.toString();
+    connMap[id] = (connMap[id] || 0) + c.count;
+  });
+
+  // Build scored list using real counts
+  const scored = allUsers.map(u => {
+    const id            = u._id.toString();
+    const realPosts     = postMap[id]  ?? (u.totalPosts       || 0);
+    const realConns     = connMap[id]  ?? (u.totalConnections || 0);
+    const daysActive    = u.totalDaysActive  || 0;
+    const streak        = u.currentStreak    || 0;
+
+    const leaderboardScore =
+      realConns   * 15 +
+      realPosts   * 10 +
+      daysActive  *  5 +
+      streak      *  3;
+
+    return {
+      _id:              u._id,
+      name:             u.name,
+      profilePicture:   u.profilePicture || '',
+      currentStreak:    streak,
+      longestStreak:    u.longestStreak || 0,
+      totalPosts:       realPosts,
+      totalConnections: realConns,
+      totalDaysActive:  daysActive,
+      rewardPoints:     u.rewardPoints || 0,
+      leaderboardScore,
+    };
+  });
+
+  // Sort: score desc, then streak desc as tiebreaker
   scored.sort((a, b) => {
     if (b.leaderboardScore !== a.leaderboardScore) return b.leaderboardScore - a.leaderboardScore;
     return b.currentStreak - a.currentStreak;
   });
 
-  // Assign ranks
   scored.forEach((u, i) => { u.rank = i + 1; });
 
-  // Find current user's rank across ALL users (not just top N)
-  let myRank = null;
+  // Current user's rank across ALL users
+  let myRank  = null;
   let myEntry = null;
   if (currentUserId) {
     const idx = scored.findIndex(u => u._id.toString() === currentUserId.toString());
     if (idx !== -1) {
-      myRank = idx + 1;
+      myRank  = idx + 1;
       myEntry = scored[idx];
     }
   }
 
-  // Return top N for display
-  const topN = scored.slice(0, limit);
-
-  return { topN, myRank, myEntry, totalUsers: scored.length };
+  return { topN: scored.slice(0, limit), myRank, myEntry, totalUsers: scored.length };
 }
 
 // ─── Streak Lost (Daily Cron) ─────────────────────────────────────────────────
@@ -278,8 +327,8 @@ async function processStreakLosses() {
     user.currentStreak = 0;
     await user.save();
 
-    // In-app notification
-    await createNotification({
+    // In-app notification (fire-and-forget)
+    createNotification({
       userId: user._id,
       type: 'STREAK_LOST',
       title: 'Streak Lost',
@@ -287,11 +336,11 @@ async function processStreakLosses() {
       priority: 'high',
       actionUrl: '#gamification',
       actionText: 'Rebuild Streak',
-    });
+    }).catch(e => console.error('Streak lost notification error:', e));
 
-    // Email notification
+    // Email notification (fire-and-forget)
     if (user.emailNotifications !== false) {
-      await sendStreakLostEmail(user, lostStreak).catch(e =>
+      sendStreakLostEmail(user, lostStreak).catch(e =>
         console.error(`Streak lost email failed for ${user.email}:`, e)
       );
     }
@@ -391,37 +440,50 @@ async function sendStreakMilestoneEmail(user, reward) {
 async function sendStreakLostEmail(user, lostStreak) {
   await sendEmail({
     email: user.email,
-    subject: `Your ${lostStreak}-day streak has ended — rebuild it today!`,
+    subject: `🔥 Your ${lostStreak}-day streak has gone — but you can rebuild it!`,
     message: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #E5E7EB; border-radius: 12px;">
         <div style="text-align: center; margin-bottom: 24px;">
-          <img src="https://api.dolphinorg.in/logo-icon.svg" alt="Dolphin" style="height: 48px;" />
-          <h2 style="color: #1E3A8A; margin: 12px 0 0;">Dolphin</h2>
+          <h2 style="color: #1E3A8A; margin: 0;">🐬 Dolphin</h2>
         </div>
-        <h2 style="color: #DC2626;">Your streak has ended</h2>
-        <p style="color: #374151; line-height: 1.6;">
-          Hi <strong>${user.name}</strong>, your <strong>${lostStreak}-day streak</strong> has ended because you missed a day of activity.
-        </p>
-        <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px; padding: 20px; margin: 20px 0; text-align: center;">
-          <div style="font-size: 2rem; margin-bottom: 8px;">🔥</div>
-          <p style="color: #991B1B; font-weight: 600; margin: 0;">
+
+        <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
+          <div style="font-size: 3rem; margin-bottom: 8px;">😢</div>
+          <h2 style="color: #DC2626; margin: 0 0 8px;">Your streak has gone</h2>
+          <p style="color: #991B1B; font-size: 1.1rem; font-weight: 600; margin: 0;">
             ${lostStreak}-day streak lost
           </p>
         </div>
-        <p style="color: #374151; line-height: 1.6;">
-          Don't give up! Every great streak starts with a single day. Log in today to start a new streak and work towards your next reward:
+
+        <p style="color: #374151; line-height: 1.7; font-size: 1rem;">
+          Hi <strong>${user.name}</strong>,
         </p>
-        <ul style="color: #374151; line-height: 2;">
-          <li><strong>30 days</strong> → Dolphin Cap</li>
-          <li><strong>60 days</strong> → Dolphin Bottle</li>
-          <li><strong>90 days</strong> → Dolphin Bag</li>
-        </ul>
-        <div style="text-align: center; margin: 24px 0;">
+        <p style="color: #374151; line-height: 1.7; font-size: 1rem;">
+          Your <strong>${lostStreak}-day streak</strong> has ended because you missed a day of activity on Dolphin.
+          But don't worry — every great journey has a setback, and this is just yours!
+        </p>
+
+        <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 20px; margin: 20px 0;">
+          <h3 style="color: #065F46; margin: 0 0 12px;">🎁 Maintain your streak to get awesome goodies!</h3>
+          <ul style="color: #374151; line-height: 2; margin: 0; padding-left: 20px;">
+            <li><strong>30-day streak</strong> → 🧢 Exclusive Dolphin Cap</li>
+            <li><strong>60-day streak</strong> → 🍶 Premium Dolphin Bottle</li>
+            <li><strong>90-day streak</strong> → 🎒 Stylish Dolphin Backpack</li>
+          </ul>
+        </div>
+
+        <p style="color: #374151; line-height: 1.7; font-size: 1rem;">
+          Log in today, post an update, make a connection — any activity counts.
+          Your new streak starts the moment you come back. 💪
+        </p>
+
+        <div style="text-align: center; margin: 28px 0;">
           <a href="https://dolphin-main.vercel.app"
-             style="display: inline-block; padding: 12px 28px; background: #84CC16; color: white; text-decoration: none; border-radius: 8px; font-weight: 700;">
-            Rebuild My Streak
+             style="display: inline-block; padding: 14px 32px; background: #84CC16; color: #0F172A; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 1rem;">
+            🔥 Rebuild My Streak Now
           </a>
         </div>
+
         <p style="color: #9CA3AF; font-size: 0.8rem; text-align: center; margin-top: 24px;">
           &copy; 2026 Dolphin &middot; support@pacificdev.in
         </p>
