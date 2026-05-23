@@ -6,6 +6,7 @@ import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { investorAPI } from '../../../services/api';
 import { Star, StarOff } from '../../shared/Icons';
+import { INDUSTRIES } from '../../../constants/industries';
 
 const VERIFIED = ['APPROVED','STAGE_1','STAGE_2','STAGE_3','STAGE_4','STAGE_5','STAGE_6','STAGE_7'];
 
@@ -54,10 +55,8 @@ export default function StartupsPage() {
     setLoading(false);
   };
 
-  const industries = useMemo(() => {
-    const set = new Set(startups.map(s => s.industry).filter(Boolean));
-    return ['all', ...Array.from(set).sort()];
-  }, [startups]);
+  // Use the full static industry list so all options are always available
+  const industries = ['all', ...INDUSTRIES];
 
   const filtered = useMemo(() => {
     let list = startups;

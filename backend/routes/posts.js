@@ -87,17 +87,26 @@ router.post('/', protect, createLimiter, uploadPostMedia.array('media', 10), asy
 router.get('/feed', protect, feedLimiter, async (req, res) => {
     try {
         const userRole = req.user.role;
-        const filterType = req.query.filter; // 'all' or 'mine'
+        const filterType = req.query.filter; // 'all', 'mine', or a specific postType value
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
-        
+
+        // Valid postType values for direct filtering
+        const VALID_POST_TYPES = ['general', 'service_needed', 'funding_needed', 'offering_service', 'offering_funding'];
+
         let filter = {};
 
         if (filterType === 'mine') {
             filter = { authorId: req.user._id };
+        } else if (VALID_POST_TYPES.includes(filterType)) {
+            // Filter by specific post type — still apply role-based author filter
+            const roleFilter = buildRoleFilter(req.user._id, userRole);
+            filter = { ...roleFilter, postType: filterType };
         } else {
-            // Role-based feed: each role sees their own posts + relevant other roles
+            // 'all' — role-based feed
+            filter = buildRoleFilter(req.user._id, userRole);
+        }
             if (userRole === 'founder') {
                 // Founders see: own posts + posts by investors + posts by providers
                 filter = {

@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const postSchema = new mongoose.Schema({
     authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     authorName: { type: String, required: true },
-    authorRole: { type: String, required: true, enum: ['founder', 'provider', 'investor'] },
+    authorRole: { type: String, required: true, enum: ['founder', 'provider', 'investor', 'admin'] },
     authorImage: { type: String, default: '' },
     content: { 
         type: String, 
@@ -14,7 +14,8 @@ const postSchema = new mongoose.Schema({
     postType: { 
         type: String, 
         required: true, 
-        enum: ['service_needed', 'funding_needed', 'offering_service', 'offering_funding'] 
+        enum: ['general', 'service_needed', 'funding_needed', 'offering_service', 'offering_funding'],
+        default: 'general',
     },
     tags: [{ type: String, trim: true, maxlength: 20 }],
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

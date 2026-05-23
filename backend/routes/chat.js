@@ -71,49 +71,87 @@ router.get('/user/:userId', protect, async (req, res) => {
 });
 
 // @route   GET /api/chat/conversations
-// @desc    Get all conversations for logged-in user
+// @desc    Get all conversations — includes connected users even with no messages yet
 router.get('/conversations', protect, async (req, res) => {
   try {
+    const Connection = require('../models/Connection');
+
+    // 1. Build conversation map from existing messages
     const messages = await Message.find({
       $or: [ { senderId: req.user.id }, { receiverId: req.user.id } ]
     })
-    .populate('senderId', 'name profilePicture')
-    .populate('receiverId', 'name profilePicture')
+    .populate('senderId', 'name profilePicture role')
+    .populate('receiverId', 'name profilePicture role')
     .sort({ createdAt: -1 });
 
     const conversationsMap = {};
 
     messages.forEach(msg => {
-      // ==========================================
-      // FIX: Check if sender or receiver is NULL (Deleted User)
-      // If a user was deleted, populate returns null. We must skip this.
-      // ==========================================
-      if (!msg.senderId || !msg.receiverId) {
-        console.log(`Skipping message ${msg._id}: User data missing (deleted).`);
-        return; // Skip this message
-      }
+      if (!msg.senderId || !msg.receiverId) return;
 
-      const partner = msg.senderId._id.toString() === req.user.id.toString() 
-        ? msg.receiverId 
+      const partner = msg.senderId._id.toString() === req.user.id.toString()
+        ? msg.receiverId
         : msg.senderId;
 
-      // Safety check
       if (!partner) return;
 
-      if (!conversationsMap[partner._id]) {
-        conversationsMap[partner._id] = {
+      if (!conversationsMap[partner._id.toString()]) {
+        conversationsMap[partner._id.toString()] = {
           _id: partner._id,
           name: partner.name,
-          profilePicture: partner.profilePicture || "",
+          profilePicture: partner.profilePicture || '',
+          role: partner.role || '',
           lastMessage: msg.content,
-          updatedAt: msg.createdAt
+          updatedAt: msg.createdAt,
         };
       }
     });
 
-    res.json(Object.values(conversationsMap));
+    // 2. Add connected users who have no messages yet
+    const connections = await Connection.find({
+      status: 'accepted',
+      $or: [
+        { from: req.user.id },
+        { to: req.user.id },
+      ],
+    })
+    .populate('from', 'name profilePicture role')
+    .populate('to', 'name profilePicture role')
+    .lean();
+
+    connections.forEach(conn => {
+      const partner = conn.from?._id?.toString() === req.user.id.toString()
+        ? conn.to
+        : conn.from;
+
+      if (!partner || !partner._id) return;
+
+      const partnerId = partner._id.toString();
+      if (!conversationsMap[partnerId]) {
+        // No messages yet — add as a conversation with no last message
+        conversationsMap[partnerId] = {
+          _id: partner._id,
+          name: partner.name || 'User',
+          profilePicture: partner.profilePicture || '',
+          role: partner.role || '',
+          lastMessage: '',
+          updatedAt: conn.updatedAt || conn.createdAt,
+        };
+      }
+    });
+
+    // 3. Sort: conversations with messages first (by updatedAt), then new connections
+    const result = Object.values(conversationsMap).sort((a, b) => {
+      // Conversations with messages come first
+      const aHasMsg = !!a.lastMessage;
+      const bHasMsg = !!b.lastMessage;
+      if (aHasMsg !== bHasMsg) return bHasMsg ? 1 : -1;
+      return new Date(b.updatedAt) - new Date(a.updatedAt);
+    });
+
+    res.json(result);
   } catch (err) {
-    console.error(err);
+    console.error('Conversations error:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });

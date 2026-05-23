@@ -3,6 +3,7 @@ import PageHeader from '../../shared/PageHeader';
 import Card from '../../shared/Card';
 import toast from 'react-hot-toast';
 import api from '../../../services/api';
+import { INDUSTRIES } from '../../../constants/industries';
 
 const ProfilePage = ({ startup, refetch }) => {
   const [formData, setFormData] = useState({
@@ -115,11 +116,9 @@ const ProfilePage = ({ startup, refetch }) => {
               onChange={handleChange}
               required
             >
-              <option value="General">General</option>
-              <option value="Technology">Technology</option>
-              <option value="Healthcare">Healthcare</option>
-              <option value="Fintech">Fintech</option>
-              <option value="Retail/E-commerce">Retail/E-commerce</option>
+              {INDUSTRIES.map(ind => (
+                <option key={ind} value={ind}>{ind}</option>
+              ))}
             </select>
           </div>
 

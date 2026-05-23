@@ -5,6 +5,7 @@ import Modal from '../../shared/Modal';
 import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { providerAPI } from '../../../services/api';
+import { INDUSTRIES } from '../../../constants/industries';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -99,11 +100,8 @@ const FoundersPage = () => {
     }
   };
 
-  // ── derived industries list ──────────────────────────────────────────────────
-  const industries = useMemo(() => {
-    const set = new Set(founders.map(f => f.industry).filter(Boolean));
-    return ['all', ...Array.from(set).sort()];
-  }, [founders]);
+  // Use the full static industry list so all options are always available
+  const industries = useMemo(() => ['all', ...INDUSTRIES], []);
 
   // ── filtered list ────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
