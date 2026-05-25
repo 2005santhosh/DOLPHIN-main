@@ -63,7 +63,7 @@ export const postsAPI = {
   createPost: async (content, postType, tags, mediaFiles = []) => {
     const fd = new FormData();
     fd.append('content', content || '');
-    fd.append('postType', postType || 'service_needed');
+    fd.append('postType', postType || 'general');
     (tags || []).forEach(t => fd.append('tags', t));
     (mediaFiles || []).forEach(f => fd.append('media', f));
     return api.post('/posts', fd, {

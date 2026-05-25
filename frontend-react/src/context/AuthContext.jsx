@@ -84,18 +84,6 @@ export const AuthProvider = ({ children }) => {
       const data = await apiFetch('/auth/profile');
       const profile = data.profile || data;
       _setAuth(profile);
-
-      // Also refresh streak in the navbar immediately
-      apiFetch('/gamification/me')
-        .then(g => {
-          if (g?.currentStreak !== undefined) {
-            window.dispatchEvent(new CustomEvent('streak-updated', {
-              detail: { currentStreak: g.currentStreak }
-            }));
-          }
-        })
-        .catch(() => {});
-
       return profile;
     } catch (err) {
       console.warn('[Auth] refreshProfile error (ignored):', err.message);

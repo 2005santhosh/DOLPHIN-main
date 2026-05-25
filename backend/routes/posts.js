@@ -53,7 +53,7 @@ router.post('/', protect, createLimiter, uploadPostMedia.array('media', 10), asy
             authorRole: user.role,
             authorImage: user.profilePicture || '',
             content: content || '',
-            postType,
+            postType: postType || 'general',
             tags: tags ? (Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim())) : [],
             media,
             mediaCount: media.length
@@ -92,50 +92,36 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
 
-        // Valid postType values for direct filtering
         const VALID_POST_TYPES = ['general', 'service_needed', 'funding_needed', 'offering_service', 'offering_funding'];
+
+        // Build the role-based author filter (who can see whose posts)
+        const buildRoleFilter = (userId, role) => {
+            if (role === 'founder') {
+                return { $or: [{ authorId: userId }, { authorRole: 'investor' }, { authorRole: 'provider' }] };
+            } else if (role === 'provider') {
+                return { $or: [{ authorId: userId }, { authorRole: 'founder' }] };
+            } else if (role === 'investor') {
+                return { $or: [{ authorId: userId }, { authorRole: 'founder' }] };
+            }
+            return {}; // admin sees everything
+        };
 
         let filter = {};
 
         if (filterType === 'mine') {
             filter = { authorId: req.user._id };
         } else if (VALID_POST_TYPES.includes(filterType)) {
-            // Filter by specific post type — still apply role-based author filter
+            // Filter by specific post type within the role-based feed
             const roleFilter = buildRoleFilter(req.user._id, userRole);
-            filter = { ...roleFilter, postType: filterType };
-        } else {
-            // 'all' — role-based feed
-            filter = buildRoleFilter(req.user._id, userRole);
-        }
-            if (userRole === 'founder') {
-                // Founders see: own posts + posts by investors + posts by providers
-                filter = {
-                    $or: [
-                        { authorId: req.user._id },
-                        { authorRole: 'investor' },
-                        { authorRole: 'provider' },
-                    ]
-                };
-            } else if (userRole === 'provider') {
-                // Providers see: own posts + posts by founders
-                filter = {
-                    $or: [
-                        { authorId: req.user._id },
-                        { authorRole: 'founder' },
-                    ]
-                };
-            } else if (userRole === 'investor') {
-                // Investors see: own posts + posts by founders
-                filter = {
-                    $or: [
-                        { authorId: req.user._id },
-                        { authorRole: 'founder' },
-                    ]
-                };
+            // Merge role filter with postType filter
+            if (roleFilter.$or) {
+                filter = { $and: [roleFilter, { postType: filterType }] };
             } else {
-                // Admin or other roles: see everything
-                filter = {};
+                filter = { postType: filterType };
             }
+        } else {
+            // 'all' — role-based feed, no postType restriction
+            filter = buildRoleFilter(req.user._id, userRole);
         }
 
         // Get total count for pagination

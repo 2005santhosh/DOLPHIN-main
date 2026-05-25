@@ -87,21 +87,17 @@ export default function Header({ onMenuToggle }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Streak — listen for streak-updated events from AuthContext (fires on mount + every 2min)
-  // Also do one direct fetch as a fallback in case the event fires before this effect runs
+  // Streak — fetch directly on mount (immediate, no waiting for events)
+  // Also listen for streak-updated events for real-time updates after activity
   useEffect(() => {
     let mounted = true;
 
-    // Fallback fetch — only if streak is still null after 2 seconds
-    // (means the streak-updated event was missed)
-    const fallbackTimer = setTimeout(() => {
-      if (mounted && streak === null) {
-        gamificationAPI.getMyStats()
-          .then(data => { if (mounted) setStreak(data?.currentStreak ?? 0); })
-          .catch(() => { if (mounted) setStreak(0); });
-      }
-    }, 2000);
+    // Fetch immediately on mount — don't wait for AuthContext event
+    gamificationAPI.getMyStats()
+      .then(data => { if (mounted) setStreak(data?.currentStreak ?? 0); })
+      .catch(() => { if (mounted) setStreak(0); });
 
+    // Also listen for updates triggered by GamificationPage or AuthContext
     const onStreakUpdated = (e) => {
       if (!mounted) return;
       if (e.detail?.currentStreak !== undefined) {
@@ -112,7 +108,6 @@ export default function Header({ onMenuToggle }) {
 
     return () => {
       mounted = false;
-      clearTimeout(fallbackTimer);
       window.removeEventListener('streak-updated', onStreakUpdated);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
