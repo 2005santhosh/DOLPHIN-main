@@ -13,10 +13,6 @@ import { Eye, EyeOff, AlertTriangle, CheckCircle2 } from '../../shared/Icons';
 const SettingsPage = () => {
   const { user, logout, refreshProfile } = useAuth();
 
-  // Derive verified status: use API status when loaded, fall back to user object immediately
-  // This prevents the "Get Verified" button from flashing for already-verified users
-  const isVerifiedNow = verifyStatus?.isVerified ?? user?.isVerified ?? false;
-  const isFounderNow  = verifyStatus?.isFounderVerified ?? user?.isFounderVerified ?? false;
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
@@ -34,7 +30,12 @@ const SettingsPage = () => {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [uploading, setUploading] = useState(false);
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
-  const [verifyStatus, setVerifyStatus] = useState(null); // null | { isVerified, paymentStatus }
+  const [verifyStatus, setVerifyStatus] = useState(null);
+
+  // Derive verified status AFTER useState declarations to avoid TDZ
+  // Falls back to user object from AuthContext while API loads
+  const isVerifiedNow = verifyStatus?.isVerified ?? user?.isVerified ?? false;
+  const isFounderNow  = verifyStatus?.isFounderVerified ?? user?.isFounderVerified ?? false;
 
   useEffect(() => {
     loadSettings();
