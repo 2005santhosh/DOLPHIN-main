@@ -1,29 +1,22 @@
 /**
- * VerificationModal — NO AuthContext import (prevents circular dependency).
- * Receives userName and userEmail as props from the parent (SettingsPage).
+ * VerificationModal
+ * No AuthContext import. No top-level const that could cause TDZ issues.
+ * verificationAPI is called lazily (inside async function) to avoid bundler TDZ.
  */
 import { useState } from 'react';
-import { verificationAPI } from '../../services/api';
-import toast from 'react-hot-toast';
 import VerifiedBadge from './VerifiedBadge';
+import toast from 'react-hot-toast';
+
+// Call verificationAPI lazily to avoid bundler circular-init issues
+async function createPaymentLink(fullName, phone, email) {
+  const { verificationAPI } = await import('../../services/api');
+  return verificationAPI.createPaymentLink(fullName, phone, email);
+}
 
 export default function VerificationModal({ isOpen, onClose, userName = '', userEmail = '' }) {
   const [step, setStep] = useState('benefits');
-  const [form, setForm] = useState({
-    fullName: userName,
-    phone: '',
-    email: userEmail,
-  });
+  const [form, setForm] = useState({ fullName: userName, phone: '', email: userEmail });
   const [errors, setErrors] = useState({});
-
-  // Sync form defaults when props change (e.g. user loads after mount)
-  // Only update if form hasn't been touched yet
-  if (userName && !form.fullName) {
-    setForm(p => ({ ...p, fullName: userName }));
-  }
-  if (userEmail && !form.email) {
-    setForm(p => ({ ...p, email: userEmail }));
-  }
 
   if (!isOpen) return null;
 
@@ -43,11 +36,7 @@ export default function VerificationModal({ isOpen, onClose, userName = '', user
     if (!validate()) return;
     setStep('loading');
     try {
-      const result = await verificationAPI.createPaymentLink(
-        form.fullName.trim(),
-        form.phone.trim(),
-        form.email.trim(),
-      );
+      const result = await createPaymentLink(form.fullName.trim(), form.phone.trim(), form.email.trim());
       if (result.link_url) {
         window.location.href = result.link_url;
       } else {
@@ -64,29 +53,13 @@ export default function VerificationModal({ isOpen, onClose, userName = '', user
     }
   };
 
-  const handleClose = () => {
-    setStep('benefits');
-    setErrors({});
-    onClose();
-  };
+  const handleClose = () => { setStep('benefits'); setErrors({}); onClose(); };
 
   return (
     <>
-      {/* Backdrop */}
       <div onClick={handleClose} style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'fixed', zIndex: 9999, top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% - 2rem)', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', background: 'white', borderRadius: 20, boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }}>
 
-      {/* Modal */}
-      <div style={{
-        position: 'fixed', zIndex: 9999,
-        top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: 'calc(100% - 2rem)', maxWidth: 520,
-        maxHeight: '90vh', overflowY: 'auto',
-        background: 'white', borderRadius: 20,
-        boxShadow: '0 24px 64px rgba(0,0,0,0.25)',
-      }}>
-
-        {/* ── Benefits ── */}
         {step === 'benefits' && (
           <div>
             <div style={{ background: 'linear-gradient(135deg, #0F172A 0%, #1E3A8A 60%, #166534 100%)', borderRadius: '20px 20px 0 0', padding: '2rem 1.5rem 1.5rem', position: 'relative', textAlign: 'center' }}>
@@ -101,7 +74,6 @@ export default function VerificationModal({ isOpen, onClose, userName = '', user
                 <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>per month · cancel anytime</span>
               </div>
             </div>
-
             <div style={{ padding: '1.5rem' }}>
               <p style={{ fontSize: '0.8rem', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: '0.75rem' }}>What you get</p>
               <div style={{ borderRadius: 12, border: '1px solid #E5E7EB', overflow: 'hidden', marginBottom: '1.5rem' }}>
@@ -119,13 +91,11 @@ export default function VerificationModal({ isOpen, onClose, userName = '', user
                   </div>
                 ))}
               </div>
-
               <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                 {['🔐 Secure Payment', '⚡ Instant Activation', '💳 Cashfree Powered'].map(t => (
                   <span key={t} style={{ fontSize: '0.75rem', color: '#6B7280', background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 9999, padding: '4px 10px' }}>{t}</span>
                 ))}
               </div>
-
               <button onClick={() => setStep('form')} style={{ width: '100%', padding: '0.875rem', background: 'linear-gradient(135deg, #84CC16, #16A34A)', color: 'white', border: 'none', borderRadius: 12, fontSize: '1rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', boxShadow: '0 4px 16px rgba(132,204,22,0.35)' }}>
                 <VerifiedBadge size={18} /> Get Verified – ₹99
               </button>
@@ -134,7 +104,6 @@ export default function VerificationModal({ isOpen, onClose, userName = '', user
           </div>
         )}
 
-        {/* ── Form ── */}
         {step === 'form' && (
           <div>
             <div style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid #F3F4F6' }}>
@@ -147,7 +116,6 @@ export default function VerificationModal({ isOpen, onClose, userName = '', user
               </div>
               <button onClick={handleClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: '1.25rem', lineHeight: 1 }}>×</button>
             </div>
-
             <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
               <div style={{ background: 'linear-gradient(135deg, #F0FDF4, #DCFCE7)', border: '1px solid #BBF7D0', borderRadius: 12, padding: '1rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
@@ -193,7 +161,6 @@ export default function VerificationModal({ isOpen, onClose, userName = '', user
           </div>
         )}
 
-        {/* ── Loading ── */}
         {step === 'loading' && (
           <div style={{ padding: '3rem 2rem', textAlign: 'center' }}>
             <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg, #84CC16, #16A34A)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', animation: 'vmPulse 1.5s ease-in-out infinite' }}>
@@ -201,7 +168,7 @@ export default function VerificationModal({ isOpen, onClose, userName = '', user
             </div>
             <h3 style={{ margin: '0 0 0.5rem', color: '#111827' }}>Creating your payment link…</h3>
             <p style={{ color: '#6B7280', fontSize: '0.875rem', margin: 0 }}>You'll be redirected to the secure Cashfree payment page in a moment.</p>
-            <style>{`@keyframes vmPulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.08);opacity:0.85} }`}</style>
+            <style>{`@keyframes vmPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }`}</style>
           </div>
         )}
       </div>
