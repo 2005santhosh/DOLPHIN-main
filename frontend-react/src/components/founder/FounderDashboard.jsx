@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { founderAPI } from '../../services/api';
+import { founderAPI, gamificationAPI } from '../../services/api';
 import Header from '../shared/Header';
 import Sidebar from '../shared/Sidebar';
 import ErrorBoundary from '../shared/ErrorBoundary';
@@ -34,6 +34,41 @@ export default function FounderDashboard() {
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
   });
+
+  // Record daily login + update streak badge on mount
+  useEffect(() => {
+    gamificationAPI.recordLogin()
+      .then(result => {
+        if (result?.newStreak !== undefined) {
+          window.dispatchEvent(new CustomEvent('streak-updated', {
+            detail: { currentStreak: result.newStreak }
+          }));
+        } else {
+          // recordLogin returned no streak — fetch it directly
+          gamificationAPI.getMyStats()
+            .then(data => {
+              if (data?.currentStreak !== undefined) {
+                window.dispatchEvent(new CustomEvent('streak-updated', {
+                  detail: { currentStreak: data.currentStreak }
+                }));
+              }
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {
+        // Fallback: fetch stats directly if recordLogin fails
+        gamificationAPI.getMyStats()
+          .then(data => {
+            if (data?.currentStreak !== undefined) {
+              window.dispatchEvent(new CustomEvent('streak-updated', {
+                detail: { currentStreak: data.currentStreak }
+              }));
+            }
+          })
+          .catch(() => {});
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle hash navigation — supports #chat?userId=xxx
   useEffect(() => {

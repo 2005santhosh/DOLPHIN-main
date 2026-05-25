@@ -263,10 +263,7 @@ export default function GamificationPage() {
 
   useEffect(() => {
     loadStats();
-    // Record daily login activity, then refresh stats to reflect any streak change
-    gamificationAPI.recordLogin()
-      .then(() => loadStats())
-      .catch(() => {});
+    // recordLogin is now called by each dashboard on mount — no need to call it here again
   }, [loadStats]);
 
   useEffect(() => {

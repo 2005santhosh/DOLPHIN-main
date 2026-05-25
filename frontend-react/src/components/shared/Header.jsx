@@ -64,7 +64,7 @@ export default function Header({ onMenuToggle }) {
   const [unreadCount, setUnreadCount]       = useState(0);
   const [imgError, setImgError]             = useState(false);
   const [providerRating, setProviderRating] = useState(null);
-  const [streak, setStreak]                 = useState(null);
+  const [streak, setStreak] = useState(0); // start at 0 so badge shows immediately
   const notifRef    = useRef(null);
   const bellRef     = useRef(null);
   const [dropdownStyle, setDropdownStyle]   = useState({});
@@ -198,7 +198,7 @@ export default function Header({ onMenuToggle }) {
         <div className="app-header__right">
 
           {/* Streak badge — always visible */}
-          {streak !== null && <StreakBadge streak={streak} />}
+          <StreakBadge streak={streak} />
 
           {/* Points / Rating — hidden on very small screens */}
           <div

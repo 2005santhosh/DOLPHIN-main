@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { providerAPI } from '../../services/api';
+import { providerAPI, gamificationAPI } from '../../services/api';
 import Header from '../shared/Header';
 import Sidebar from '../shared/Sidebar';
 import DashboardBottomNav from '../shared/DashboardBottomNav';
@@ -21,6 +21,32 @@ export default function ProviderDashboard() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [requestsCount, setRequestsCount] = useState(0);
   const [chatCount, setChatCount] = useState(0);
+
+  // Record daily login + update streak badge on mount
+  useEffect(() => {
+    const updateStreak = () => {
+      gamificationAPI.getMyStats()
+        .then(data => {
+          if (data?.currentStreak !== undefined) {
+            window.dispatchEvent(new CustomEvent('streak-updated', {
+              detail: { currentStreak: data.currentStreak }
+            }));
+          }
+        })
+        .catch(() => {});
+    };
+    gamificationAPI.recordLogin()
+      .then(result => {
+        if (result?.newStreak !== undefined) {
+          window.dispatchEvent(new CustomEvent('streak-updated', {
+            detail: { currentStreak: result.newStreak }
+          }));
+        } else {
+          updateStreak();
+        }
+      })
+      .catch(updateStreak);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle hash navigation — supports #chat?userId=xxx
   useEffect(() => {
