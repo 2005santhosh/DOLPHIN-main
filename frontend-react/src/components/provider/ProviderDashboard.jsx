@@ -145,8 +145,6 @@ export default function ProviderDashboard() {
             {renderPage()}
           </Suspense>
         </main>
-          {renderPage()}
-        </main>
       </div>
       <DashboardBottomNav requestsCount={requestsCount} chatCount={chatCount} />
     </div>
