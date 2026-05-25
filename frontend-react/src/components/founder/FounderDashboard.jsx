@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { founderAPI, gamificationAPI } from '../../services/api';
@@ -6,19 +6,20 @@ import Header from '../shared/Header';
 import Sidebar from '../shared/Sidebar';
 import ErrorBoundary from '../shared/ErrorBoundary';
 import DashboardBottomNav from '../shared/DashboardBottomNav';
+import LoadingSpinner from '../shared/LoadingSpinner';
 
-// Import pages
-import DashboardPage from './pages/DashboardPage';
-import ProfilePage from './pages/ProfilePage';
-import StagesPage from './pages/StagesPage';
-import TasksPage from './pages/TasksPage';
-import AnalyticsPage from './pages/AnalyticsPage';
-import InvestorsProvidersPage from './pages/InvestorsProvidersPage';
-import PostsPage from './pages/PostsPage';
-import RequestsPage from './pages/RequestsPage';
-import ChatPage from './pages/ChatPage';
-import SettingsPage from './pages/SettingsPage';
-import GamificationPage from '../shared/GamificationPage';
+// Lazy-load all pages to prevent circular dependency issues at bundle time
+const DashboardPage         = lazy(() => import('./pages/DashboardPage'));
+const ProfilePage           = lazy(() => import('./pages/ProfilePage'));
+const StagesPage            = lazy(() => import('./pages/StagesPage'));
+const TasksPage             = lazy(() => import('./pages/TasksPage'));
+const AnalyticsPage         = lazy(() => import('./pages/AnalyticsPage'));
+const InvestorsProvidersPage = lazy(() => import('./pages/InvestorsProvidersPage'));
+const PostsPage             = lazy(() => import('./pages/PostsPage'));
+const RequestsPage          = lazy(() => import('./pages/RequestsPage'));
+const ChatPage              = lazy(() => import('./pages/ChatPage'));
+const SettingsPage          = lazy(() => import('./pages/SettingsPage'));
+const GamificationPage      = lazy(() => import('../shared/GamificationPage'));
 
 export default function FounderDashboard() {
   const { user } = useAuth();
@@ -163,7 +164,9 @@ export default function FounderDashboard() {
               overflowX: 'hidden',
             }}
           >
-            {renderPage()}
+            <Suspense fallback={<LoadingSpinner message="Loading..." />}>
+              {renderPage()}
+            </Suspense>
           </main>
         </div>
       </div>

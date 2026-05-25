@@ -1,18 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { gamificationAPI } from '../../services/api';
 import Header from '../shared/Header';
 import Sidebar from '../shared/Sidebar';
 import DashboardBottomNav from '../shared/DashboardBottomNav';
+import LoadingSpinner from '../shared/LoadingSpinner';
 
-import DashboardPage from './pages/DashboardPage';
-import StartupsPage from './pages/StartupsPage';
-import WatchlistPage from './pages/WatchlistPage';
-import PostsPage from '../founder/pages/PostsPage';
-import RequestsPage from './pages/RequestsPage';
-import ChatPage from '../founder/pages/ChatPage';
-import SettingsPage from '../founder/pages/SettingsPage';
-import GamificationPage from '../shared/GamificationPage';
+const DashboardPage    = lazy(() => import('./pages/DashboardPage'));
+const StartupsPage     = lazy(() => import('./pages/StartupsPage'));
+const WatchlistPage    = lazy(() => import('./pages/WatchlistPage'));
+const PostsPage        = lazy(() => import('../founder/pages/PostsPage'));
+const RequestsPage     = lazy(() => import('./pages/RequestsPage'));
+const ChatPage         = lazy(() => import('../founder/pages/ChatPage'));
+const SettingsPage     = lazy(() => import('../founder/pages/SettingsPage'));
+const GamificationPage = lazy(() => import('../shared/GamificationPage'));
 
 export default function InvestorDashboard() {
   const { user } = useAuth();
@@ -117,7 +118,9 @@ export default function InvestorDashboard() {
           className="dashboard-main"
           style={{ flex: 1, maxWidth: '100%', minHeight: 'calc(100vh - 73px)', overflowX: 'hidden' }}
         >
-          {renderPage()}
+          <Suspense fallback={<LoadingSpinner message="Loading..." />}>
+            {renderPage()}
+          </Suspense>
         </main>
       </div>
       <DashboardBottomNav requestsCount={requestsCount} chatCount={chatCount} />

@@ -1,19 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { providerAPI, gamificationAPI } from '../../services/api';
+import { gamificationAPI } from '../../services/api';
 import Header from '../shared/Header';
 import Sidebar from '../shared/Sidebar';
 import DashboardBottomNav from '../shared/DashboardBottomNav';
+import LoadingSpinner from '../shared/LoadingSpinner';
 
-// Import pages
-import DashboardPage from './pages/DashboardPage';
-import ProfilePage from './pages/ProfilePage';
-import FoundersPage from './pages/FoundersPage';
-import PostsPage from '../founder/pages/PostsPage'; // Reuse
-import RequestsPage from './pages/RequestsPage';
-import ChatPage from '../founder/pages/ChatPage'; // Reuse
-import SettingsPage from '../founder/pages/SettingsPage'; // Reuse
-import GamificationPage from '../shared/GamificationPage';
+const DashboardPage    = lazy(() => import('./pages/DashboardPage'));
+const ProfilePage      = lazy(() => import('./pages/ProfilePage'));
+const FoundersPage     = lazy(() => import('./pages/FoundersPage'));
+const PostsPage        = lazy(() => import('../founder/pages/PostsPage'));
+const RequestsPage     = lazy(() => import('./pages/RequestsPage'));
+const ChatPage         = lazy(() => import('../founder/pages/ChatPage'));
+const SettingsPage     = lazy(() => import('../founder/pages/SettingsPage'));
+const GamificationPage = lazy(() => import('../shared/GamificationPage'));
 
 export default function ProviderDashboard() {
   const { user } = useAuth();
@@ -107,7 +107,8 @@ export default function ProviderDashboard() {
       case 'requests':
         return <RequestsPage {...pageProps} />;
       case 'chat':
-        return <ChatPage {...pageProps} setChatCount={setChatCount} openUserId={getOpenUserId()} />;      case 'settings':
+        return <ChatPage {...pageProps} setChatCount={setChatCount} openUserId={getOpenUserId()} />;
+      case 'settings':
         return <SettingsPage />;
       case 'gamification':
         return <GamificationPage />;
@@ -140,6 +141,10 @@ export default function ProviderDashboard() {
             overflowX: 'hidden',
           }}
         >
+          <Suspense fallback={<LoadingSpinner message="Loading..." />}>
+            {renderPage()}
+          </Suspense>
+        </main>
           {renderPage()}
         </main>
       </div>
