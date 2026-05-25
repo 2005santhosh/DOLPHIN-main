@@ -351,10 +351,10 @@ export default function Header({ onMenuToggle }) {
             )}
           </button>
 
-          {/* Name — desktop only */}
-          <span className="app-header__name" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {/* Name — desktop only, hidden on mobile via CSS */}
+          <span className="app-header__name">
             {user?.name}
-            {user?.isVerified && <VerifiedBadge size={14} />}
+            {user?.isVerified && <VerifiedBadge size={14} style={{ marginLeft: 2 }} />}
           </span>
         </div>
       </div>
@@ -472,16 +472,18 @@ export default function Header({ onMenuToggle }) {
           font-weight: 600;
           color: #111827;
           white-space: nowrap;
-          display: none;
+          display: none; /* hidden on mobile */
           max-width: 120px;
           overflow: hidden;
           text-overflow: ellipsis;
+          align-items: center;
+          gap: 4px;
         }
 
         /* ── Desktop (≥ 768px) ── */
         @media (min-width: 768px) {
           .app-header { padding: 0 1.5rem; height: 64px; }
-          .app-header__name { display: block; }
+          .app-header__name { display: flex; }
           .app-header__right { gap: 0.75rem; }
         }
 

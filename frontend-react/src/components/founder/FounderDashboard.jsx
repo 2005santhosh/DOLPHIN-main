@@ -154,14 +154,15 @@ export default function FounderDashboard() {
             chatCount={chatCount}
           />
           
-          <main style={{
-            flex: 1,
-            padding: '2rem',
-            maxWidth: '100%',
-            minHeight: 'calc(100vh - 73px)',
-            overflowX: 'hidden',
-          }}
-          className="dashboard-main">
+          <main
+            className="dashboard-main"
+            style={{
+              flex: 1,
+              maxWidth: '100%',
+              minHeight: 'calc(100vh - 73px)',
+              overflowX: 'hidden',
+            }}
+          >
             {renderPage()}
           </main>
         </div>

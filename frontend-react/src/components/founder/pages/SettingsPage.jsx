@@ -11,6 +11,11 @@ import { Eye, EyeOff, AlertTriangle, CheckCircle2 } from '../../shared/Icons';
 
 const SettingsPage = () => {
   const { user, logout, refreshProfile } = useAuth();
+
+  // Derive verified status: use API status when loaded, fall back to user object immediately
+  // This prevents the "Get Verified" button from flashing for already-verified users
+  const isVerifiedNow = verifyStatus?.isVerified ?? user?.isVerified ?? false;
+  const isFounderNow  = verifyStatus?.isFounderVerified ?? user?.isFounderVerified ?? false;
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
@@ -308,7 +313,7 @@ const SettingsPage = () => {
           </CardTitle>
         </CardHeader>
 
-        {verifyStatus?.isFounderVerified ? (
+        {isFounderNow ? (
           /* Early supporter — lifetime free badge */
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', padding: '0.5rem 0' }}>
             <div style={{
@@ -329,7 +334,7 @@ const SettingsPage = () => {
               </div>
             </div>
           </div>
-        ) : verifyStatus?.isVerified ? (
+        ) : isVerifiedNow ? (
           /* Active monthly badge */
           <div>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', padding: '0.5rem 0', marginBottom: '1rem' }}>

@@ -78,6 +78,11 @@ router.post('/create-link', protect, async (req, res) => {
     const ts      = Date.now().toString().slice(-8);
     const linkId  = `dlphn_v_${shortId}_${ts}`; // max ~26 chars
 
+    // Ensure return_url is always a full https:// URL
+    const rawFrontend = (process.env.FRONTEND_URL || 'https://dolphin-main.vercel.app').trim();
+    const frontendBase = rawFrontend.startsWith('http') ? rawFrontend : `https://${rawFrontend}`;
+    const backendBase  = (process.env.BACKEND_URL || 'https://api.dolphinorg.in').trim();
+
     const linkPayload = {
       customer_details: {
         customer_name:  fullName.trim(),
@@ -93,8 +98,8 @@ router.post('/create-link', protect, async (req, res) => {
         send_email: false,
       },
       link_meta: {
-        return_url: `${FRONTEND_URL}/dashboard?verified=1`,
-        notify_url: `${BACKEND_URL}/api/verification/webhook`,
+        return_url: `${frontendBase}/dashboard?verified=1`,
+        notify_url: `${backendBase}/api/verification/webhook`,
       },
     };
 

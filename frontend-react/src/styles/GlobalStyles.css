@@ -300,10 +300,21 @@ input, textarea, select {
   }
 }
 
+/* Dashboard layout */
+.dashboard-main {
+  padding: 2rem;
+}
+
 /* Dashboard layout mobile */
 @media (max-width: 768px) {
   .dashboard-main {
-    padding: 1rem !important;
+    padding: 0.875rem !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .dashboard-main {
+    padding: 0.625rem !important;
   }
 }
 
