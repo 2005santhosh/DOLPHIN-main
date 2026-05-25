@@ -344,3 +344,37 @@ input, textarea, select {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── Circular avatar images — always perfect circles ─────── */
+/* Prevents oval distortion on mobile when container shrinks */
+img[style*="border-radius: 50%"],
+img[style*="borderRadius: '50%'"],
+img[style*="border-radius:50%"] {
+  aspect-ratio: 1 / 1 !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+}
+
+/* Explicit avatar size classes */
+.avatar-img {
+  border-radius: 50% !important;
+  aspect-ratio: 1 / 1 !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+}
+
+@media (max-width: 768px) {
+  /* Prevent any image from stretching beyond its container */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* But circular avatars keep their fixed size */
+  img[style*="border-radius: 50%"],
+  img[style*="borderRadius: '50%'"],
+  img[style*="border-radius:50%"] {
+    max-width: unset !important;
+    height: unset !important;
+  }
+}

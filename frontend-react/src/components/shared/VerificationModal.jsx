@@ -2,39 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { verificationAPI } from '../../services/api';
 import toast from 'react-hot-toast';
-
-// ─── Benefit item ─────────────────────────────────────────────────────────────
-const Benefit = ({ icon, text }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0' }}>
-    <div style={{
-      width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-      background: 'linear-gradient(135deg, #84CC16, #16A34A)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: '0.9rem',
-    }}>
-      {icon}
-    </div>
-    <span style={{ fontSize: '0.9rem', color: '#374151', lineHeight: 1.4 }}>{text}</span>
-  </div>
-);
-
-// ─── Verified badge SVG ───────────────────────────────────────────────────────
-export function VerifiedBadge({ size = 16, style = {} }) {
-  return (
-    <svg
-      width={size} height={size} viewBox="0 0 24 24"
-      style={{ flexShrink: 0, ...style }}
-      aria-label="Verified"
-    >
-      <circle cx="12" cy="12" r="12" fill="#84CC16" />
-      <polyline
-        points="7 12 10.5 15.5 17 9"
-        fill="none" stroke="white" strokeWidth="2.2"
-        strokeLinecap="round" strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+import VerifiedBadge from './VerifiedBadge';
 
 // ─── Main modal ───────────────────────────────────────────────────────────────
 export default function VerificationModal({ isOpen, onClose }) {

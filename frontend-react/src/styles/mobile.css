@@ -611,3 +611,26 @@ html, body {
     display: none !important;
   }
 }
+
+/* ── Fix oval profile images on mobile ───────────────────── */
+/* React inline styles use camelCase so we target by common patterns */
+@media (max-width: 768px) {
+  /* Any img inside a circular container div */
+  div[style*="border-radius: 50%"] > img,
+  div[style*="borderRadius"] > img {
+    aspect-ratio: 1 / 1 !important;
+    object-fit: cover !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* Direct circular images */
+  img[alt*="Profile"],
+  img[alt*="profile"],
+  img[alt*="avatar"],
+  img[alt*="Avatar"] {
+    aspect-ratio: 1 / 1 !important;
+    object-fit: cover !important;
+    flex-shrink: 0 !important;
+  }
+}

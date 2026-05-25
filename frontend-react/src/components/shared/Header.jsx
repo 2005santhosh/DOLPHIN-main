@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { notificationsAPI, providerAPI, gamificationAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import DolphinLogo from './DolphinLogo';
-import { VerifiedBadge } from './VerificationModal';
+import VerifiedBadge from './VerifiedBadge';
 
 const VERIFIED_STATES = ['APPROVED','STAGE_1','STAGE_2','STAGE_3','STAGE_4','STAGE_5','STAGE_6','STAGE_7'];
 
@@ -324,7 +324,7 @@ export default function Header({ onMenuToggle }) {
                 src={avatarUrl}
                 alt={user?.name || 'Profile'}
                 onError={() => setImgError(true)}
-                style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E5E7EB', display: 'block' }}
+                style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E5E7EB', display: 'block', aspectRatio: '1/1', flexShrink: 0 }}
               />
             ) : (
               <div style={{

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Heart, MessageCircle } from './Icons';
-import { VerifiedBadge } from './VerificationModal';
+import VerifiedBadge from './VerifiedBadge';
 
 function getVideoUrl(post) {
   const vid = post.media?.find(m =>

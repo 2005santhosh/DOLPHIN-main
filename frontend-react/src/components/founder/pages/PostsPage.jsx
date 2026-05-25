@@ -8,7 +8,7 @@ import { postsAPI, connectionsAPI } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import ReelsViewer from '../../shared/ReelsViewer';
 import { Edit3, Heart, Eye, MessageCircle, Image } from '../../shared/Icons';
-import { VerifiedBadge } from '../../shared/VerificationModal';
+import VerifiedBadge from '../../shared/VerifiedBadge';
 
 // ─── Post type config per role ────────────────────────────────────────────────
 

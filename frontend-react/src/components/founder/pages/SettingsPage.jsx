@@ -6,7 +6,8 @@ import { useAuth } from '../../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { authAPI, verificationAPI } from '../../../services/api';
 import LegalSections from '../../shared/LegalSections';
-import VerificationModal, { VerifiedBadge } from '../../shared/VerificationModal';
+import VerificationModal from '../../shared/VerificationModal';
+import VerifiedBadge from '../../shared/VerifiedBadge';
 import { Eye, EyeOff, AlertTriangle, CheckCircle2 } from '../../shared/Icons';
 
 const SettingsPage = () => {

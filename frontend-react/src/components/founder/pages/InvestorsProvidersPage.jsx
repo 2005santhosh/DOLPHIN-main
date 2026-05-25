@@ -6,7 +6,7 @@ import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { founderAPI } from '../../../services/api';
 import { Lock, TrendingUp, Puzzle, Star } from '../../shared/Icons';
-import { VerifiedBadge } from '../../shared/VerificationModal';
+import VerifiedBadge from '../../shared/VerifiedBadge';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const Avatar = ({ src, name, size = 72 }) => {
