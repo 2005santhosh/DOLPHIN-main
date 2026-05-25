@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -16,18 +15,21 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Manually split chunks to prevent circular dependency TDZ issues
         manualChunks(id) {
-          // Each dashboard page gets its own chunk
-          if (id.includes('/pages/SettingsPage')) return 'SettingsPage';
-          if (id.includes('/pages/GamificationPage') || id.includes('/shared/GamificationPage')) return 'GamificationPage';
-          if (id.includes('VerificationModal')) return 'VerificationModal';
-          if (id.includes('VerifiedBadge')) return 'VerifiedBadge';
-          // Vendor chunk
+          // Force each problematic file into its own isolated chunk
+          if (id.includes('SettingsPage')) return 'chunk-settings';
+          if (id.includes('GamificationPage')) return 'chunk-gamification';
+          if (id.includes('VerificationModal')) return 'chunk-verification-modal';
+          if (id.includes('VerifiedBadge')) return 'chunk-verified-badge';
+          if (id.includes('AuthContext')) return 'chunk-auth-context';
+          if (id.includes('/services/api')) return 'chunk-api';
+          // Vendor splits
           if (id.includes('node_modules')) {
-            if (id.includes('lucide-react')) return 'lucide';
-            if (id.includes('react') || id.includes('react-dom')) return 'react-vendor';
-            return 'vendor';
+            if (id.includes('lucide-react')) return 'vendor-lucide';
+            if (id.includes('react-dom')) return 'vendor-react-dom';
+            if (id.includes('react')) return 'vendor-react';
+            if (id.includes('axios')) return 'vendor-axios';
+            return 'vendor-misc';
           }
         },
       },

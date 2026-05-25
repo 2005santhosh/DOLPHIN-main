@@ -158,46 +158,43 @@ app.use('/api/connections', connectionRoutes);
 app.use('/api/gamification', require('./routes/gamification'));
 app.use('/api/verification', require('./routes/verification'));
 // --- PUBLIC HTML ROUTES ---
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/index.html'));
-});
+// Only serve old HTML frontend if the files actually exist (not on Railway when using React frontend)
+const frontendDir = path.join(__dirname, '../frontend');
+const fs = require('fs');
+const hasFrontend = fs.existsSync(path.join(frontendDir, 'index.html'));
 
-app.get('/login.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/login.html'));
-});
-
-app.get('/register.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/register.html'));
-});
-
-// --- PROTECTED HTML ROUTES ---
-// SECURITY FIX: These must be defined BEFORE express.static
-// This forces the securePage middleware to run before the file is served
-app.get('/dashboard.html', securePage(['founder']), (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dashboard.html'));
-});
-
-app.get('/investor-dashboard.html', securePage(['investor']), (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/investor-dashboard.html'));
-});
-
-app.get('/admin-dashboard.html', securePage(['admin', 'investor']), (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/admin-dashboard.html'));
-});
-
-app.get('/provider-dashboard.html', securePage(['provider']), (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/provider-dashboard.html'));
-});
-
-app.get('/marketplace.html', securePage(['founder', 'investor', 'provider']), (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/marketplace.html'));
-});
-
-// --- STATIC FILES ---
-// SECURITY FIX: Moved to BOTTOM. 
-// If a user requests /dashboard.html, it hits the route above first.
-// If they request /images/logo.png, it hits this static handler.
-app.use(express.static(path.join(__dirname, '../frontend')));
+if (hasFrontend) {
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(frontendDir, 'index.html'));
+  });
+  app.get('/login.html', (req, res) => {
+    res.sendFile(path.join(frontendDir, 'login.html'));
+  });
+  app.get('/register.html', (req, res) => {
+    res.sendFile(path.join(frontendDir, 'register.html'));
+  });
+  app.get('/dashboard.html', securePage(['founder']), (req, res) => {
+    res.sendFile(path.join(frontendDir, 'dashboard.html'));
+  });
+  app.get('/investor-dashboard.html', securePage(['investor']), (req, res) => {
+    res.sendFile(path.join(frontendDir, 'investor-dashboard.html'));
+  });
+  app.get('/admin-dashboard.html', securePage(['admin', 'investor']), (req, res) => {
+    res.sendFile(path.join(frontendDir, 'admin-dashboard.html'));
+  });
+  app.get('/provider-dashboard.html', securePage(['provider']), (req, res) => {
+    res.sendFile(path.join(frontendDir, 'provider-dashboard.html'));
+  });
+  app.get('/marketplace.html', securePage(['founder', 'investor', 'provider']), (req, res) => {
+    res.sendFile(path.join(frontendDir, 'marketplace.html'));
+  });
+  app.use(express.static(frontendDir));
+} else {
+  // React frontend is on Vercel — backend is API-only
+  app.get('/', (req, res) => {
+    res.json({ status: 'Dolphin API', version: '2.0', frontend: 'https://dolphin-main.vercel.app' });
+  });
+}
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
