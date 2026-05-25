@@ -407,7 +407,7 @@ router.put('/reset-password/:token', resetPassword);
 router.get('/profile', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select(
-      'name email role state stage emailVerified watchlist interestAreas stagePreference createdAt updatedAt rewardPoints emailNotifications profilePicture'
+      'name email role state stage emailVerified watchlist interestAreas stagePreference createdAt updatedAt rewardPoints emailNotifications profilePicture isVerified verifiedAt'
     );
 
     if (!user) {
@@ -432,6 +432,8 @@ router.get('/profile', protect, async (req, res) => {
         rewardPoints: user.rewardPoints || 0,
         emailNotifications: user.emailNotifications ?? true,
         profilePicture: user.profilePicture || "",
+        isVerified: user.isVerified || false,
+        verifiedAt: user.verifiedAt || null,
         status: {
           isApproved: user.state === 'APPROVED' || user.state?.startsWith('STAGE_'),
           isBlocked: user.state === 'BLOCKED',

@@ -109,8 +109,15 @@ app.use(helmet({
 }));
 
 // Security middleware — single JSON parser with size limit
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Note: /api/verification/webhook uses raw body for signature verification
+app.use((req, res, next) => {
+  if (req.path === '/api/verification/webhook') return next();
+  express.json({ limit: '10mb' })(req, res, next);
+});
+app.use((req, res, next) => {
+  if (req.path === '/api/verification/webhook') return next();
+  express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+});
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -149,6 +156,7 @@ app.use('/api/admin/admin-notifications', require('./routes/admin-notifications'
 app.use('/api/posts', postRoutes);
 app.use('/api/connections', connectionRoutes);
 app.use('/api/gamification', require('./routes/gamification'));
+app.use('/api/verification', require('./routes/verification'));
 // --- PUBLIC HTML ROUTES ---
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));

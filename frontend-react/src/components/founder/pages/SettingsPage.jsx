@@ -4,8 +4,9 @@ import Card, { CardHeader, CardTitle } from '../../shared/Card';
 import Modal from '../../shared/Modal';
 import { useAuth } from '../../../context/AuthContext';
 import toast from 'react-hot-toast';
-import { authAPI } from '../../../services/api';
+import { authAPI, verificationAPI } from '../../../services/api';
 import LegalSections from '../../shared/LegalSections';
+import VerificationModal, { VerifiedBadge } from '../../shared/VerificationModal';
 import { Eye, EyeOff, AlertTriangle, CheckCircle2 } from '../../shared/Icons';
 
 const SettingsPage = () => {
@@ -26,10 +27,41 @@ const SettingsPage = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
+  const [verifyStatus, setVerifyStatus] = useState(null); // null | { isVerified, paymentStatus }
 
   useEffect(() => {
     loadSettings();
-  }, []);
+    loadVerifyStatus();
+    // Handle return from Cashfree payment page
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('verified') === '1') {
+      toast.success('Payment received! Your verified badge will activate shortly.');
+      window.history.replaceState({}, '', window.location.pathname);
+      // Poll for verification status
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        try {
+          const s = await verificationAPI.getStatus();
+          if (s.isVerified) {
+            clearInterval(poll);
+            setVerifyStatus(s);
+            if (refreshProfile) refreshProfile().catch(() => {});
+            toast.success('🎉 Your profile is now Verified!');
+          }
+        } catch {}
+        if (attempts >= 10) clearInterval(poll);
+      }, 3000);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadVerifyStatus = async () => {
+    try {
+      const s = await verificationAPI.getStatus();
+      setVerifyStatus(s);
+    } catch {}
+  };
 
   const loadSettings = async () => {
     try {
@@ -268,6 +300,66 @@ const SettingsPage = () => {
         </form>
       </Card>
 
+      {/* ── Verified Badge ── */}
+      <Card style={{ marginBottom: '1.5rem' }}>
+        <CardHeader>
+          <CardTitle style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <VerifiedBadge size={20} /> Profile Verification
+          </CardTitle>
+        </CardHeader>
+
+        {verifyStatus?.isVerified ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.5rem 0' }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: '50%',
+              background: 'linear-gradient(135deg, #84CC16, #16A34A)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <polyline points="7 12 10.5 15.5 17 9" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <VerifiedBadge size={16} /> Profile Verified
+              </div>
+              <div style={{ fontSize: '0.82rem', color: '#6B7280', marginTop: 2 }}>
+                Your profile has a verified badge. You enjoy priority visibility and increased trust.
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1rem', lineHeight: 1.6 }}>
+              Get a verified badge on your profile to stand out in the Dolphin ecosystem.
+              Verified profiles get higher visibility, more connections, and better trust.
+            </p>
+            <button
+              onClick={() => setVerifyModalOpen(true)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                padding: '0.625rem 1.25rem',
+                background: 'linear-gradient(135deg, #84CC16, #16A34A)',
+                color: 'white', border: 'none', borderRadius: 10,
+                fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(132,204,22,0.3)',
+                transition: 'transform 0.15s, box-shadow 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
+            >
+              <VerifiedBadge size={16} />
+              Get Verified – ₹99
+            </button>
+            {verifyStatus?.paymentStatus === 'pending' && (
+              <p style={{ fontSize: '0.78rem', color: '#D97706', marginTop: '0.5rem' }}>
+                ⏳ Payment pending — your badge will activate once payment is confirmed.
+              </p>
+            )}
+          </div>
+        )}
+      </Card>
+
       {/* Legal & Support — open in new tab */}
       <Card>
         <CardHeader>
@@ -301,6 +393,12 @@ const SettingsPage = () => {
           </div>
         </div>
       </Card>
+
+      {/* Verification Modal */}
+      <VerificationModal
+        isOpen={verifyModalOpen}
+        onClose={() => setVerifyModalOpen(false)}
+      />
 
       {/* Delete Confirmation Modal */}
       <Modal

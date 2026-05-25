@@ -227,12 +227,17 @@ export const chatAPI = {
   getUserProfile: async (userId) => api.get(`/chat/user/${userId}`),
 };
 
+// ─── VERIFICATION ──────────────────────────────────────────────────────────────
+export const verificationAPI = {
+  createPaymentLink: async (fullName, phone, email) =>
+    api.post('/verification/create-link', { fullName, phone, email }),
+  getStatus: async () => api.get('/verification/status'),
+};
+
 // ─── RESOURCES ─────────────────────────────────────────────────────────────────
 export const resourcesAPI = {
   getResources: async () => api.get('/resources'),
 };
-
-// ─── Default export (backward compat) ─────────────────────────────────────────
 export default {
   getProfile: authAPI.getProfile,
   getStartup: founderAPI.getStartup,

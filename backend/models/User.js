@@ -86,7 +86,17 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpire: Date,
   verificationToken: String,
   verificationExpire: Date,
-  // Virtual or static method to calculate average could be added, but we will calculate on the fly for simplicity
+
+  // ── Profile Verification (paid badge) ────────────────────────────────────────
+  isVerified:       { type: Boolean, default: false },
+  verifiedAt:       { type: Date, default: null },
+  verificationPayment: {
+    cfLinkId:       { type: String },
+    cfOrderId:      { type: String },
+    status:         { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
+    amount:         { type: Number },
+    paidAt:         { type: Date },
+  },
 });
 // Add a method to the schema to generate a reset token
 userSchema.methods.getResetPasswordToken = function() {

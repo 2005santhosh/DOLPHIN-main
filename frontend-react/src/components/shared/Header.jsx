@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { notificationsAPI, providerAPI, gamificationAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import DolphinLogo from './DolphinLogo';
+import { VerifiedBadge } from './VerificationModal';
 
 const VERIFIED_STATES = ['APPROVED','STAGE_1','STAGE_2','STAGE_3','STAGE_4','STAGE_5','STAGE_6','STAGE_7'];
 
@@ -351,8 +352,9 @@ export default function Header({ onMenuToggle }) {
           </button>
 
           {/* Name — desktop only */}
-          <span className="app-header__name">
+          <span className="app-header__name" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             {user?.name}
+            {user?.isVerified && <VerifiedBadge size={14} />}
           </span>
         </div>
       </div>
