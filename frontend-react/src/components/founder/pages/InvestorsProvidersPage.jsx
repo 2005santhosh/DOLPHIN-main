@@ -6,6 +6,7 @@ import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { founderAPI } from '../../../services/api';
 import { Lock, TrendingUp, Puzzle, Star } from '../../shared/Icons';
+import { VerifiedBadge } from '../../shared/VerificationModal';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const Avatar = ({ src, name, size = 72 }) => {
@@ -248,8 +249,9 @@ export default function InvestorsProvidersPage({ startup }) {
 
                   {/* Name & subtitle */}
                   <div>
-                    <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2, display: 'flex', alignItems: 'center', gap: '4px' }}>
                       {profile.name}
+                      {profile.isVerified && <VerifiedBadge size={13} />}
                     </div>
                     <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
                       {tab === 'investors'

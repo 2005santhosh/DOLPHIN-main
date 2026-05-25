@@ -8,6 +8,7 @@ import { postsAPI, connectionsAPI } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import ReelsViewer from '../../shared/ReelsViewer';
 import { Edit3, Heart, Eye, MessageCircle, Image } from '../../shared/Icons';
+import { VerifiedBadge } from '../../shared/VerificationModal';
 
 // ─── Post type config per role ────────────────────────────────────────────────
 
@@ -392,6 +393,7 @@ const PostsPage = () => {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
                       <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{post.authorName}</span>
+                      {post.isAuthorVerified && <VerifiedBadge size={14} />}
                       <span style={{ fontSize: '0.7rem', background: '#f3f4f6', color: '#6b7280', padding: '2px 8px', borderRadius: '12px' }}>
                         {post.authorRole}
                       </span>

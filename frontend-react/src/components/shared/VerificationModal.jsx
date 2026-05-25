@@ -164,7 +164,7 @@ export default function VerificationModal({ isOpen, onClose }) {
                 borderRadius: 9999, padding: '6px 16px', marginTop: '1rem',
               }}>
                 <span style={{ color: '#84CC16', fontWeight: 800, fontSize: '1.25rem' }}>₹99</span>
-                <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>one-time · lifetime badge</span>
+                <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>per month · cancel anytime</span>
               </div>
             </div>
 
@@ -223,7 +223,7 @@ export default function VerificationModal({ isOpen, onClose }) {
               </button>
 
               <p style={{ textAlign: 'center', fontSize: '0.75rem', color: '#9CA3AF', marginTop: '0.75rem' }}>
-                Secure payment via Cashfree · No subscription · Lifetime badge
+                Secure payment via Cashfree · ₹99/month · Cancel anytime
               </p>
             </div>
           </div>
@@ -257,7 +257,7 @@ export default function VerificationModal({ isOpen, onClose }) {
                   <div style={{ fontWeight: 700, color: '#111827', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     <VerifiedBadge size={16} /> Dolphin Verified Badge
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: '#6B7280', marginTop: 2 }}>Lifetime · One-time payment</div>
+                  <div style={{ fontSize: '0.78rem', color: '#6B7280', marginTop: 2 }}>Monthly · Renews every 30 days</div>
                 </div>
                 <div style={{ fontWeight: 800, fontSize: '1.25rem', color: '#16A34A' }}>₹99</div>
               </div>

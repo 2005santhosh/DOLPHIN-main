@@ -90,6 +90,9 @@ const userSchema = new mongoose.Schema({
   // ── Profile Verification (paid badge) ────────────────────────────────────────
   isVerified:       { type: Boolean, default: false },
   verifiedAt:       { type: Date, default: null },
+  // null = lifetime (early supporters); Date = monthly expiry
+  verifiedUntil:    { type: Date, default: null },
+  isFounderVerified: { type: Boolean, default: false }, // lifetime free badge for early supporters
   verificationPayment: {
     cfLinkId:       { type: String },
     cfOrderId:      { type: String },

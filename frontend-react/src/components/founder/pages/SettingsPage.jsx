@@ -308,31 +308,87 @@ const SettingsPage = () => {
           </CardTitle>
         </CardHeader>
 
-        {verifyStatus?.isVerified ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.5rem 0' }}>
+        {verifyStatus?.isFounderVerified ? (
+          /* Early supporter — lifetime free badge */
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', padding: '0.5rem 0' }}>
             <div style={{
-              width: 48, height: 48, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #84CC16, #16A34A)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
+              background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <polyline points="7 12 10.5 15.5 17 9" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <span style={{ fontSize: '1.25rem' }}>🏆</span>
             </div>
             <div>
-              <div style={{ fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <VerifiedBadge size={16} /> Profile Verified
+              <div style={{ fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <VerifiedBadge size={16} />
+                Early Supporter — Lifetime Verified Badge
               </div>
-              <div style={{ fontSize: '0.82rem', color: '#6B7280', marginTop: 2 }}>
-                Your profile has a verified badge. You enjoy priority visibility and increased trust.
+              <div style={{ fontSize: '0.82rem', color: '#6B7280', marginTop: 4, lineHeight: 1.5 }}>
+                As one of our first supporters, you have a <strong>free lifetime verified badge</strong> on Dolphin.
+                Thank you for believing in us from the start! 🎉
               </div>
             </div>
           </div>
+        ) : verifyStatus?.isVerified ? (
+          /* Active monthly badge */
+          <div>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', padding: '0.5rem 0', marginBottom: '1rem' }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
+                background: 'linear-gradient(135deg, #84CC16, #16A34A)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <polyline points="7 12 10.5 15.5 17 9" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <VerifiedBadge size={16} /> Profile Verified
+                </div>
+                <div style={{ fontSize: '0.82rem', color: '#6B7280', marginTop: 2 }}>
+                  {verifyStatus.daysLeft !== null
+                    ? `Expires in ${verifyStatus.daysLeft} day${verifyStatus.daysLeft !== 1 ? 's' : ''} · ${new Date(verifyStatus.verifiedUntil).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                    : 'Active'}
+                </div>
+                {/* Progress bar for days remaining */}
+                {verifyStatus.daysLeft !== null && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <div style={{ height: 4, background: '#E5E7EB', borderRadius: 9999, overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%', borderRadius: 9999,
+                        background: verifyStatus.daysLeft <= 5 ? '#EF4444' : verifyStatus.daysLeft <= 10 ? '#F59E0B' : '#84CC16',
+                        width: `${Math.min(100, (verifyStatus.daysLeft / 30) * 100)}%`,
+                        transition: 'width 0.6s ease',
+                      }} />
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#9CA3AF', marginTop: 2 }}>
+                      {verifyStatus.daysLeft} / 30 days remaining
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Renew early option */}
+            <button
+              onClick={() => setVerifyModalOpen(true)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                padding: '0.5rem 1rem',
+                background: 'transparent',
+                color: '#16A34A', border: '1.5px solid #84CC16', borderRadius: 8,
+                fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              ↻ Renew Badge – ₹99
+            </button>
+          </div>
         ) : (
+          /* Not verified */
           <div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1rem', lineHeight: 1.6 }}>
-              Get a verified badge on your profile to stand out in the Dolphin ecosystem.
-              Verified profiles get higher visibility, more connections, and better trust.
+              Get a verified badge on your profile for <strong>₹99/month</strong>. Stand out in the Dolphin ecosystem
+              with boosted visibility, higher connection chances, and a trust badge.
             </p>
             <button
               onClick={() => setVerifyModalOpen(true)}
@@ -343,13 +399,13 @@ const SettingsPage = () => {
                 color: 'white', border: 'none', borderRadius: 10,
                 fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer',
                 boxShadow: '0 2px 8px rgba(132,204,22,0.3)',
-                transition: 'transform 0.15s, box-shadow 0.15s',
+                transition: 'transform 0.15s',
               }}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
               onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
             >
               <VerifiedBadge size={16} />
-              Get Verified – ₹99
+              Get Verified – ₹99/month
             </button>
             {verifyStatus?.paymentStatus === 'pending' && (
               <p style={{ fontSize: '0.78rem', color: '#D97706', marginTop: '0.5rem' }}>

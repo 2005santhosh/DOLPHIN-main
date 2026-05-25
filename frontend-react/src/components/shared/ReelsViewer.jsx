@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Heart, MessageCircle } from './Icons';
+import { VerifiedBadge } from './VerificationModal';
 
 function getVideoUrl(post) {
   const vid = post.media?.find(m =>
@@ -262,8 +263,9 @@ export default function ReelsViewer({
                     onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'U')}&background=84CC16&color=fff&size=80`; }}
                   />
                   <div>
-                    <p style={{ margin: 0, color: 'white', fontWeight: 700, fontSize: '0.9rem', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
+                    <p style={{ margin: 0, color: 'white', fontWeight: 700, fontSize: '0.9rem', textShadow: '0 1px 4px rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       {post.authorName}
+                      {post.isAuthorVerified && <VerifiedBadge size={13} />}
                     </p>
                     <p style={{ margin: 0, color: 'rgba(255,255,255,0.7)', fontSize: '0.72rem' }}>
                       {post.authorRole}

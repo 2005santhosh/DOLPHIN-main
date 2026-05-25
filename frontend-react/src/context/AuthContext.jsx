@@ -74,8 +74,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // ── refreshProfile ─────────────────────────────────────────────────────────
-  // Updates user data (rewardPoints, profilePicture, etc.) from server.
-  // NEVER clears auth — even on 401. Only explicit logout() clears auth.
+  // Updates user data from server. On 401 (expired token) → auto logout.
   const refreshProfile = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!token) return null;
@@ -86,10 +85,21 @@ export const AuthProvider = ({ children }) => {
       _setAuth(profile);
       return profile;
     } catch (err) {
+      // 401 = token expired or invalid → force logout
+      if (err.status === 401) {
+        console.warn('[Auth] Token expired — logging out');
+        _clearAuth();
+        // Only redirect if currently on a dashboard page
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+          window.location.href = '/login';
+        }
+        return null;
+      }
+      // Other errors (network, 5xx) — keep user logged in with cached data
       console.warn('[Auth] refreshProfile error (ignored):', err.message);
       return null;
     }
-  }, [_setAuth]);
+  }, [_setAuth, _clearAuth]);
 
   // ── on mount: refresh profile + streak immediately ────────────────────────
   useEffect(() => {

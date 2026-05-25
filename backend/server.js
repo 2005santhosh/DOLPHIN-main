@@ -234,6 +234,7 @@ setInterval(async () => {
 
 // Daily streak loss processing — runs at 2am UTC
 const { processStreakLosses } = require('./services/gamificationService');
+const { processVerificationExpiry } = require('./routes/verification');
 const scheduleStreakCron = () => {
   const now = new Date();
   const next2am = new Date();
@@ -248,6 +249,13 @@ const scheduleStreakCron = () => {
     } catch (e) {
       console.error('[Gamification] Streak cron error:', e);
     }
+    // Also run verification expiry check
+    try {
+      const r = await processVerificationExpiry();
+      console.log(`[Verification] Daily cron: expired=${r.expired}, reminded=${r.reminded}`);
+    } catch (e) {
+      console.error('[Verification] Expiry cron error:', e);
+    }
     // Re-schedule for next day
     setInterval(async () => {
       try {
@@ -255,6 +263,12 @@ const scheduleStreakCron = () => {
         console.log(`[Gamification] Daily streak cron: reset ${count} streaks`);
       } catch (e) {
         console.error('[Gamification] Streak cron error:', e);
+      }
+      try {
+        const r = await processVerificationExpiry();
+        console.log(`[Verification] Daily cron: expired=${r.expired}, reminded=${r.reminded}`);
+      } catch (e) {
+        console.error('[Verification] Expiry cron error:', e);
       }
     }, 24 * 60 * 60 * 1000);
   }, msUntil2am);

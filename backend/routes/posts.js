@@ -215,8 +215,34 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
                 : (connectionMap[p.authorId?.toString()] || null)
         }));
 
+        // Boost verified authors: sort verified posts to the top within the page
+        // (secondary sort after createdAt — verified posts appear first among same-time posts)
+        const verifiedAuthorIds = new Set();
+        if (enrichedPosts.length > 0) {
+            const authorUserIds = [...new Set(enrichedPosts.map(p => p.authorId?.toString()).filter(Boolean))];
+            const verifiedAuthors = await User.find({
+                _id: { $in: authorUserIds },
+                isVerified: true,
+                $or: [
+                    { isFounderVerified: true },
+                    { verifiedUntil: { $gt: new Date() } },
+                    { verifiedUntil: null, verifiedAt: { $ne: null } }, // legacy lifetime
+                ],
+            }).select('_id').lean();
+            verifiedAuthors.forEach(u => verifiedAuthorIds.add(u._id.toString()));
+        }
+
+        const boostedPosts = enrichedPosts
+            .map(p => ({ ...p, isAuthorVerified: verifiedAuthorIds.has(p.authorId?.toString()) }))
+            .sort((a, b) => {
+                // Verified posts first, then by date
+                if (a.isAuthorVerified && !b.isAuthorVerified) return -1;
+                if (!a.isAuthorVerified && b.isAuthorVerified) return 1;
+                return 0; // already sorted by createdAt from DB
+            });
+
         res.json({
-            posts: enrichedPosts,
+            posts: boostedPosts,
             pagination: {
                 currentPage: page,
                 totalPages: Math.ceil(totalPosts / limit),
