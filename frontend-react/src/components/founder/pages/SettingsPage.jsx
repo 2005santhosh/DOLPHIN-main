@@ -7,7 +7,8 @@ import toast from 'react-hot-toast';
 import { authAPI, verificationAPI } from '../../../services/api';
 import LegalSections from '../../shared/LegalSections';
 import VerificationModal from '../../shared/VerificationModal';
-import VerifiedBadge from '../../shared/VerifiedBadge';import { Eye, EyeOff, AlertTriangle, CheckCircle2 } from '../../shared/Icons';
+import VerifiedBadge from '../../shared/VerifiedBadge';
+import { Eye, EyeOff, AlertTriangle, CheckCircle2 } from '../../shared/Icons';
 
 const SettingsPage = () => {
   const { user, logout, refreshProfile } = useAuth();
@@ -459,6 +460,8 @@ const SettingsPage = () => {
       <VerificationModal
         isOpen={verifyModalOpen}
         onClose={() => setVerifyModalOpen(false)}
+        userName={user?.name || ''}
+        userEmail={user?.email || ''}
       />
 
       {/* Delete Confirmation Modal */}
