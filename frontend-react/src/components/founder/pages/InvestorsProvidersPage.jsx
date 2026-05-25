@@ -21,7 +21,7 @@ const Avatar = ({ src, name, size = 72 }) => {
   );
 };
 
-const VerifiedBadge = ({ state }) => {
+const ApprovedBadge = ({ state }) => {
   const ok = ['APPROVED','STAGE_1','STAGE_2','STAGE_3','STAGE_4','STAGE_5','STAGE_6','STAGE_7'].includes(state);
   if (!ok) return null;
   return (
@@ -258,7 +258,7 @@ export default function InvestorsProvidersPage({ startup }) {
                         ? (profile.interestAreas?.slice(0, 2).join(', ') || 'Investor')
                         : (profile.category || 'Service Provider')}
                     </div>
-                    <VerifiedBadge state={profile.state} />
+                    <ApprovedBadge state={profile.state} />
                     {profile.rating && parseFloat(profile.rating) > 0 && (
                       <div style={{ fontSize: '0.82rem', color: '#F59E0B', marginTop: 4, display: 'flex', alignItems: 'center', gap: '3px' }}>
                         <Star size={13} fill="#F59E0B" color="#F59E0B" /> {parseFloat(profile.rating).toFixed(1)}
@@ -303,7 +303,7 @@ export default function InvestorsProvidersPage({ startup }) {
                   {detailProfile.name}
                 </h3>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <VerifiedBadge state={detailProfile.state} />
+                  <ApprovedBadge state={detailProfile.state} />
                   {detailProfile.rating && parseFloat(detailProfile.rating) > 0 && (
                     <span style={{ fontSize: '0.85rem', color: '#F59E0B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
                       <Star size={14} fill="#F59E0B" color="#F59E0B" /> {parseFloat(detailProfile.rating).toFixed(1)}
