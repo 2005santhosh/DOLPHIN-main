@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Post = require('../models/Post');
+const User = require('../models/User');
 const IntroRequest = require('../models/IntroRequest');
 const Connection = require('../models/Connection');
 const { protect } = require('../middleware/authMiddleware');

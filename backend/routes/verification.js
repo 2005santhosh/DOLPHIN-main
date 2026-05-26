@@ -117,9 +117,11 @@ router.post('/create-link', protect, async (req, res) => {
     const cfData = await cfRes.json();
 
     if (!cfRes.ok || !cfData.link_url) {
-      console.error('Cashfree create-link error:', cfData);
+      console.error('Cashfree create-link error:', JSON.stringify(cfData));
+      console.error('Cashfree status:', cfRes.status);
+      console.error('CF_APP_ID present:', !!CF_APP_ID, 'CF_SECRET present:', !!CF_SECRET);
       return res.status(502).json({
-        message: cfData.message || 'Failed to create payment link. Please try again.',
+        message: cfData.message || `Payment gateway error (${cfRes.status}). Please try again or contact support@pacificdev.in`,
       });
     }
 
