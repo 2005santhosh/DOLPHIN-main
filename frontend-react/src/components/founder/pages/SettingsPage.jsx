@@ -365,6 +365,7 @@ const SettingsPage = () => {
         </CardHeader>
 
         {verifyLoading ? (
+          /* Skeleton — prevents CTA flash for verified users */
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.5rem 0' }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#F3F4F6', flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
@@ -373,40 +374,8 @@ const SettingsPage = () => {
             </div>
           </div>
 
-        ) : vs.isFounderVerified ? (
-          /* Case A: Founder-lifetime verified */
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', padding: '0.5rem 0' }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, #F59E0B, #D97706)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: '1.25rem' }}>🏆</span>
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                <VerifiedBadge size={16} /> Early Supporter — Lifetime Verified Badge
-              </div>
-              <div style={{ fontSize: '0.875rem', color: '#6B7280', marginTop: 6, lineHeight: 1.6 }}>
-                You have a lifetime verified badge as an early supporter. Thank you for helping build the Dolphin ecosystem.
-              </div>
-            </div>
-          </div>
-
-        ) : vs.isAdminVerified ? (
-          /* Case B: Admin/manual verified */
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', padding: '0.5rem 0' }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, #3B82F6, #1D4ED8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <VerifiedBadge size={24} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <VerifiedBadge size={16} /> Profile Verified
-              </div>
-              <div style={{ fontSize: '0.875rem', color: '#6B7280', marginTop: 6, lineHeight: 1.6 }}>
-                Congratulations, your profile is already verified. Thank you for being part of this ecosystem.
-              </div>
-            </div>
-          </div>
-
         ) : vs.isVerified ? (
-          /* Case C: Active paid verification */
+          /* State 1: Active paid verification */
           <div>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', padding: '0.5rem 0', marginBottom: '1rem' }}>
               <div style={{ width: 48, height: 48, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, #84CC16, #16A34A)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -422,7 +391,7 @@ const SettingsPage = () => {
                 {vs.verifiedUntil && (
                   <div style={{ fontSize: '0.82rem', color: '#6B7280', marginTop: 4 }}>
                     Valid until: <strong>{new Date(vs.verifiedUntil).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>
-                    {vs.daysLeft !== null && ` (${vs.daysLeft} day${vs.daysLeft !== 1 ? 's' : ''} left)`}
+                    {vs.daysLeft !== null && ` · ${vs.daysLeft} day${vs.daysLeft !== 1 ? 's' : ''} left`}
                   </div>
                 )}
                 {vs.daysLeft !== null && (
@@ -441,7 +410,7 @@ const SettingsPage = () => {
           </div>
 
         ) : vs.shouldShowPending ? (
-          /* Case D: Pending payment */
+          /* State 2: Payment pending */
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: '#FFFBEB', borderRadius: 10, border: '1px solid #FDE68A' }}>
             <span style={{ fontSize: '1.5rem' }}>⏳</span>
             <div>
@@ -453,7 +422,7 @@ const SettingsPage = () => {
           </div>
 
         ) : (
-          /* Case E: Not verified / expired */
+          /* State 3: Unverified / expired */
           <div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1rem', lineHeight: 1.6 }}>
               Get a verified badge on your profile for <strong>₹99/month</strong>. Stand out in the Dolphin ecosystem

@@ -228,24 +228,37 @@ setInterval(async () => {
   }
 }, 24 * 60 * 60 * 1000);
 
-// Auto-run legacy verification migration after DB connects
+// Startup migration: reset all non-payment verified badges, then reconcile from paid records
 const User = require('./models/User');
 const mongoose = require('mongoose');
-const { migrateLegacyVerifiedUsers } = require('./routes/verification');
 
 const runMigrations = async () => {
   try {
     if (mongoose.connection.readyState !== 1) {
       await new Promise(resolve => mongoose.connection.once('connected', resolve));
     }
-    // 1. Grant isFounderVerified to all isVerified users with no verifiedUntil and no payment record
-    await migrateLegacyVerifiedUsers();
-    // 2. Also bulk-set isFounderVerified for any remaining isVerified=true + no verifiedUntil
-    const r = await User.updateMany(
-      { isVerified: true, isFounderVerified: { $ne: true }, isAdminVerified: { $ne: true }, verifiedUntil: null },
-      { $set: { isFounderVerified: true, verifiedSource: 'founder' } }
+    // Reset all legacy/founder/admin verified badges — payment-only going forward
+    const reset = await User.updateMany(
+      { $or: [{ isFounderVerified: true }, { isAdminVerified: true }, { verifiedSource: { $in: ['founder', 'admin'] } }] },
+      { $set: { isVerified: false, isFounderVerified: false, isAdminVerified: false, verifiedSource: null, verifiedAt: null, verifiedUntil: null, activeVerificationPaymentId: null } }
     );
-    if (r.modifiedCount > 0) console.log(`[Migration] ✅ Granted lifetime founder badge to ${r.modifiedCount} users`);
+    if (reset.modifiedCount > 0) console.log(`[Migration] Reset ${reset.modifiedCount} legacy verified users`);
+
+    // Reconcile from paid payment records
+    const VerificationPayment = require('./models/VerificationPayment');
+    const paidPayments = await VerificationPayment.find({ status: 'paid' }).sort({ paidAt: -1 });
+    const seen = new Set();
+    let activated = 0;
+    for (const p of paidPayments) {
+      const uid = p.userId?.toString();
+      if (!uid || seen.has(uid)) continue;
+      seen.add(uid);
+      const verifiedUntil = p.verifiedUntil || new Date((p.paidAt || new Date()).getTime() + 30 * 24 * 60 * 60 * 1000);
+      if (new Date(verifiedUntil) <= new Date()) continue;
+      await User.findByIdAndUpdate(p.userId, { $set: { isVerified: true, verifiedSource: 'payment', verifiedAt: p.paidAt || new Date(), verifiedUntil, activeVerificationPaymentId: p._id } });
+      activated++;
+    }
+    if (activated > 0) console.log(`[Migration] Reconciled ${activated} paid verified users`);
   } catch (e) {
     console.error('[Migration] Error:', e.message);
   }
