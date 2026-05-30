@@ -57,12 +57,24 @@ const createOrderLimiter = rateLimit({
 /** Is the user's badge currently active? */
 function isBadgeActive(user) {
   if (!user.isVerified) return false;
+  // Founder verified = lifetime, never expires
   if (user.isFounderVerified) return true;
-  if (!user.verifiedUntil) return true; // legacy lifetime
+  // Legacy: verified before monthly system (no verifiedUntil) = treat as founder/lifetime
+  if (!user.verifiedUntil) return true;
+  // Monthly paid badge — check expiry
   return new Date(user.verifiedUntil) > new Date();
 }
 
-/** Can this user purchase a new verification? */
+/** Auto-upgrade legacy verified users to isFounderVerified on first status check */
+async function ensureFounderBadgeForLegacyUsers(user) {
+  // If user has isVerified=true but isFounderVerified=false and no verifiedUntil
+  // they were verified before the monthly system — give them lifetime badge
+  if (user.isVerified && !user.isFounderVerified && !user.verifiedUntil) {
+    user.isFounderVerified = true;
+    await user.save();
+    console.log(`[Verification] Auto-upgraded legacy verified user ${user.email} to isFounderVerified`);
+  }
+}
 function canPurchase(user) {
   if (user.isFounderVerified) return { ok: false, reason: 'founder_verified' };
   if (isBadgeActive(user)) return { ok: false, reason: 'already_active' };
@@ -386,15 +398,18 @@ router.get('/status', protect, async (req, res) => {
       .select('isVerified verifiedAt verifiedUntil isFounderVerified activeVerificationPaymentId');
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    // Auto-upgrade legacy verified users to lifetime founder badge
+    await ensureFounderBadgeForLegacyUsers(user);
+
     const active = isBadgeActive(user);
 
-    // Auto-expire: clear stale isVerified flag
+    // Auto-expire: clear stale isVerified flag (only for monthly paid badges)
     if (user.isVerified && !active && !user.isFounderVerified) {
       user.isVerified = false;
       await user.save();
     }
 
-    // Check for pending payment
+    // Check for pending payment (only relevant if not already verified)
     const pendingCutoff = new Date(Date.now() - PENDING_TTL_MIN * 60 * 1000);
     const pendingPayment = active ? null : await VerificationPayment.findOne({
       userId: user._id,
@@ -402,7 +417,7 @@ router.get('/status', protect, async (req, res) => {
       createdAt: { $gte: pendingCutoff },
     }).select('cashfreeOrderId status createdAt').lean();
 
-    const daysLeft = user.verifiedUntil
+    const daysLeft = (user.verifiedUntil && !user.isFounderVerified)
       ? Math.max(0, Math.ceil((new Date(user.verifiedUntil) - new Date()) / 86400000))
       : null;
 
@@ -410,7 +425,7 @@ router.get('/status', protect, async (req, res) => {
       isVerified:        active,
       isFounderVerified: user.isFounderVerified || false,
       verifiedAt:        user.verifiedAt,
-      verifiedUntil:     user.verifiedUntil,
+      verifiedUntil:     user.isFounderVerified ? null : user.verifiedUntil,
       daysLeft,
       activePlan:        active ? (user.isFounderVerified ? 'lifetime' : 'monthly') : null,
       pendingPayment:    pendingPayment ? {

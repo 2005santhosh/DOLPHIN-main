@@ -77,7 +77,10 @@ const sendTokenResponse = (user, statusCode, req, res) => {
         role: user.role,
         rewardPoints: user.rewardPoints || 0,
         profilePicture: user.profilePicture || '',
-        state: user.state || 'PENDING_APPROVAL'
+        state: user.state || 'PENDING_APPROVAL',
+        isVerified: user.isVerified || false,
+        isFounderVerified: user.isFounderVerified || false,
+        verifiedUntil: user.verifiedUntil || null,
       }
     });
 };
