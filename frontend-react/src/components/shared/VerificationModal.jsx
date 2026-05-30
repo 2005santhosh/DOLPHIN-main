@@ -97,7 +97,25 @@ export default function VerificationModal({ isOpen, onClose, userName = '', user
       // 4. Open checkout
       const checkoutResult = await cashfree.checkout(checkoutOptions);
 
-      // 5. After checkout closes — poll backend for status (never trust frontend result)
+      // 5. Check if user actually completed payment or cancelled
+      // Cashfree returns { paymentDetails: { paymentStatus: 'SUCCESS'|'FAILED'|'CANCELLED'|'PENDING' } }
+      const paymentStatus = checkoutResult?.paymentDetails?.paymentStatus
+        || checkoutResult?.status
+        || '';
+
+      const isCancelled = ['CANCELLED', 'FAILED', 'USER_DROPPED', 'DROPPED'].includes(
+        paymentStatus.toUpperCase()
+      );
+
+      if (isCancelled || (!paymentStatus && checkoutResult?.error)) {
+        // User cancelled or payment failed
+        setStep('form');
+        toast.error('Payment was cancelled. Please try again when ready.');
+        return;
+      }
+
+      // 6. Payment submitted (SUCCESS or PENDING) — poll backend for confirmation
+      // Never trust frontend status alone — webhook is the source of truth
       setStep('done');
       toast.success('Payment submitted! Verifying your badge…');
 

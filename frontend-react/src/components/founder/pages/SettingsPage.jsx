@@ -31,11 +31,17 @@ const SettingsPage = () => {
   const [uploading, setUploading] = useState(false);
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
   const [verifyStatus, setVerifyStatus] = useState(null);
+  const [verifyLoading, setVerifyLoading] = useState(true);
 
   // Derive verified status AFTER useState declarations to avoid TDZ
-  // Falls back to user object from AuthContext while API loads
-  const isVerifiedNow = verifyStatus?.isVerified ?? user?.isVerified ?? false;
-  const isFounderNow  = verifyStatus?.isFounderVerified ?? user?.isFounderVerified ?? false;
+  // While verifyStatus is loading, fall back to user object from AuthContext
+  // This prevents "Get Verified" flashing for already-verified users
+  const isVerifiedNow = verifyStatus !== null
+    ? verifyStatus.isVerified
+    : (user?.isVerified ?? false);
+  const isFounderNow = verifyStatus !== null
+    ? verifyStatus.isFounderVerified
+    : (user?.isFounderVerified ?? false);
 
   useEffect(() => {
     loadSettings();
@@ -72,10 +78,15 @@ const SettingsPage = () => {
   };
 
   const loadVerifyStatus = async () => {
+    setVerifyLoading(true);
     try {
       const s = await verificationAPI.getStatus();
       setVerifyStatus(s);
-    } catch {}
+    } catch {
+      // On error, keep using user object fallback — don't block UI
+    } finally {
+      setVerifyLoading(false);
+    }
   };
 
   const loadSettings = async () => {
@@ -323,7 +334,16 @@ const SettingsPage = () => {
           </CardTitle>
         </CardHeader>
 
-        {isFounderNow ? (
+        {verifyLoading ? (
+          /* Loading skeleton — prevents "Get Verified" flash for verified users */
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.5rem 0' }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#F3F4F6', flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ height: 14, background: '#F3F4F6', borderRadius: 6, width: '60%', marginBottom: 8 }} />
+              <div style={{ height: 12, background: '#F3F4F6', borderRadius: 6, width: '80%' }} />
+            </div>
+          </div>
+        ) : isFounderNow ? (
           /* Early supporter — lifetime free badge */
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', padding: '0.5rem 0' }}>
             <div style={{
@@ -422,7 +442,7 @@ const SettingsPage = () => {
               <VerifiedBadge size={16} />
               Get Verified – ₹99/month
             </button>
-            {verifyStatus?.paymentStatus === 'pending' && (
+            {verifyStatus?.pendingPayment && (
               <p style={{ fontSize: '0.78rem', color: '#D97706', marginTop: '0.5rem' }}>
                 ⏳ Payment pending — your badge will activate once payment is confirmed.
               </p>
