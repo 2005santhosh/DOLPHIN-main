@@ -421,7 +421,7 @@ async function sendStreakMilestoneEmail(user, reward) {
             Log in to your dashboard to claim your reward. You'll need to provide your delivery address.
           </p>
           <div style="text-align: center; margin: 24px 0;">
-            <a href="https://dolphin-main.vercel.app/dashboard#gamification"
+            <a href="https://www.dolphinorg.in/dashboard#gamification"
                style="display: inline-block; padding: 12px 28px; background: #84CC16; color: white; text-decoration: none; border-radius: 8px; font-weight: 700;">
               Claim Your Reward
             </a>
@@ -478,7 +478,7 @@ async function sendStreakLostEmail(user, lostStreak) {
         </p>
 
         <div style="text-align: center; margin: 28px 0;">
-          <a href="https://dolphin-main.vercel.app"
+          <a href="https://www.dolphinorg.in"
              style="display: inline-block; padding: 14px 32px; background: #84CC16; color: #0F172A; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 1rem;">
             🔥 Rebuild My Streak Now
           </a>
@@ -526,3 +526,4 @@ module.exports = {
   STREAK_REWARDS,
   POINTS,
 };
+

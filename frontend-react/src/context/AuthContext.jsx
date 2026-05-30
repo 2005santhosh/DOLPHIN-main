@@ -3,18 +3,30 @@ import toast from 'react-hot-toast';
 
 const AuthContext = createContext(null);
 
-// ─── API base: use relative path so Vite proxy handles CORS in dev ────────────
-// In production (Vercel), VITE_API_URL is set to https://api.dolphinorg.in/api
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
+// ─── Safe localStorage wrapper — extensions may block it ─────────────────────
+const storage = {
+  get(key) {
+    try { return localStorage.getItem(key); } catch { return null; }
+  },
+  set(key, value) {
+    try { localStorage.setItem(key, value); } catch { /* blocked — cookie auth still works */ }
+  },
+  remove(key) {
+    try { localStorage.removeItem(key); } catch { /* ignored */ }
+  },
+};
 
 // ─── raw fetch helper ─────────────────────────────────────────────────────────
 async function apiFetch(path, options = {}) {
-  const token = localStorage.getItem('token');
+  const token = storage.get('token');
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  // Attach Bearer token if available (localStorage); cookie is sent automatically via credentials
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(`${API_BASE}${path}`, {
-    credentials: 'include',
+    credentials: 'include', // always send HttpOnly cookie — works even if localStorage is blocked
     ...options,
     headers,
   });
@@ -39,21 +51,22 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  // ── Synchronous init from localStorage ────────────────────────────────────
-  // This runs BEFORE the first render, so ProtectedRoute sees the correct state immediately.
+  // ── Synchronous init from localStorage (may be null if extension blocks it) ─
   const [user, setUser] = useState(() => {
     try {
-      const s = localStorage.getItem('user');
+      const s = storage.get('user');
       return s ? JSON.parse(s) : null;
     } catch { return null; }
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(
-    () => !!(localStorage.getItem('token') && localStorage.getItem('user'))
+    () => !!(storage.get('token') && storage.get('user'))
   );
 
-  // loading is always false — we read synchronously from localStorage
-  const [loading] = useState(false);
+  // KEY FIX: loading = true until we've verified auth with the server.
+  // This prevents ProtectedRoute from redirecting to /login before the
+  // cookie-based auth check completes (critical for users with localStorage blocked).
+  const [loading, setLoading] = useState(true);
 
   const timerRef = useRef(null);
 
@@ -62,55 +75,69 @@ export const AuthProvider = ({ children }) => {
     if (!userData) return;
     setUser(userData);
     setIsAuthenticated(true);
-    localStorage.setItem('user', JSON.stringify(userData));
+    storage.set('user', JSON.stringify(userData));
   }, []);
 
   const _clearAuth = useCallback(() => {
     setUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    localStorage.removeItem('startupData');
+    storage.remove('user');
+    storage.remove('token');
+    storage.remove('startupData');
   }, []);
 
   // ── refreshProfile ─────────────────────────────────────────────────────────
-  // Updates user data from server. On 401 (expired token) → auto logout.
-  const refreshProfile = useCallback(async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return null;
+  // Verifies auth with the server. Works via:
+  //   1. Bearer token from localStorage (normal case)
+  //   2. HttpOnly cookie (when localStorage is blocked by extensions)
+  // On 401 → clears auth and redirects to login.
+  const refreshProfile = useCallback(async (isInitialLoad = false) => {
+    const token = storage.get('token');
 
+    // If no token in localStorage AND this is not the initial load,
+    // we still try the request — the HttpOnly cookie may authenticate it.
+    // On initial load we always try to verify with the server.
     try {
       const data = await apiFetch('/auth/profile');
       const profile = data.profile || data;
       _setAuth(profile);
+      // If we got here via cookie auth (no localStorage token), save the token
+      // from the profile response if available
+      if (!token && data.token) {
+        storage.set('token', data.token);
+      }
       return profile;
     } catch (err) {
-      // 401 = token expired or invalid → force logout
       if (err.status === 401) {
-        console.warn('[Auth] Token expired — logging out');
+        // Genuinely not authenticated
         _clearAuth();
-        // Only redirect if currently on a dashboard page
-        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        if (
+          isInitialLoad === false &&
+          window.location.pathname !== '/login' &&
+          window.location.pathname !== '/register' &&
+          window.location.pathname !== '/'
+        ) {
           window.location.href = '/login';
         }
         return null;
       }
-      // Other errors (network, 5xx) — keep user logged in with cached data
+      // Network error / 5xx — keep existing auth state, don't log out
       console.warn('[Auth] refreshProfile error (ignored):', err.message);
       return null;
+    } finally {
+      if (isInitialLoad) setLoading(false);
     }
   }, [_setAuth, _clearAuth]);
 
-  // ── on mount: refresh profile + streak immediately ────────────────────────
+  // ── on mount: always verify with server before making auth decisions ───────
   useEffect(() => {
-    if (localStorage.getItem('token')) {
-      // Fire immediately — don't wait
-      refreshProfile();
-    }
+    // Always call refreshProfile on mount — even if localStorage is empty.
+    // The HttpOnly cookie will authenticate the request if localStorage is blocked.
+    refreshProfile(true).finally(() => setLoading(false));
 
-    // Refresh every 2 minutes
+    // Refresh every 2 minutes to keep session fresh
     timerRef.current = setInterval(() => {
-      if (localStorage.getItem('token')) refreshProfile();
+      refreshProfile(false);
     }, 120_000);
 
     return () => clearInterval(timerRef.current);
@@ -122,11 +149,10 @@ export const AuthProvider = ({ children }) => {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    if (data.token) localStorage.setItem('token', data.token);
+    if (data.token) storage.set('token', data.token);
     if (data.user) _setAuth(data.user);
     toast.success(`Welcome back, ${data.user?.name || 'User'}!`);
-    // Fetch full profile right after login to get all fields
-    setTimeout(() => refreshProfile(), 300);
+    setTimeout(() => refreshProfile(false), 300);
     return data;
   };
 
@@ -144,10 +170,10 @@ export const AuthProvider = ({ children }) => {
       method: 'POST',
       body: JSON.stringify({ email, otp }),
     });
-    if (data.token) localStorage.setItem('token', data.token);
+    if (data.token) storage.set('token', data.token);
     if (data.user) _setAuth(data.user);
     toast.success(`Welcome, ${data.user?.name || 'User'}!`);
-    setTimeout(() => refreshProfile(), 300);
+    setTimeout(() => refreshProfile(false), 300);
     return data;
   };
 

@@ -21,7 +21,7 @@ const CF_APP_ID    = (process.env.CASHFREE_APP_ID    || '').trim();
 const CF_SECRET    = (process.env.CASHFREE_SECRET_KEY || '').trim();
 const CF_ENV       = (process.env.CASHFREE_ENV        || 'production').trim();
 const AMOUNT       = Number(process.env.VERIFICATION_AMOUNT || 99);
-const FRONTEND_URL = (process.env.FRONTEND_URL || 'https://dolphin-main.vercel.app').trim();
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'https://www.dolphinorg.in').trim();
 const BACKEND_URL  = (process.env.BACKEND_URL  || 'https://api.dolphinorg.in').trim();
 
 const CF_BASE = CF_ENV === 'sandbox'
@@ -79,7 +79,7 @@ router.post('/create-link', protect, async (req, res) => {
     const linkId  = `dlphn_v_${shortId}_${ts}`; // max ~26 chars
 
     // Ensure return_url is always a full https:// URL
-    const rawFrontend = (process.env.FRONTEND_URL || 'https://dolphin-main.vercel.app').trim();
+    const rawFrontend = (process.env.FRONTEND_URL || 'https://www.dolphinorg.in').trim();
     const frontendBase = rawFrontend.startsWith('http') ? rawFrontend : `https://${rawFrontend}`;
     const backendBase  = (process.env.BACKEND_URL || 'https://api.dolphinorg.in').trim();
 

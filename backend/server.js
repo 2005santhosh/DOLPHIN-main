@@ -192,7 +192,7 @@ if (hasFrontend) {
 } else {
   // React frontend is on Vercel — backend is API-only
   app.get('/', (req, res) => {
-    res.json({ status: 'Dolphin API', version: '2.0', frontend: 'https://dolphin-main.vercel.app' });
+    res.json({ status: 'Dolphin API', version: '2.0', frontend: 'https://www.dolphinorg.in' });
   });
 }
 
