@@ -444,7 +444,109 @@ router.get('/status', protect, async (req, res) => {
   }
 });
 
-// ─── Daily cron: expire badges + send 2-day reminders ────────────────────────
+// ─── GET /api/verification/refresh-status ────────────────────────────────────
+// Called by frontend after returning from Cashfree checkout.
+// Actively checks Cashfree order status server-side and activates badge if paid.
+// This handles the case where the webhook hasn't fired yet.
+router.get('/refresh-status', protect, async (req, res) => {
+  try {
+    const { order_id } = req.query;
+
+    const user = await User.findById(req.user._id)
+      .select('isVerified verifiedAt verifiedUntil isFounderVerified activeVerificationPaymentId');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Auto-upgrade legacy users
+    await ensureFounderBadgeForLegacyUsers(user);
+
+    // If already verified, just return current status
+    if (isBadgeActive(user)) {
+      return res.json({
+        isVerified: true,
+        isFounderVerified: user.isFounderVerified || false,
+        verifiedAt: user.verifiedAt,
+        verifiedUntil: user.isFounderVerified ? null : user.verifiedUntil,
+        justActivated: false,
+      });
+    }
+
+    // If order_id provided, check that specific order
+    if (order_id) {
+      // Security: ensure this order belongs to the logged-in user
+      const payment = await VerificationPayment.findOne({
+        cashfreeOrderId: order_id,
+        userId: req.user._id, // CRITICAL: prevent cross-user activation
+      });
+
+      if (!payment) {
+        return res.json({ isVerified: false, message: 'Order not found for this user' });
+      }
+
+      // Already paid — activate if not yet done
+      if (payment.status === 'paid' && !isBadgeActive(user)) {
+        await activateBadge(user, payment, payment.cashfreePaymentId);
+        return res.json({
+          isVerified: true,
+          isFounderVerified: false,
+          verifiedAt: user.verifiedAt,
+          verifiedUntil: user.verifiedUntil,
+          justActivated: true,
+        });
+      }
+
+      // Check Cashfree order status server-to-server
+      if (payment.status !== 'paid' && CF_APP_ID && CF_SECRET) {
+        try {
+          const cfOrder = await getCashfreeOrderStatus(order_id);
+          const orderStatus = (cfOrder.order_status || '').toUpperCase();
+
+          if (orderStatus === 'PAID') {
+            // Get payment ID from Cashfree payments list
+            let cfPaymentId = '';
+            try {
+              const paymentsRes = await fetch(`${CF_BASE}/orders/${order_id}/payments`, {
+                headers: {
+                  'x-api-version':   CF_API_VER,
+                  'x-client-id':     CF_APP_ID,
+                  'x-client-secret': CF_SECRET,
+                },
+              });
+              const paymentsData = await paymentsRes.json();
+              const successPayment = Array.isArray(paymentsData)
+                ? paymentsData.find(p => p.payment_status === 'SUCCESS')
+                : null;
+              cfPaymentId = successPayment?.cf_payment_id || '';
+            } catch { /* ignore — activate anyway */ }
+
+            await activateBadge(user, payment, cfPaymentId);
+            return res.json({
+              isVerified: true,
+              isFounderVerified: false,
+              verifiedAt: user.verifiedAt,
+              verifiedUntil: user.verifiedUntil,
+              justActivated: true,
+            });
+          }
+
+          // Payment not yet confirmed
+          return res.json({
+            isVerified: false,
+            orderStatus,
+            message: orderStatus === 'ACTIVE' ? 'Payment pending confirmation' : `Order status: ${orderStatus}`,
+          });
+        } catch (cfErr) {
+          console.error('[refresh-status] Cashfree check error:', cfErr.message);
+        }
+      }
+    }
+
+    // No order_id or couldn't confirm — return current status
+    res.json({ isVerified: false });
+  } catch (err) {
+    console.error('[refresh-status] Error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 async function processVerificationExpiry() {
   const now = new Date();
 

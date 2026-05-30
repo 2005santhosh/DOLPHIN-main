@@ -232,6 +232,9 @@ export const verificationAPI = {
   createOrder: async (fullName, phone, email) =>
     api.post('/verification/create-order', { fullName, phone, email }),
   getStatus: async () => api.get('/verification/status'),
+  // Actively checks Cashfree order status and activates badge if paid
+  refreshStatus: async (orderId) =>
+    api.get('/verification/refresh-status', { params: { order_id: orderId } }),
 };
 
 // ─── RESOURCES ─────────────────────────────────────────────────────────────────

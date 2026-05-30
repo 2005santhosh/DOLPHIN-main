@@ -46,26 +46,62 @@ const SettingsPage = () => {
   useEffect(() => {
     loadSettings();
     loadVerifyStatus();
-    // Handle return from Cashfree payment page (redirect flow fallback)
+
+    // Handle return from Cashfree checkout
     const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('order_id');
     const orderStatus = params.get('order_status');
-    if (params.get('order_id') || orderStatus) {
+
+    if (orderId || orderStatus) {
+      // Clean URL immediately
       window.history.replaceState({}, '', window.location.pathname + window.location.hash);
-      if (orderStatus === 'SUCCESS' || orderStatus === 'PAID') {
-        toast.success('Payment submitted! Verifying your badge…');
-        startPolling();
-      } else if (orderStatus) {
+
+      if (orderStatus === 'FAILED' || orderStatus === 'CANCELLED') {
         toast.error('Payment was not completed. Please try again.');
+      } else if (orderId) {
+        // Call refresh-status to actively check Cashfree and activate badge
+        toast.loading('Verifying your payment…', { id: 'verify-toast' });
+        refreshPaymentStatus(orderId);
       }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const refreshPaymentStatus = async (orderId) => {
+    // Try refresh-status first (actively checks Cashfree)
+    let activated = false;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      try {
+        const { verificationAPI: vAPI } = await import('../../../services/api');
+        const s = await vAPI.refreshStatus(orderId);
+        if (s.isVerified) {
+          activated = true;
+          setVerifyStatus({ ...s, daysLeft: s.verifiedUntil ? Math.max(0, Math.ceil((new Date(s.verifiedUntil) - new Date()) / 86400000)) : null });
+          if (refreshProfile) refreshProfile().catch(() => {});
+          toast.success('🎉 Your profile is now Verified!', { id: 'verify-toast' });
+          break;
+        }
+        if (s.orderStatus === 'FAILED' || s.orderStatus === 'CANCELLED') {
+          toast.error('Payment failed. Please try again.', { id: 'verify-toast' });
+          break;
+        }
+      } catch {}
+      // Wait 4s between attempts
+      await new Promise(r => setTimeout(r, 4000));
+    }
+    if (!activated) {
+      toast.dismiss('verify-toast');
+      // Fall back to polling /status
+      startPolling();
+    }
+  };
 
   const startPolling = () => {
     let attempts = 0;
     const poll = setInterval(async () => {
       attempts++;
       try {
-        const s = await verificationAPI.getStatus();
+        const { verificationAPI: vAPI } = await import('../../../services/api');
+        const s = await vAPI.getStatus();
         if (s.isVerified) {
           clearInterval(poll);
           setVerifyStatus(s);
@@ -73,7 +109,7 @@ const SettingsPage = () => {
           toast.success('🎉 Your profile is now Verified!');
         }
       } catch {}
-      if (attempts >= 12) clearInterval(poll); // stop after 60s
+      if (attempts >= 10) clearInterval(poll);
     }, 5000);
   };
 
@@ -491,9 +527,14 @@ const SettingsPage = () => {
         onClose={() => setVerifyModalOpen(false)}
         userName={user?.name || ''}
         userEmail={user?.email || ''}
-        onPaymentComplete={() => {
+        onPaymentComplete={(orderId) => {
           setVerifyModalOpen(false);
-          startPolling();
+          if (orderId) {
+            toast.loading('Verifying your payment…', { id: 'verify-toast' });
+            refreshPaymentStatus(orderId);
+          } else {
+            startPolling();
+          }
         }}
       />
 

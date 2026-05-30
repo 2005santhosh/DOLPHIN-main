@@ -1,3 +1,21 @@
+/**
+ * AuthContext — production-hardened auth state management.
+ *
+ * Auth states:
+ *   loading=true  → bootstrap in progress, ProtectedRoute shows spinner
+ *   loading=false + isAuthenticated=true  → logged in
+ *   loading=false + isAuthenticated=false → not logged in, redirect to /login
+ *
+ * Session persistence:
+ *   Primary:   Bearer token in localStorage (fast, synchronous read)
+ *   Fallback:  HttpOnly cookie (works when localStorage is blocked by extensions)
+ *
+ * Redirect-to-login bug fix:
+ *   - loading starts true, only becomes false after server check completes
+ *   - network errors (5xx, timeout) do NOT clear auth — only genuine 401 does
+ *   - if localStorage is blocked but cookie exists, server check succeeds via cookie
+ *   - isAuthenticated is set to true if EITHER localStorage token OR server check succeeds
+ */
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 
@@ -5,7 +23,7 @@ const AuthContext = createContext(null);
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
-// ─── Safe localStorage wrapper — extensions may block it ─────────────────────
+// ─── Safe localStorage wrapper ────────────────────────────────────────────────
 const storage = {
   get(key) {
     try { return localStorage.getItem(key); } catch { return null; }
@@ -22,11 +40,10 @@ const storage = {
 async function apiFetch(path, options = {}) {
   const token = storage.get('token');
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-  // Attach Bearer token if available (localStorage); cookie is sent automatically via credentials
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(`${API_BASE}${path}`, {
-    credentials: 'include', // always send HttpOnly cookie — works even if localStorage is blocked
+    credentials: 'include', // always send HttpOnly cookie
     ...options,
     headers,
   });
@@ -51,7 +68,8 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  // ── Synchronous init from localStorage (may be null if extension blocks it) ─
+  // Synchronous init — read from localStorage immediately so ProtectedRoute
+  // doesn't flash the login page for users who are clearly logged in
   const [user, setUser] = useState(() => {
     try {
       const s = storage.get('user');
@@ -59,18 +77,21 @@ export const AuthProvider = ({ children }) => {
     } catch { return null; }
   });
 
+  // isAuthenticated starts true if we have BOTH token AND user in localStorage.
+  // This prevents the login flash for users who are clearly authenticated.
+  // The server check will correct this if the token is actually expired.
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => !!(storage.get('token') && storage.get('user'))
   );
 
-  // KEY FIX: loading = true until we've verified auth with the server.
-  // This prevents ProtectedRoute from redirecting to /login before the
-  // cookie-based auth check completes (critical for users with localStorage blocked).
+  // loading=true until the server auth check completes.
+  // ProtectedRoute shows a spinner while loading=true.
+  // This prevents redirect-to-login before we know the real auth state.
   const [loading, setLoading] = useState(true);
 
   const timerRef = useRef(null);
+  const initDoneRef = useRef(false);
 
-  // ── helpers ────────────────────────────────────────────────────────────────
   const _setAuth = useCallback((userData) => {
     if (!userData) return;
     setUser(userData);
@@ -87,60 +108,63 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // ── refreshProfile ─────────────────────────────────────────────────────────
-  // Verifies auth with the server. Works via:
-  //   1. Bearer token from localStorage (normal case)
-  //   2. HttpOnly cookie (when localStorage is blocked by extensions)
-  // On 401 → clears auth and redirects to login.
   const refreshProfile = useCallback(async (isInitialLoad = false) => {
-    const token = storage.get('token');
-
     try {
       const data = await apiFetch('/auth/profile');
       const profile = data.profile || data;
       _setAuth(profile);
-      if (!token && data.token) {
+      // If we authenticated via cookie (no localStorage token), save the token
+      if (!storage.get('token') && data.token) {
         storage.set('token', data.token);
       }
       return profile;
     } catch (err) {
       if (err.status === 401) {
+        // Genuine 401 — token is invalid/expired
         _clearAuth();
-        // On initial load: do NOT redirect — ProtectedRoute handles it after loading=false
-        if (!isInitialLoad &&
-          window.location.pathname !== '/login' &&
-          window.location.pathname !== '/register' &&
-          window.location.pathname !== '/') {
-          window.location.href = '/login';
+        // On initial load: do NOT redirect here — ProtectedRoute handles it
+        // after loading becomes false. This prevents the redirect-to-login bug.
+        if (!isInitialLoad) {
+          const path = window.location.pathname;
+          if (path !== '/login' && path !== '/register' && path !== '/') {
+            window.location.href = '/login';
+          }
         }
         return null;
       }
-      // Network/5xx errors — keep existing auth state, never log out
-      console.warn('[Auth] refreshProfile error (ignored):', err.message);
+      // Network error, 5xx, timeout — do NOT clear auth.
+      // The user is probably still logged in; this is a transient failure.
+      // Keep existing isAuthenticated state so they stay on the dashboard.
+      console.warn('[Auth] refreshProfile network/server error (keeping auth state):', err.message);
       return null;
     }
-    // Note: setLoading(false) is handled by the useEffect caller, not here
   }, [_setAuth, _clearAuth]);
 
-  // ── on mount: always verify with server before making auth decisions ───────
+  // ── Bootstrap on mount ─────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
 
-    const init = async () => {
+    const bootstrap = async () => {
+      // Always verify with server — even if localStorage has a token.
+      // This handles: expired tokens, cookie-only auth, stale localStorage.
       try {
         await refreshProfile(true);
       } catch {
-        // refreshProfile handles its own errors — this is just a safety net
+        // refreshProfile handles all errors internally
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          initDoneRef.current = true;
+        }
       }
     };
 
-    init();
+    bootstrap();
 
-    // Refresh every 2 minutes to keep session fresh
+    // Refresh every 3 minutes to keep session alive
     timerRef.current = setInterval(() => {
-      refreshProfile(false);
-    }, 120_000);
+      if (initDoneRef.current) refreshProfile(false);
+    }, 3 * 60 * 1000);
 
     return () => {
       cancelled = true;
@@ -157,7 +181,8 @@ export const AuthProvider = ({ children }) => {
     if (data.token) storage.set('token', data.token);
     if (data.user) _setAuth(data.user);
     toast.success(`Welcome back, ${data.user?.name || 'User'}!`);
-    setTimeout(() => refreshProfile(false), 300);
+    // Fetch full profile to get all fields (isVerified, isFounderVerified, etc.)
+    setTimeout(() => refreshProfile(false), 200);
     return data;
   };
 
@@ -178,7 +203,7 @@ export const AuthProvider = ({ children }) => {
     if (data.token) storage.set('token', data.token);
     if (data.user) _setAuth(data.user);
     toast.success(`Welcome, ${data.user?.name || 'User'}!`);
-    setTimeout(() => refreshProfile(false), 300);
+    setTimeout(() => refreshProfile(false), 200);
     return data;
   };
 

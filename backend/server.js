@@ -228,10 +228,16 @@ setInterval(async () => {
   }
 }, 24 * 60 * 60 * 1000);
 
-// Auto-run founder badge migration on startup (idempotent — safe to run every time)
+// Auto-run founder badge migration after DB connects (idempotent — safe to run every time)
 const User = require('./models/User');
-setImmediate(async () => {
+const mongoose = require('mongoose');
+
+const runFounderBadgeMigration = async () => {
   try {
+    // Wait for DB to be ready
+    if (mongoose.connection.readyState !== 1) {
+      await new Promise((resolve) => mongoose.connection.once('connected', resolve));
+    }
     const result = await User.updateMany(
       { isVerified: true, isFounderVerified: { $ne: true } },
       { $set: { isFounderVerified: true } }
@@ -242,7 +248,10 @@ setImmediate(async () => {
   } catch (e) {
     console.error('[Migration] Founder badge migration error:', e.message);
   }
-});
+};
+
+// Run after a short delay to ensure DB connection is established
+setTimeout(runFounderBadgeMigration, 5000);
 
 // Daily streak loss processing — runs at 2am UTC
 const { processStreakLosses } = require('./services/gamificationService');
