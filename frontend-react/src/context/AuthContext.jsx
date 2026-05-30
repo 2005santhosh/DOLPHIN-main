@@ -104,9 +104,8 @@ export const AuthProvider = ({ children }) => {
       return profile;
     } catch (err) {
       if (err.status === 401) {
-        // On initial load: clear auth silently, do NOT redirect
-        // The ProtectedRoute will handle the redirect after loading=false
         _clearAuth();
+        // On initial load: do NOT redirect — ProtectedRoute handles it after loading=false
         if (!isInitialLoad &&
           window.location.pathname !== '/login' &&
           window.location.pathname !== '/register' &&
@@ -115,26 +114,38 @@ export const AuthProvider = ({ children }) => {
         }
         return null;
       }
-      // Network/5xx errors — keep existing auth state
+      // Network/5xx errors — keep existing auth state, never log out
       console.warn('[Auth] refreshProfile error (ignored):', err.message);
       return null;
-    } finally {
-      if (isInitialLoad) setLoading(false);
     }
+    // Note: setLoading(false) is handled by the useEffect caller, not here
   }, [_setAuth, _clearAuth]);
 
   // ── on mount: always verify with server before making auth decisions ───────
   useEffect(() => {
-    // Always call refreshProfile on mount — even if localStorage is empty.
-    // The HttpOnly cookie will authenticate the request if localStorage is blocked.
-    refreshProfile(true).finally(() => setLoading(false));
+    let cancelled = false;
+
+    const init = async () => {
+      try {
+        await refreshProfile(true);
+      } catch {
+        // refreshProfile handles its own errors — this is just a safety net
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    init();
 
     // Refresh every 2 minutes to keep session fresh
     timerRef.current = setInterval(() => {
       refreshProfile(false);
     }, 120_000);
 
-    return () => clearInterval(timerRef.current);
+    return () => {
+      cancelled = true;
+      clearInterval(timerRef.current);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── login ──────────────────────────────────────────────────────────────────

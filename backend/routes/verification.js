@@ -67,13 +67,15 @@ function isBadgeActive(user) {
 
 /** Auto-upgrade legacy verified users to isFounderVerified on first status check */
 async function ensureFounderBadgeForLegacyUsers(user) {
-  // If user has isVerified=true but isFounderVerified=false and no verifiedUntil
-  // they were verified before the monthly system — give them lifetime badge
+  // Any user with isVerified=true but isFounderVerified=false and no verifiedUntil
+  // was verified before the monthly payment system — give them lifetime badge
   if (user.isVerified && !user.isFounderVerified && !user.verifiedUntil) {
     user.isFounderVerified = true;
     await user.save();
     console.log(`[Verification] Auto-upgraded legacy verified user ${user.email} to isFounderVerified`);
+    return true;
   }
+  return false;
 }
 function canPurchase(user) {
   if (user.isFounderVerified) return { ok: false, reason: 'founder_verified' };
@@ -399,8 +401,10 @@ router.get('/status', protect, async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     // Auto-upgrade legacy verified users to lifetime founder badge
-    await ensureFounderBadgeForLegacyUsers(user);
+    const wasUpgraded = await ensureFounderBadgeForLegacyUsers(user);
 
+    // Use in-memory value (may have just been upgraded above)
+    const effectiveIsFounderVerified = user.isFounderVerified || false;
     const active = isBadgeActive(user);
 
     // Auto-expire: clear stale isVerified flag (only for monthly paid badges)
@@ -423,11 +427,11 @@ router.get('/status', protect, async (req, res) => {
 
     res.json({
       isVerified:        active,
-      isFounderVerified: user.isFounderVerified || false,
+      isFounderVerified: effectiveIsFounderVerified,
       verifiedAt:        user.verifiedAt,
-      verifiedUntil:     user.isFounderVerified ? null : user.verifiedUntil,
+      verifiedUntil:     effectiveIsFounderVerified ? null : user.verifiedUntil,
       daysLeft,
-      activePlan:        active ? (user.isFounderVerified ? 'lifetime' : 'monthly') : null,
+      activePlan:        active ? (effectiveIsFounderVerified ? 'lifetime' : 'monthly') : null,
       pendingPayment:    pendingPayment ? {
         orderId:   pendingPayment.cashfreeOrderId,
         status:    pendingPayment.status,
