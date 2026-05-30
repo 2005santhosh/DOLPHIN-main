@@ -340,10 +340,11 @@ export default function Header({ onMenuToggle }) {
                 {getInitials(user?.name)}
               </div>
             )}
-            {isApproved && (
+            {isPaidVerified && (
               <span style={{
                 position: 'absolute', bottom: '-1px', right: '-1px',
-                width: 13, height: 13, background: '#22C55E',
+                width: 13, height: 13,
+                background: 'linear-gradient(135deg, #84CC16, #16A34A)',
                 borderRadius: '50%', border: '2px solid white',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
