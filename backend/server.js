@@ -228,6 +228,22 @@ setInterval(async () => {
   }
 }, 24 * 60 * 60 * 1000);
 
+// Auto-run founder badge migration on startup (idempotent — safe to run every time)
+const User = require('./models/User');
+setImmediate(async () => {
+  try {
+    const result = await User.updateMany(
+      { isVerified: true, isFounderVerified: { $ne: true } },
+      { $set: { isFounderVerified: true } }
+    );
+    if (result.modifiedCount > 0) {
+      console.log(`[Migration] ✅ Granted lifetime founder badge to ${result.modifiedCount} existing verified users`);
+    }
+  } catch (e) {
+    console.error('[Migration] Founder badge migration error:', e.message);
+  }
+});
+
 // Daily streak loss processing — runs at 2am UTC
 const { processStreakLosses } = require('./services/gamificationService');
 const { processVerificationExpiry } = require('./routes/verification');

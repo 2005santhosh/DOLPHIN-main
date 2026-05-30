@@ -11,6 +11,45 @@ const Log = require('../models/Log');
 // READ-ONLY routes — accessible by both admin and investor
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── One-time migration: grant lifetime founder badge to all existing verified users ───
+// Run this once after deploying. Safe to run multiple times (idempotent).
+router.post('/migrate-founder-badges', protect, authorize('admin'), async (req, res) => {
+  try {
+    // Find all users who have isVerified=true but isFounderVerified=false
+    // These are users verified by admin before the payment system existed
+    const result = await User.updateMany(
+      { isVerified: true, isFounderVerified: { $ne: true } },
+      { $set: { isFounderVerified: true } }
+    );
+    console.log(`[Migration] Granted lifetime founder badge to ${result.modifiedCount} users`);
+    res.json({
+      success: true,
+      message: `Granted lifetime verified badge to ${result.modifiedCount} existing verified users.`,
+      modifiedCount: result.modifiedCount,
+    });
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({ message: 'Migration failed', error: error.message });
+  }
+});
+
+// Grant verified badge to a specific user (admin action)
+router.post('/grant-verified-badge', protect, authorize('admin'), async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ message: 'userId is required' });
+  try {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: { isVerified: true, isFounderVerified: true, verifiedAt: new Date() } },
+      { new: true }
+    ).select('name email isVerified isFounderVerified');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ success: true, message: `Lifetime verified badge granted to ${user.name}`, user });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Get all users (read-only — investors can view but not modify)
 router.get('/users', protect, authorize('admin', 'investor'), async (req, res) => {
   try {

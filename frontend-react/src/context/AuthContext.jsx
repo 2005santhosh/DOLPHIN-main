@@ -94,34 +94,28 @@ export const AuthProvider = ({ children }) => {
   const refreshProfile = useCallback(async (isInitialLoad = false) => {
     const token = storage.get('token');
 
-    // If no token in localStorage AND this is not the initial load,
-    // we still try the request — the HttpOnly cookie may authenticate it.
-    // On initial load we always try to verify with the server.
     try {
       const data = await apiFetch('/auth/profile');
       const profile = data.profile || data;
       _setAuth(profile);
-      // If we got here via cookie auth (no localStorage token), save the token
-      // from the profile response if available
       if (!token && data.token) {
         storage.set('token', data.token);
       }
       return profile;
     } catch (err) {
       if (err.status === 401) {
-        // Genuinely not authenticated
+        // On initial load: clear auth silently, do NOT redirect
+        // The ProtectedRoute will handle the redirect after loading=false
         _clearAuth();
-        if (
-          isInitialLoad === false &&
+        if (!isInitialLoad &&
           window.location.pathname !== '/login' &&
           window.location.pathname !== '/register' &&
-          window.location.pathname !== '/'
-        ) {
+          window.location.pathname !== '/') {
           window.location.href = '/login';
         }
         return null;
       }
-      // Network error / 5xx — keep existing auth state, don't log out
+      // Network/5xx errors — keep existing auth state
       console.warn('[Auth] refreshProfile error (ignored):', err.message);
       return null;
     } finally {
