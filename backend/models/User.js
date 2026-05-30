@@ -88,18 +88,12 @@ const userSchema = new mongoose.Schema({
   verificationExpire: Date,
 
   // ── Profile Verification (paid badge) ────────────────────────────────────────
-  isVerified:       { type: Boolean, default: false },
-  verifiedAt:       { type: Date, default: null },
-  // null = lifetime (early supporters); Date = monthly expiry
-  verifiedUntil:    { type: Date, default: null },
+  isVerified:        { type: Boolean, default: false },
+  verifiedAt:        { type: Date, default: null },
+  verifiedUntil:     { type: Date, default: null },   // null = lifetime; Date = monthly expiry
   isFounderVerified: { type: Boolean, default: false }, // lifetime free badge for early supporters
-  verificationPayment: {
-    cfLinkId:       { type: String },
-    cfOrderId:      { type: String },
-    status:         { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
-    amount:         { type: Number },
-    paidAt:         { type: Date },
-  },
+  // activeVerificationPaymentId links to VerificationPayment collection
+  activeVerificationPaymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'VerificationPayment', default: null },
 });
 // Add a method to the schema to generate a reset token
 userSchema.methods.getResetPasswordToken = function() {

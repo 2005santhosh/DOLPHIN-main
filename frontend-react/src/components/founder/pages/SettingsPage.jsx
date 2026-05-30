@@ -40,28 +40,36 @@ const SettingsPage = () => {
   useEffect(() => {
     loadSettings();
     loadVerifyStatus();
-    // Handle return from Cashfree payment page
+    // Handle return from Cashfree payment page (redirect flow fallback)
     const params = new URLSearchParams(window.location.search);
-    if (params.get('verified') === '1') {
-      toast.success('Payment received! Your verified badge will activate shortly.');
-      window.history.replaceState({}, '', window.location.pathname);
-      // Poll for verification status
-      let attempts = 0;
-      const poll = setInterval(async () => {
-        attempts++;
-        try {
-          const s = await verificationAPI.getStatus();
-          if (s.isVerified) {
-            clearInterval(poll);
-            setVerifyStatus(s);
-            if (refreshProfile) refreshProfile().catch(() => {});
-            toast.success('🎉 Your profile is now Verified!');
-          }
-        } catch {}
-        if (attempts >= 10) clearInterval(poll);
-      }, 3000);
+    const orderStatus = params.get('order_status');
+    if (params.get('order_id') || orderStatus) {
+      window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+      if (orderStatus === 'SUCCESS' || orderStatus === 'PAID') {
+        toast.success('Payment submitted! Verifying your badge…');
+        startPolling();
+      } else if (orderStatus) {
+        toast.error('Payment was not completed. Please try again.');
+      }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const startPolling = () => {
+    let attempts = 0;
+    const poll = setInterval(async () => {
+      attempts++;
+      try {
+        const s = await verificationAPI.getStatus();
+        if (s.isVerified) {
+          clearInterval(poll);
+          setVerifyStatus(s);
+          if (refreshProfile) refreshProfile().catch(() => {});
+          toast.success('🎉 Your profile is now Verified!');
+        }
+      } catch {}
+      if (attempts >= 12) clearInterval(poll); // stop after 60s
+    }, 5000);
+  };
 
   const loadVerifyStatus = async () => {
     try {
@@ -463,6 +471,10 @@ const SettingsPage = () => {
         onClose={() => setVerifyModalOpen(false)}
         userName={user?.name || ''}
         userEmail={user?.email || ''}
+        onPaymentComplete={() => {
+          setVerifyModalOpen(false);
+          startPolling();
+        }}
       />
 
       {/* Delete Confirmation Modal */}

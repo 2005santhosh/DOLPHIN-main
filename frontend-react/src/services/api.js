@@ -229,8 +229,8 @@ export const chatAPI = {
 
 // ─── VERIFICATION ──────────────────────────────────────────────────────────────
 export const verificationAPI = {
-  createPaymentLink: async (fullName, phone, email) =>
-    api.post('/verification/create-link', { fullName, phone, email }),
+  createOrder: async (fullName, phone, email) =>
+    api.post('/verification/create-order', { fullName, phone, email }),
   getStatus: async () => api.get('/verification/status'),
 };
 

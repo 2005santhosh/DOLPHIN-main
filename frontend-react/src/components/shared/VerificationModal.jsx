@@ -1,22 +1,56 @@
 /**
- * VerificationModal
- * No AuthContext import. No top-level const that could cause TDZ issues.
- * verificationAPI is called lazily (inside async function) to avoid bundler TDZ.
+ * VerificationModal — Cashfree Checkout integration.
+ * No AuthContext import (prevents circular dependency).
+ * Uses Cashfree JS SDK loaded from CDN.
+ *
+ * Flow:
+ *  1. User fills form → POST /api/verification/create-order
+ *  2. Backend returns payment_session_id + order_id
+ *  3. Frontend opens Cashfree Checkout with payment_session_id
+ *  4. After checkout closes, parent polls /api/verification/status
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import VerifiedBadge from './VerifiedBadge';
 import toast from 'react-hot-toast';
 
-// Call verificationAPI lazily to avoid bundler circular-init issues
-async function createPaymentLink(fullName, phone, email) {
-  const { verificationAPI } = await import('../../services/api');
-  return verificationAPI.createPaymentLink(fullName, phone, email);
+const CF_ENV = import.meta.env.VITE_CASHFREE_ENV || 'production';
+
+/** Load Cashfree JS SDK from CDN (idempotent) */
+function loadCashfreeSDK() {
+  return new Promise((resolve, reject) => {
+    if (window.Cashfree) { resolve(window.Cashfree); return; }
+    const script = document.createElement('script');
+    script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+    script.async = true;
+    script.onload = () => {
+      if (window.Cashfree) resolve(window.Cashfree);
+      else reject(new Error('Cashfree SDK failed to initialize'));
+    };
+    script.onerror = () => reject(new Error('Failed to load Cashfree SDK'));
+    document.head.appendChild(script);
+  });
 }
 
-export default function VerificationModal({ isOpen, onClose, userName = '', userEmail = '' }) {
-  const [step, setStep] = useState('benefits');
+/** Call create-order endpoint lazily to avoid bundler circular-init issues */
+async function callCreateOrder(fullName, phone, email) {
+  const { verificationAPI } = await import('../../services/api');
+  return verificationAPI.createOrder(fullName, phone, email);
+}
+
+export default function VerificationModal({ isOpen, onClose, userName = '', userEmail = '', onPaymentComplete }) {
+  const [step, setStep] = useState('benefits'); // benefits | form | processing | done
   const [form, setForm] = useState({ fullName: userName, phone: '', email: userEmail });
   const [errors, setErrors] = useState({});
+  const [sdkReady, setSdkReady] = useState(false);
+
+  // Pre-load SDK when modal opens
+  useEffect(() => {
+    if (isOpen && !sdkReady) {
+      loadCashfreeSDK()
+        .then(() => setSdkReady(true))
+        .catch(e => console.warn('[Cashfree] SDK preload failed:', e.message));
+    }
+  }, [isOpen, sdkReady]);
 
   if (!isOpen) return null;
 
@@ -34,22 +68,52 @@ export default function VerificationModal({ isOpen, onClose, userName = '', user
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    setStep('loading');
+    setStep('processing');
+
     try {
-      const result = await createPaymentLink(form.fullName.trim(), form.phone.trim(), form.email.trim());
-      if (result.link_url) {
-        window.location.href = result.link_url;
-      } else {
-        throw new Error('No payment link received');
+      // 1. Create order on backend
+      const result = await callCreateOrder(
+        form.fullName.trim(),
+        form.phone.trim(),
+        form.email.trim(),
+      );
+
+      if (!result.payment_session_id) throw new Error('No payment session received');
+
+      // 2. Load SDK if not ready
+      let CashfreeSDK = window.Cashfree;
+      if (!CashfreeSDK) {
+        CashfreeSDK = await loadCashfreeSDK();
       }
+
+      // 3. Initialize Cashfree Checkout
+      const cashfree = await CashfreeSDK({ mode: CF_ENV === 'sandbox' ? 'sandbox' : 'production' });
+
+      const checkoutOptions = {
+        paymentSessionId: result.payment_session_id,
+        redirectTarget:   '_modal', // opens in-page modal
+      };
+
+      // 4. Open checkout
+      const checkoutResult = await cashfree.checkout(checkoutOptions);
+
+      // 5. After checkout closes — poll backend for status (never trust frontend result)
+      setStep('done');
+      toast.success('Payment submitted! Verifying your badge…');
+
+      // Notify parent to poll status
+      if (onPaymentComplete) onPaymentComplete(result.order_id);
+      onClose();
+
     } catch (err) {
+      console.error('[Checkout] Error:', err);
       setStep('form');
-      if (err.message?.includes('already verified')) {
+      if (err.message?.includes('already verified') || err.message?.includes('still active')) {
         toast.success('Your profile is already verified!');
         onClose();
         return;
       }
-      toast.error(err.message || 'Failed to create payment link. Please try again.');
+      toast.error(err.message || 'Payment failed. Please try again.');
     }
   };
 
@@ -60,6 +124,7 @@ export default function VerificationModal({ isOpen, onClose, userName = '', user
       <div onClick={handleClose} style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} />
       <div style={{ position: 'fixed', zIndex: 9999, top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% - 2rem)', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', background: 'white', borderRadius: 20, boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }}>
 
+        {/* ── Benefits ── */}
         {step === 'benefits' && (
           <div>
             <div style={{ background: 'linear-gradient(135deg, #0F172A 0%, #1E3A8A 60%, #166534 100%)', borderRadius: '20px 20px 0 0', padding: '2rem 1.5rem 1.5rem', position: 'relative', textAlign: 'center' }}>
@@ -104,6 +169,7 @@ export default function VerificationModal({ isOpen, onClose, userName = '', user
           </div>
         )}
 
+        {/* ── Form ── */}
         {step === 'form' && (
           <div>
             <div style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid #F3F4F6' }}>
@@ -161,13 +227,14 @@ export default function VerificationModal({ isOpen, onClose, userName = '', user
           </div>
         )}
 
-        {step === 'loading' && (
+        {/* ── Processing ── */}
+        {step === 'processing' && (
           <div style={{ padding: '3rem 2rem', textAlign: 'center' }}>
             <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg, #84CC16, #16A34A)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', animation: 'vmPulse 1.5s ease-in-out infinite' }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><polyline points="7 12 10.5 15.5 17 9" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
-            <h3 style={{ margin: '0 0 0.5rem', color: '#111827' }}>Creating your payment link…</h3>
-            <p style={{ color: '#6B7280', fontSize: '0.875rem', margin: 0 }}>You'll be redirected to the secure Cashfree payment page in a moment.</p>
+            <h3 style={{ margin: '0 0 0.5rem', color: '#111827' }}>Opening secure checkout…</h3>
+            <p style={{ color: '#6B7280', fontSize: '0.875rem', margin: 0 }}>Please complete your payment in the Cashfree checkout window.</p>
             <style>{`@keyframes vmPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }`}</style>
           </div>
         )}
