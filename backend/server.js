@@ -228,30 +228,29 @@ setInterval(async () => {
   }
 }, 24 * 60 * 60 * 1000);
 
-// Auto-run founder badge migration after DB connects (idempotent — safe to run every time)
+// Auto-run legacy verification migration after DB connects
 const User = require('./models/User');
 const mongoose = require('mongoose');
+const { migrateLegacyVerifiedUsers } = require('./routes/verification');
 
-const runFounderBadgeMigration = async () => {
+const runMigrations = async () => {
   try {
-    // Wait for DB to be ready
     if (mongoose.connection.readyState !== 1) {
-      await new Promise((resolve) => mongoose.connection.once('connected', resolve));
+      await new Promise(resolve => mongoose.connection.once('connected', resolve));
     }
-    const result = await User.updateMany(
-      { isVerified: true, isFounderVerified: { $ne: true } },
-      { $set: { isFounderVerified: true } }
+    // 1. Grant isFounderVerified to all isVerified users with no verifiedUntil and no payment record
+    await migrateLegacyVerifiedUsers();
+    // 2. Also bulk-set isFounderVerified for any remaining isVerified=true + no verifiedUntil
+    const r = await User.updateMany(
+      { isVerified: true, isFounderVerified: { $ne: true }, isAdminVerified: { $ne: true }, verifiedUntil: null },
+      { $set: { isFounderVerified: true, verifiedSource: 'founder' } }
     );
-    if (result.modifiedCount > 0) {
-      console.log(`[Migration] ✅ Granted lifetime founder badge to ${result.modifiedCount} existing verified users`);
-    }
+    if (r.modifiedCount > 0) console.log(`[Migration] ✅ Granted lifetime founder badge to ${r.modifiedCount} users`);
   } catch (e) {
-    console.error('[Migration] Founder badge migration error:', e.message);
+    console.error('[Migration] Error:', e.message);
   }
 };
-
-// Run after a short delay to ensure DB connection is established
-setTimeout(runFounderBadgeMigration, 5000);
+setTimeout(runMigrations, 5000);
 
 // Daily streak loss processing — runs at 2am UTC
 const { processStreakLosses } = require('./services/gamificationService');

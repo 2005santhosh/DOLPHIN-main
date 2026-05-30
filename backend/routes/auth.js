@@ -80,6 +80,8 @@ const sendTokenResponse = (user, statusCode, req, res) => {
         state: user.state || 'PENDING_APPROVAL',
         isVerified: user.isVerified || false,
         isFounderVerified: user.isFounderVerified || false,
+        isAdminVerified: user.isAdminVerified || false,
+        verifiedSource: user.verifiedSource || null,
         verifiedUntil: user.verifiedUntil || null,
       }
     });
@@ -410,7 +412,7 @@ router.put('/reset-password/:token', resetPassword);
 router.get('/profile', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select(
-      'name email role state stage emailVerified watchlist interestAreas stagePreference createdAt updatedAt rewardPoints emailNotifications profilePicture isVerified verifiedAt verifiedUntil isFounderVerified'
+      'name email role state stage emailVerified watchlist interestAreas stagePreference createdAt updatedAt rewardPoints emailNotifications profilePicture isVerified verifiedAt verifiedUntil isFounderVerified isAdminVerified verifiedSource'
     );
 
     if (!user) {
@@ -439,6 +441,8 @@ router.get('/profile', protect, async (req, res) => {
         verifiedAt: user.verifiedAt || null,
         verifiedUntil: user.verifiedUntil || null,
         isFounderVerified: user.isFounderVerified || false,
+        isAdminVerified: user.isAdminVerified || false,
+        verifiedSource: user.verifiedSource || null,
         status: {
           isApproved: user.state === 'APPROVED' || user.state?.startsWith('STAGE_'),
           isBlocked: user.state === 'BLOCKED',

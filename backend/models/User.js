@@ -87,13 +87,28 @@ const userSchema = new mongoose.Schema({
   verificationToken: String,
   verificationExpire: Date,
 
-  // ── Profile Verification (paid badge) ────────────────────────────────────────
-  isVerified:        { type: Boolean, default: false },
+  // ── Profile Verification ─────────────────────────────────────────────────────
+  // Unified verification model — all three sources map to isVerified=true
+  //
+  // Sources:
+  //   isFounderVerified=true  → lifetime badge for early supporters
+  //   isAdminVerified=true    → manually granted by admin (lifetime)
+  //   isVerified=true + verifiedUntil → paid monthly badge
+  //   isVerified=true + verifiedUntil=null → legacy lifetime (pre-monthly system)
+  //
+  // Use verificationService.isUserActuallyVerified(user) everywhere — never check fields directly.
+  isVerified:        { type: Boolean, default: false, index: true },
   verifiedAt:        { type: Date, default: null },
   verifiedUntil:     { type: Date, default: null },   // null = lifetime; Date = monthly expiry
-  isFounderVerified: { type: Boolean, default: false }, // lifetime free badge for early supporters
-  // activeVerificationPaymentId links to VerificationPayment collection
-  activeVerificationPaymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'VerificationPayment', default: null },
+  isFounderVerified: { type: Boolean, default: false }, // early supporter lifetime badge
+  isAdminVerified:   { type: Boolean, default: false }, // admin-manually granted lifetime badge
+  verifiedSource:    { type: String, enum: ['founder', 'admin', 'payment', null], default: null },
+  // Links to VerificationPayment collection for paid badges
+  activeVerificationPaymentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'VerificationPayment',
+    default: null,
+  },
 });
 // Add a method to the schema to generate a reset token
 userSchema.methods.getResetPasswordToken = function() {
