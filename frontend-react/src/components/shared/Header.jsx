@@ -166,7 +166,10 @@ export default function Header({ onMenuToggle }) {
   const goToProfile = () => { window.location.hash = 'profile'; };
 
   // Derived
-  const isVerified = VERIFIED_STATES.includes(user?.state);
+  // isVerified here = approval state badge (green dot), NOT payment verification
+  const isApproved = VERIFIED_STATES.includes(user?.state);
+  // Payment verification badge — only show if payment-based and not expired
+  const isPaidVerified = user?.isVerified === true && user?.verifiedSource === 'payment' && user?.verifiedUntil && new Date(user.verifiedUntil) > new Date();
   const avatarUrl  = buildImageUrl(user?.profilePicture);
   const showImage  = !!avatarUrl && !imgError;
   const isProvider = user?.role === 'provider';
@@ -337,7 +340,7 @@ export default function Header({ onMenuToggle }) {
                 {getInitials(user?.name)}
               </div>
             )}
-            {isVerified && (
+            {isApproved && (
               <span style={{
                 position: 'absolute', bottom: '-1px', right: '-1px',
                 width: 13, height: 13, background: '#22C55E',
@@ -354,7 +357,7 @@ export default function Header({ onMenuToggle }) {
           {/* Name — desktop only, hidden on mobile via CSS */}
           <span className="app-header__name">
             {user?.name}
-            {user?.isVerified && <VerifiedBadge size={14} style={{ marginLeft: 2 }} />}
+            {isPaidVerified && <VerifiedBadge size={14} style={{ marginLeft: 2 }} />}
           </span>
         </div>
       </div>

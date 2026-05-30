@@ -8,6 +8,11 @@ import { founderAPI } from '../../../services/api';
 import { Lock, TrendingUp, Puzzle, Star } from '../../shared/Icons';
 import VerifiedBadge from '../../shared/VerifiedBadge';
 
+// Payment-only verified check for profile cards
+function isProfilePaymentVerified(profile) {
+  return profile?.isVerified === true && profile?.verifiedSource === 'payment' && profile?.verifiedUntil && new Date(profile.verifiedUntil) > new Date();
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const Avatar = ({ src, name, size = 72 }) => {
   const fb = `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'U')}&background=84CC16&color=fff&size=${size * 2}`;
@@ -251,7 +256,7 @@ export default function InvestorsProvidersPage({ startup }) {
                   <div>
                     <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2, display: 'flex', alignItems: 'center', gap: '4px' }}>
                       {profile.name}
-                      {profile.isVerified && <VerifiedBadge size={13} />}
+                      {isProfilePaymentVerified(profile) && <VerifiedBadge size={13} />}
                     </div>
                     <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
                       {tab === 'investors'

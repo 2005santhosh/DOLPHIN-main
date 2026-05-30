@@ -78,11 +78,12 @@ const sendTokenResponse = (user, statusCode, req, res) => {
         rewardPoints: user.rewardPoints || 0,
         profilePicture: user.profilePicture || '',
         state: user.state || 'PENDING_APPROVAL',
-        isVerified: user.isVerified || false,
-        isFounderVerified: user.isFounderVerified || false,
-        isAdminVerified: user.isAdminVerified || false,
-        verifiedSource: user.verifiedSource || null,
-        verifiedUntil: user.verifiedUntil || null,
+        // Payment-only verification — never send founder/admin flags
+        isVerified: (user.isVerified && user.verifiedSource === 'payment' && user.verifiedUntil && new Date(user.verifiedUntil) > new Date()) || false,
+        isFounderVerified: false,
+        isAdminVerified: false,
+        verifiedSource: user.verifiedSource === 'payment' ? 'payment' : null,
+        verifiedUntil: user.verifiedSource === 'payment' ? (user.verifiedUntil || null) : null,
       }
     });
 };
@@ -437,12 +438,13 @@ router.get('/profile', protect, async (req, res) => {
         rewardPoints: user.rewardPoints || 0,
         emailNotifications: user.emailNotifications ?? true,
         profilePicture: user.profilePicture || "",
-        isVerified: user.isVerified || false,
-        verifiedAt: user.verifiedAt || null,
-        verifiedUntil: user.verifiedUntil || null,
-        isFounderVerified: user.isFounderVerified || false,
-        isAdminVerified: user.isAdminVerified || false,
-        verifiedSource: user.verifiedSource || null,
+        // Payment-only verification — never expose founder/admin flags
+        isVerified: (user.isVerified && user.verifiedSource === 'payment' && user.verifiedUntil && new Date(user.verifiedUntil) > new Date()) || false,
+        isFounderVerified: false,
+        isAdminVerified: false,
+        verifiedSource: user.verifiedSource === 'payment' ? 'payment' : null,
+        verifiedAt: user.verifiedSource === 'payment' ? (user.verifiedAt || null) : null,
+        verifiedUntil: user.verifiedSource === 'payment' ? (user.verifiedUntil || null) : null,
         status: {
           isApproved: user.state === 'APPROVED' || user.state?.startsWith('STAGE_'),
           isBlocked: user.state === 'BLOCKED',

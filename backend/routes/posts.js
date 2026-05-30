@@ -217,18 +217,15 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
         }));
 
         // Boost verified authors: sort verified posts to the top within the page
-        // (secondary sort after createdAt — verified posts appear first among same-time posts)
+        // Only payment-based verified authors with active (non-expired) badges
         const verifiedAuthorIds = new Set();
         if (enrichedPosts.length > 0) {
             const authorUserIds = [...new Set(enrichedPosts.map(p => p.authorId?.toString()).filter(Boolean))];
             const verifiedAuthors = await User.find({
                 _id: { $in: authorUserIds },
                 isVerified: true,
-                $or: [
-                    { isFounderVerified: true },
-                    { verifiedUntil: { $gt: new Date() } },
-                    { verifiedUntil: null, verifiedAt: { $ne: null } }, // legacy lifetime
-                ],
+                verifiedSource: 'payment',
+                verifiedUntil: { $gt: new Date() }, // must not be expired
             }).select('_id').lean();
             verifiedAuthors.forEach(u => verifiedAuthorIds.add(u._id.toString()));
         }
