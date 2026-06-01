@@ -12,7 +12,7 @@ import { Eye, EyeOff, AlertTriangle } from '../../shared/Icons';
 import { buildUIVerificationState } from '../../../utils/verificationHelpers';
 
 const SettingsPage = () => {
-  const { user, logout, refreshProfile } = useAuth();
+  const { user, logout, refreshProfile, updateUser } = useAuth();
 
   const [profileData, setProfileData] = useState({
     name: '',
@@ -60,8 +60,32 @@ const SettingsPage = () => {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const activateVerifiedState = (statusData) => {
+    // 1. Update local verifyStatus so Settings card switches immediately
+    const daysLeft = statusData.verifiedUntil
+      ? Math.max(0, Math.ceil((new Date(statusData.verifiedUntil) - new Date()) / 86400000))
+      : null;
+    setVerifyStatus({ ...statusData, daysLeft });
+
+    // 2. Immediately patch the AuthContext user so Header badge appears NOW
+    // This updates localStorage + all components that read user.isVerified
+    if (updateUser && user) {
+      updateUser({
+        ...user,
+        isVerified: true,
+        verifiedSource: 'payment',
+        verifiedUntil: statusData.verifiedUntil,
+        verifiedAt: statusData.verifiedAt,
+      });
+    }
+
+    // 3. Full server sync in background (updates all other fields)
+    if (refreshProfile) refreshProfile(false).catch(() => {});
+
+    toast.success('🎉 Your profile is now Verified!', { id: 'verify-toast' });
+  };
+
   const refreshPaymentStatus = async (orderId) => {
-    // Try refresh-status first (actively checks Cashfree)
     let activated = false;
     for (let attempt = 0; attempt < 8; attempt++) {
       try {
@@ -69,9 +93,7 @@ const SettingsPage = () => {
         const s = await vAPI.refreshStatus(orderId);
         if (s.isVerified) {
           activated = true;
-          setVerifyStatus({ ...s, daysLeft: s.verifiedUntil ? Math.max(0, Math.ceil((new Date(s.verifiedUntil) - new Date()) / 86400000)) : null });
-          if (refreshProfile) refreshProfile().catch(() => {});
-          toast.success('🎉 Your profile is now Verified!', { id: 'verify-toast' });
+          activateVerifiedState(s);
           break;
         }
         if (s.orderStatus === 'FAILED' || s.orderStatus === 'CANCELLED') {
@@ -79,12 +101,10 @@ const SettingsPage = () => {
           break;
         }
       } catch {}
-      // Wait 4s between attempts
       await new Promise(r => setTimeout(r, 4000));
     }
     if (!activated) {
       toast.dismiss('verify-toast');
-      // Fall back to polling /status
       startPolling();
     }
   };
@@ -98,9 +118,7 @@ const SettingsPage = () => {
         const s = await vAPI.getStatus();
         if (s.isVerified) {
           clearInterval(poll);
-          setVerifyStatus(s);
-          if (refreshProfile) refreshProfile().catch(() => {});
-          toast.success('🎉 Your profile is now Verified!');
+          activateVerifiedState(s);
         }
       } catch {}
       if (attempts >= 10) clearInterval(poll);
@@ -477,8 +495,8 @@ const SettingsPage = () => {
         userEmail={user?.email || ''}
         onPaymentComplete={(orderId) => {
           setVerifyModalOpen(false);
+          toast.loading('Verifying your payment…', { id: 'verify-toast' });
           if (orderId) {
-            toast.loading('Verifying your payment…', { id: 'verify-toast' });
             refreshPaymentStatus(orderId);
           } else {
             startPolling();

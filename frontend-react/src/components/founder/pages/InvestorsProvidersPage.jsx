@@ -26,15 +26,7 @@ const Avatar = ({ src, name, size = 72 }) => {
   );
 };
 
-const ApprovedBadge = ({ state }) => {
-  const ok = ['APPROVED','STAGE_1','STAGE_2','STAGE_3','STAGE_4','STAGE_5','STAGE_6','STAGE_7'].includes(state);
-  if (!ok) return null;
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#D1FAE5', color: '#059669', padding: '2px 8px', borderRadius: 9999, fontSize: '0.75rem', fontWeight: 600 }}>
-      ✓ Verified
-    </span>
-  );
-};
+const ApprovedBadge = () => null; // Removed — only payment-verified users show badge
 
 const InfoRow = ({ label, value }) => {
   if (!value) return null;

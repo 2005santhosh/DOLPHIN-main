@@ -7,8 +7,17 @@ import toast from 'react-hot-toast';
 import { investorAPI } from '../../../services/api';
 import { Star, StarOff } from '../../shared/Icons';
 import { INDUSTRIES } from '../../../constants/industries';
+import VerifiedBadge from '../../shared/VerifiedBadge';
 
-const VERIFIED = ['APPROVED','STAGE_1','STAGE_2','STAGE_3','STAGE_4','STAGE_5','STAGE_6','STAGE_7'];
+// Payment-only verified check — single source of truth
+function isProfilePaymentVerified(profile) {
+  return (
+    profile?.isVerified === true &&
+    profile?.verifiedSource === 'payment' &&
+    !!profile?.verifiedUntil &&
+    new Date(profile.verifiedUntil) > new Date()
+  );
+}
 
 const Avatar = ({ src, name, size = 56 }) => {
   const fb = `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'U')}&background=3B82F6&color=fff&size=${size * 2}`;
@@ -179,7 +188,7 @@ export default function StartupsPage() {
                   {/* Avatar */}
                   <div style={{ position: 'relative', flexShrink: 0 }}>
                     <Avatar src={founder.profilePicture} name={founder.name} size={56} />
-                    {VERIFIED.includes(founder.state) && (
+                    {isProfilePaymentVerified(founder) && (
                       <span style={{
                         position: 'absolute', bottom: -2, right: -2,
                         width: 18, height: 18, background: '#2563EB',
@@ -252,7 +261,7 @@ export default function StartupsPage() {
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <div style={{ position: 'relative' }}>
                   <Avatar src={f.profilePicture} name={f.name} size={72} />
-                  {VERIFIED.includes(f.state) && (
+                  {isProfilePaymentVerified(f) && (
                     <span style={{ position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, background: '#2563EB', borderRadius: '50%', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5" style={{ width: 10, height: 10 }}><polyline points="20 6 9 17 4 12" /></svg>
                     </span>

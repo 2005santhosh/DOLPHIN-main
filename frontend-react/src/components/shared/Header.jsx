@@ -5,8 +5,6 @@ import toast from 'react-hot-toast';
 import DolphinLogo from './DolphinLogo';
 import VerifiedBadge from './VerifiedBadge';
 
-const VERIFIED_STATES = ['APPROVED','STAGE_1','STAGE_2','STAGE_3','STAGE_4','STAGE_5','STAGE_6','STAGE_7'];
-
 function getInitials(name) {
   if (!name) return 'U';
   return name.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -166,8 +164,6 @@ export default function Header({ onMenuToggle }) {
   const goToProfile = () => { window.location.hash = 'profile'; };
 
   // Derived
-  // isVerified here = approval state badge (green dot), NOT payment verification
-  const isApproved = VERIFIED_STATES.includes(user?.state);
   // Payment verification badge — only show if payment-based and not expired
   const isPaidVerified = user?.isVerified === true && user?.verifiedSource === 'payment' && user?.verifiedUntil && new Date(user.verifiedUntil) > new Date();
   const avatarUrl  = buildImageUrl(user?.profilePicture);
