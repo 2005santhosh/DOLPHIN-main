@@ -14,8 +14,6 @@ import toast from 'react-hot-toast';
  * - "Get Verified" opens VerificationModal (Cashfree payment) directly
  */
 
-const STORAGE_KEY = 'dolphin_promo_last_shown';
-
 function isPaymentVerified(user) {
   return (
     user?.isVerified === true &&
@@ -23,18 +21,6 @@ function isPaymentVerified(user) {
     !!user?.verifiedUntil &&
     new Date(user.verifiedUntil) > new Date()
   );
-}
-
-function shouldShowToday() {
-  try {
-    const last = localStorage.getItem(STORAGE_KEY);
-    if (!last) return true;
-    return new Date(last).toDateString() !== new Date().toDateString();
-  } catch { return true; }
-}
-
-function markShownToday() {
-  try { localStorage.setItem(STORAGE_KEY, new Date().toISOString()); } catch {}
 }
 
 const BENEFITS = [
@@ -52,8 +38,7 @@ export default function VerifiedPromoModal() {
 
   useEffect(() => {
     if (isPaymentVerified(user)) return;
-    if (!shouldShowToday()) return;
-    const timer = setTimeout(() => { markShownToday(); setOpen(true); }, 1500);
+    const timer = setTimeout(() => setOpen(true), 1500);
     return () => clearTimeout(timer);
   }, [user]);
 
