@@ -824,6 +824,26 @@ const requireFounderValidationScore = async (req, res, next) => {
   }
 };
 
+/**
+ * Stable verified-first sort helper — used in founder.js listing endpoints.
+ * Verified profiles float to the top; within each group original order is kept.
+ */
+function isVerifiedProfile(user) {
+  if (!user) return false;
+  return (
+    user.isVerified === true &&
+    user.verifiedSource === 'payment' &&
+    !!user.verifiedUntil &&
+    new Date(user.verifiedUntil) > new Date()
+  );
+}
+function verifiedFirst(arr, getUser) {
+  return arr
+    .map((item, idx) => ({ item, idx, v: isVerifiedProfile(getUser(item)) ? 0 : 1 }))
+    .sort((a, b) => a.v - b.v || a.idx - b.idx)
+    .map(({ item }) => item);
+}
+
 // @route   GET /api/founder/investors
 // @desc    List all investors (Restricted to Validated Founders)
 // @access  Private (Requires 70% Validation Score)
@@ -831,7 +851,6 @@ router.get('/investors', protect, requireFounderValidationScore, async (req, res
   try {
     const { search, sort } = req.query;
     
-    // ✅ FIX: Filter out deleted users explicitly
     let query = { 
       role: 'investor', 
       isDeleted: { $ne: true } 
@@ -844,8 +863,9 @@ router.get('/investors', protect, requireFounderValidationScore, async (req, res
       ];
     }
 
+    // Include verification fields for badge rendering and verified-first sort
     let investors = await User.find(query)
-      .select('name email interestAreas stagePreference createdAt profilePicture rewardPoints state ratings')
+      .select('name email interestAreas stagePreference createdAt profilePicture rewardPoints state ratings isVerified verifiedSource verifiedUntil')
       .lean();
 
     let results = investors.map(u => {
@@ -863,16 +883,23 @@ router.get('/investors', protect, requireFounderValidationScore, async (req, res
         profilePicture: u.profilePicture || "",
         rewardPoints: u.rewardPoints || 0,
         state: u.state,
-        rating: avgRating.toFixed(1)
+        rating: avgRating.toFixed(1),
+        // Verification fields for Featured badge
+        isVerified: u.isVerified || false,
+        verifiedSource: u.verifiedSource || null,
+        verifiedUntil: u.verifiedUntil || null,
       };
     });
 
-    // Sorting
+    // Apply secondary sort (rating/name) within each group first, then verified-first
     if (sort === 'rating') {
       results.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
     } else if (sort === 'name') {
       results.sort((a, b) => a.name.localeCompare(b.name));
     }
+
+    // Verified investors always float to top, preserving the sorted order within each group
+    results = verifiedFirst(results, r => r);
 
     res.json(results);
   } catch (err) {
@@ -970,22 +997,20 @@ router.get('/providers', protect, async (req, res) => {
   try {
     const { search, sort, category } = req.query;
     
-    // 1. Base Query: Filter by category AND Exclude deleted Providers
     let query = { 
-      isDeleted: { $ne: true } // Assuming Provider schema has isDeleted
+      isDeleted: { $ne: true }
     }; 
     
     if (category && category !== 'all') {
       query.category = new RegExp(category, 'i');
     }
 
-    // 2. Fetch Providers
-    // ✅ CRITICAL: Use match in populate to exclude deleted Users
+    // Include verification fields from the linked User record
     let providers = await Provider.find(query)
       .populate({
         path: 'userId',
-        select: 'name email profilePicture state rewardPoints ratings',
-        match: { isDeleted: { $ne: true } } // Exclude if the User record is deleted
+        select: 'name email profilePicture state rewardPoints ratings isVerified verifiedSource verifiedUntil',
+        match: { isDeleted: { $ne: true } }
       })
       .select('name category description bio experienceLevel specialties availability contactMethod rating userId verified')
       .lean(); 
@@ -994,10 +1019,8 @@ router.get('/providers', protect, async (req, res) => {
       return res.json([]);
     }
 
-    // 3. Filter out providers where the User was deleted (populate returns null if match fails)
     providers = providers.filter(p => p.userId); 
 
-    // 4. OPTIMIZED REQUEST FETCHING
     const providerUserIds = providers.map(p => p.userId?._id).filter(id => id);
     
     const myRequests = await IntroRequest.find({
@@ -1010,7 +1033,6 @@ router.get('/providers', protect, async (req, res) => {
       requestMap[r.providerId.toString()] = r.status;
     });
 
-    // 5. Process Data in Memory
     let results = providers.map(p => {
       const user = p.userId || {};
       const ratings = user.ratings || [];
@@ -1032,16 +1054,23 @@ router.get('/providers', protect, async (req, res) => {
         contactMethod: p.contactMethod || 'N/A',
         rating: avgRating.toFixed(1),
         verified: p.verified || false,
-        requestStatus: requestMap[user._id?.toString()] || null 
+        requestStatus: requestMap[user._id?.toString()] || null,
+        // Verification fields for Featured badge
+        isVerified: user.isVerified || false,
+        verifiedSource: user.verifiedSource || null,
+        verifiedUntil: user.verifiedUntil || null,
       };
     });
 
-    // Sort logic
+    // Apply secondary sort within groups first, then verified-first
     if (sort === 'rating') {
       results.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
     } else if (sort === 'name') {
       results.sort((a, b) => a.name.localeCompare(b.name));
     }
+
+    // Verified providers float to top
+    results = verifiedFirst(results, r => r);
 
     res.json(results);
   } catch (err) {
@@ -1216,7 +1245,7 @@ router.get('/requests', protect, async (req, res) => {
       founderId: req.user.id,
       initiator: { $ne: 'founder' } 
     })
-      .populate('providerId', 'name email profilePicture')
+      .populate('providerId', 'name email profilePicture isVerified verifiedSource verifiedUntil')
       .populate('startupId', 'name')
       .sort({ createdAt: -1 });
     res.json(requests);
@@ -1335,7 +1364,7 @@ router.get('/requests/sent', protect, async (req, res) => {
       founderId: req.user.id, 
       initiator: 'founder' 
     })
-      .populate('providerId', 'name email profilePicture')
+      .populate('providerId', 'name email profilePicture isVerified verifiedSource verifiedUntil')
       .populate('startupId', 'name')
       .sort({ createdAt: -1 });
     res.json(requests);

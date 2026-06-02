@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { founderAPI } from '../../../services/api';
 import { Lock, TrendingUp, Puzzle, Star } from '../../shared/Icons';
 import VerifiedBadge from '../../shared/VerifiedBadge';
+import FeaturedBadge from '../../shared/FeaturedBadge';
 
 // Payment-only verified check for profile cards
 function isProfilePaymentVerified(profile) {
@@ -246,7 +247,7 @@ export default function InvestorsProvidersPage({ startup }) {
 
                   {/* Name & subtitle */}
                   <div>
-                    <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2, display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
                       {profile.name}
                       {isProfilePaymentVerified(profile) && <VerifiedBadge size={13} />}
                     </div>
@@ -255,6 +256,9 @@ export default function InvestorsProvidersPage({ startup }) {
                         ? (profile.interestAreas?.slice(0, 2).join(', ') || 'Investor')
                         : (profile.category || 'Service Provider')}
                     </div>
+                    {isProfilePaymentVerified(profile) && (
+                      <div style={{ marginBottom: 4 }}><FeaturedBadge /></div>
+                    )}
                     <ApprovedBadge state={profile.state} />
                     {profile.rating && parseFloat(profile.rating) > 0 && (
                       <div style={{ fontSize: '0.82rem', color: '#F59E0B', marginTop: 4, display: 'flex', alignItems: 'center', gap: '3px' }}>
@@ -296,9 +300,12 @@ export default function InvestorsProvidersPage({ startup }) {
             <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', marginBottom: '1.5rem' }}>
               <Avatar src={detailProfile.profilePicture} name={detailProfile.name} size={80} />
               <div>
-                <h3 style={{ margin: '0 0 4px', color: 'var(--text-primary)', fontSize: '1.15rem' }}>
-                  {detailProfile.name}
-                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: 4 }}>
+                  <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.15rem' }}>
+                    {detailProfile.name}
+                  </h3>
+                  {isProfilePaymentVerified(detailProfile) && <FeaturedBadge />}
+                </div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
                   <ApprovedBadge state={detailProfile.state} />
                   {detailProfile.rating && parseFloat(detailProfile.rating) > 0 && (

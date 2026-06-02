@@ -55,19 +55,45 @@ router.put('/profile', protect, authorize('investor'), async (req, res) => {
 // VALIDATED STARTUPS (OPTIMIZED)
 // ==========================================
 
+/**
+ * Returns true if a user object carries an active payment-based verification.
+ * Used for server-side verified-first sort.
+ */
+function isVerifiedUser(user) {
+  if (!user) return false;
+  return (
+    user.isVerified === true &&
+    user.verifiedSource === 'payment' &&
+    user.verifiedUntil instanceof Date
+      ? user.verifiedUntil > new Date()
+      : user.verifiedUntil && new Date(user.verifiedUntil) > new Date()
+  );
+}
+
+/**
+ * Stable verified-first sort.
+ * Verified items float to top; within each group the original order is preserved.
+ */
+function verifiedFirst(arr, getUser) {
+  return arr
+    .map((item, idx) => ({ item, idx, v: isVerifiedUser(getUser(item)) ? 0 : 1 }))
+    .sort((a, b) => a.v - b.v || a.idx - b.idx)
+    .map(({ item }) => item);
+}
+
 // @route   GET api/investor/validated-startups
 // @desc    Get all startups with validationScore >= 70
 // @access  Private
 router.get('/validated-startups', protect, authorize('investor'), async (req, res) => {
   try {
-    // OPTIMIZATION: Lean query + Specific Field Selection
+    // Include verification fields so frontend can render Featured badge
     const startups = await Startup.find({ validationScore: { $gte: 70 } })
-      .populate('founderId', 'name email profilePicture state') // CRITICAL: 'state' for badge verification
+      .populate('founderId', 'name email profilePicture state isVerified verifiedSource verifiedUntil')
       .select('name thesis industry validationScore currentStage validationStages founderId')
+      .sort({ validationScore: -1, createdAt: -1 })
       .lean();
 
     const startupList = startups.map(startup => {
-      // Calculate stage progress efficiently
       let completedStages = 0;
       const stages = startup.validationStages || {};
       Object.values(stages).forEach(s => { if (s && s.completedAt) completedStages++; });
@@ -79,12 +105,15 @@ router.get('/validated-startups', protect, authorize('investor'), async (req, re
         industry: startup.industry,
         validationScore: startup.validationScore,
         currentStage: startup.currentStage,
-        completedStages: completedStages,
-        founderId: startup.founderId
+        completedStages,
+        founderId: startup.founderId  // includes isVerified, verifiedSource, verifiedUntil
       };
     });
 
-    res.json({ startups: startupList });
+    // Verified founders float to top; score order preserved within each group
+    const sorted = verifiedFirst(startupList, s => s.founderId);
+
+    res.json({ startups: sorted });
   } catch (error) {
     console.error('Fetch Startups Error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -230,7 +259,7 @@ router.get('/my-requests', protect, authorize('investor'), async (req, res) => {
     // OPTIMIZATION: .lean() for speed
     const requests = await IntroRequest.find({ providerId: req.user.id })
       .populate('startupId', 'name industry')
-      .populate('founderId', 'name email profilePicture state') // Include state for badge
+      .populate('founderId', 'name email profilePicture state isVerified verifiedSource verifiedUntil')
       .sort({ createdAt: -1 })
       .lean();
 

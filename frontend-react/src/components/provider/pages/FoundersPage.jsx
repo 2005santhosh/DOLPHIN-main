@@ -6,8 +6,20 @@ import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { providerAPI } from '../../../services/api';
 import { INDUSTRIES } from '../../../constants/industries';
+import FeaturedBadge from '../../shared/FeaturedBadge';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
+
+// Payment-only verified check
+function isFounderPaymentVerified(founder) {
+  const u = founder?.founderId || founder;
+  return (
+    u?.isVerified === true &&
+    u?.verifiedSource === 'payment' &&
+    !!u?.verifiedUntil &&
+    new Date(u.verifiedUntil) > new Date()
+  );
+}
 
 const avatarUrl = (name, pic) => {
   if (pic) return pic;
@@ -266,9 +278,12 @@ const FoundersPage = () => {
                     }}
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <h3 style={{ margin: '0 0 0.15rem', color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 700 }}>
-                      {founder.startupName || 'Unnamed Startup'}
-                    </h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.15rem' }}>
+                      <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 700 }}>
+                        {founder.startupName || 'Unnamed Startup'}
+                      </h3>
+                      {isFounderPaymentVerified(founder) && <FeaturedBadge />}
+                    </div>
                     <p style={{ margin: '0 0 0.4rem', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                       by {founderName}
                     </p>
@@ -334,7 +349,10 @@ const FoundersPage = () => {
                     marginBottom: '0.75rem',
                   }}
                 />
-                <h3 style={{ margin: '0 0 0.25rem' }}>{detailFounder.startupName}</h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+                  <h3 style={{ margin: 0 }}>{detailFounder.startupName}</h3>
+                  {isFounderPaymentVerified(detailFounder) && <FeaturedBadge />}
+                </div>
                 <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                   Founded by {fn}
                   {detailFounder.founderId?.state ? ` · ${detailFounder.founderId.state}` : ''}

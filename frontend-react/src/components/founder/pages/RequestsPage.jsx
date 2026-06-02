@@ -5,6 +5,11 @@ import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { founderAPI, connectionsAPI } from '../../../services/api';
 import { Inbox, CornerUpRight, MessageCircle } from '../../shared/Icons';
+import VerifiedBadge from '../../shared/VerifiedBadge';
+
+function isPaidVerified(u) {
+  return u?.isVerified === true && u?.verifiedSource === 'payment' && !!u?.verifiedUntil && new Date(u.verifiedUntil) > new Date();
+}
 
 const timeAgo = (dateStr) => {
   const s = Math.floor((Date.now() - new Date(dateStr)) / 1000);
@@ -208,7 +213,10 @@ export default function RequestsPage({ setRequestsCount }) {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                       <div>
-                        <h4 style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 600 }}>{otherName}</h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <h4 style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 600 }}>{otherName}</h4>
+                          {isPaidVerified(other) && <VerifiedBadge size={14} />}
+                        </div>
                         <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: 'var(--text-tertiary)' }}>
                           {otherRole && <span style={{ textTransform: 'capitalize' }}>{otherRole}</span>}
                           {otherRole && req.startupName && ' · '}

@@ -6,6 +6,11 @@ import toast from 'react-hot-toast';
 import { chatAPI } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
 import { MessageSquare } from '../../shared/Icons';
+import VerifiedBadge from '../../shared/VerifiedBadge';
+
+function isPaidVerified(u) {
+  return u?.isVerified === true && u?.verifiedSource === 'payment' && !!u?.verifiedUntil && new Date(u.verifiedUntil) > new Date();
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -375,9 +380,12 @@ export default function ChatPage({ setChatCount, openUserId }) {
                 <Avatar src={conv.profilePicture} name={conv.name} size={46} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
-                    <span style={{ fontWeight: 600, color: '#111827', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '65%' }}>
-                      {conv.name}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', overflow: 'hidden', maxWidth: '65%' }}>
+                      <span style={{ fontWeight: 600, color: '#111827', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {conv.name}
+                      </span>
+                      {isPaidVerified(conv) && <VerifiedBadge size={13} style={{ flexShrink: 0 }} />}
+                    </div>
                     {conv.updatedAt && (
                       <span style={{ fontSize: '0.7rem', color: '#9CA3AF', flexShrink: 0 }}>
                         {msgTime(conv.updatedAt)}
@@ -452,8 +460,11 @@ export default function ChatPage({ setChatCount, openUserId }) {
               )}
               <Avatar src={selected.profilePicture} name={selected.name} size={40} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, color: '#111827', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {selected.name}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', overflow: 'hidden' }}>
+                  <div style={{ fontWeight: 700, color: '#111827', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {selected.name}
+                  </div>
+                  {isPaidVerified(selected) && <VerifiedBadge size={14} style={{ flexShrink: 0 }} />}
                 </div>
                 {selected.role && (
                   <div style={{ fontSize: '0.72rem', color: '#6B7280', textTransform: 'capitalize' }}>

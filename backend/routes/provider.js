@@ -85,37 +85,40 @@ router.put('/profile', protect, async (req, res) => {
   }
 });
 
-// ==========================================
-// 3. Get eligible founders (STRICT 5-STAGE LOGIC + UNIVERSAL VISIBILITY)
-// ==========================================
-// backend/routes/provider.js
+/**
+ * Stable verified-first sort — verified founders float to top.
+ */
+function isVerifiedFounder(user) {
+  if (!user) return false;
+  return (
+    user.isVerified === true &&
+    user.verifiedSource === 'payment' &&
+    !!user.verifiedUntil &&
+    new Date(user.verifiedUntil) > new Date()
+  );
+}
+function verifiedFirstSort(arr, getUser) {
+  return arr
+    .map((item, idx) => ({ item, idx, v: isVerifiedFounder(getUser(item)) ? 0 : 1 }))
+    .sort((a, b) => a.v - b.v || a.idx - b.idx)
+    .map(({ item }) => item);
+}
 
-// ... existing imports and routes ...
-
-// ==========================================
-// 3. Get eligible founders (STRICT 5-STAGE LOGIC)
-// ==========================================
-// ==========================================
-// 3. Get eligible founders (NOW SHOWS ALL)
-// ==========================================
 // @route   GET /api/provider/eligible-founders
 router.get('/eligible-founders', protect, async (req, res) => {
   try {
-    // 1. FETCH ALL STARTUPS
-    // REMOVED: .find({ validationScore: { $gte: 70 } })
     const startups = await Startup.find({}) 
       .populate({
         path: 'founderId',
-        select: 'name email profilePicture rewardPoints state',
-        match: { isDeleted: { $ne: true } } // Exclude startups of deleted users
+        // Include verification fields for Featured badge and verified-first sort
+        select: 'name email profilePicture rewardPoints state isVerified verifiedSource verifiedUntil',
+        match: { isDeleted: { $ne: true } }
       }) 
       .select('name thesis industry validationScore currentStage founderId')
       .lean();
 
-    const eligibleFounders = startups.map(startup => {
+    let eligibleFounders = startups.map(startup => {
       const user = startup.founderId;
-      
-      // If user is deleted (populate returns null) or missing, filter out
       if (!user) return null;
 
       return {
@@ -123,7 +126,7 @@ router.get('/eligible-founders', protect, async (req, res) => {
         startupName: startup.name,
         thesis: startup.thesis,
         industry: startup.industry,
-        validationScore: startup.validationScore || 0, // Default to 0 if null
+        validationScore: startup.validationScore || 0,
         currentStage: startup.currentStage,
         founderId: {
           _id: user._id,
@@ -131,10 +134,17 @@ router.get('/eligible-founders', protect, async (req, res) => {
           email: user.email,
           profilePicture: user.profilePicture,
           rewardPoints: user.rewardPoints || 0,
-          state: user.state // Ensure state is passed samesite
+          state: user.state,
+          // Verification fields for Featured badge
+          isVerified: user.isVerified || false,
+          verifiedSource: user.verifiedSource || null,
+          verifiedUntil: user.verifiedUntil || null,
         }
       };
     }).filter(f => f !== null);
+
+    // Verified founders float to top
+    eligibleFounders = verifiedFirstSort(eligibleFounders, f => f.founderId);
 
     res.json(eligibleFounders);
   } catch (error) {
@@ -259,7 +269,7 @@ router.get('/my-requests', protect, async (req, res) => {
     const requests = await IntroRequest.find({ 
       providerId: req.user.id
     })
-      .populate('founderId', 'name email profilePicture')
+      .populate('founderId', 'name email profilePicture isVerified verifiedSource verifiedUntil')
       .populate('startupId', 'name industry')
       .sort({ createdAt: -1 });
 

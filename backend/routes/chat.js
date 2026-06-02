@@ -61,10 +61,10 @@ router.post('/send', protect, async (req, res) => {
 router.get('/user/:userId', protect, async (req, res) => {
   try {
     const u = await User.findById(req.params.userId)
-      .select('name profilePicture role')
+      .select('name profilePicture role isVerified verifiedSource verifiedUntil')
       .lean();
     if (!u) return res.status(404).json({ message: 'User not found' });
-    res.json({ _id: u._id, name: u.name, profilePicture: u.profilePicture || '', role: u.role });
+    res.json({ _id: u._id, name: u.name, profilePicture: u.profilePicture || '', role: u.role, isVerified: u.isVerified || false, verifiedSource: u.verifiedSource || null, verifiedUntil: u.verifiedUntil || null });
   } catch (err) {
     res.status(500).json({ message: 'Server Error' });
   }
@@ -80,8 +80,8 @@ router.get('/conversations', protect, async (req, res) => {
     const messages = await Message.find({
       $or: [ { senderId: req.user.id }, { receiverId: req.user.id } ]
     })
-    .populate('senderId', 'name profilePicture role')
-    .populate('receiverId', 'name profilePicture role')
+    .populate('senderId', 'name profilePicture role isVerified verifiedSource verifiedUntil')
+    .populate('receiverId', 'name profilePicture role isVerified verifiedSource verifiedUntil')
     .sort({ createdAt: -1 });
 
     const conversationsMap = {};
@@ -101,6 +101,9 @@ router.get('/conversations', protect, async (req, res) => {
           name: partner.name,
           profilePicture: partner.profilePicture || '',
           role: partner.role || '',
+          isVerified: partner.isVerified || false,
+          verifiedSource: partner.verifiedSource || null,
+          verifiedUntil: partner.verifiedUntil || null,
           lastMessage: msg.content,
           updatedAt: msg.createdAt,
         };
@@ -115,8 +118,8 @@ router.get('/conversations', protect, async (req, res) => {
         { to: req.user.id },
       ],
     })
-    .populate('from', 'name profilePicture role')
-    .populate('to', 'name profilePicture role')
+    .populate('from', 'name profilePicture role isVerified verifiedSource verifiedUntil')
+    .populate('to', 'name profilePicture role isVerified verifiedSource verifiedUntil')
     .lean();
 
     connections.forEach(conn => {
@@ -128,12 +131,14 @@ router.get('/conversations', protect, async (req, res) => {
 
       const partnerId = partner._id.toString();
       if (!conversationsMap[partnerId]) {
-        // No messages yet — add as a conversation with no last message
         conversationsMap[partnerId] = {
           _id: partner._id,
           name: partner.name || 'User',
           profilePicture: partner.profilePicture || '',
           role: partner.role || '',
+          isVerified: partner.isVerified || false,
+          verifiedSource: partner.verifiedSource || null,
+          verifiedUntil: partner.verifiedUntil || null,
           lastMessage: '',
           updatedAt: conn.updatedAt || conn.createdAt,
         };

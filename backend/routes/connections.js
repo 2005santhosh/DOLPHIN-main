@@ -53,13 +53,13 @@ router.get('/', protect, async (req, res) => {
     try {
         // Incoming: sent TO me
         const incoming = await Connection.find({ to: req.user._id, status: 'pending' })
-            .populate('from', 'name email profilePicture role')
+            .populate('from', 'name email profilePicture role isVerified verifiedSource verifiedUntil')
             .sort({ createdAt: -1 })
             .lean();
 
         // Sent: sent BY me (all statuses)
         const sent = await Connection.find({ from: req.user._id })
-            .populate('to', 'name email profilePicture role')
+            .populate('to', 'name email profilePicture role isVerified verifiedSource verifiedUntil')
             .sort({ createdAt: -1 })
             .lean();
 

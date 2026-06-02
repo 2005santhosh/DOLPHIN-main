@@ -8,6 +8,7 @@ import { investorAPI } from '../../../services/api';
 import { Star, StarOff } from '../../shared/Icons';
 import { INDUSTRIES } from '../../../constants/industries';
 import VerifiedBadge from '../../shared/VerifiedBadge';
+import FeaturedBadge from '../../shared/FeaturedBadge';
 
 // Payment-only verified check — single source of truth
 function isProfilePaymentVerified(profile) {
@@ -206,7 +207,10 @@ export default function StartupsPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
                       <div>
-                        <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.05rem' }}>{startup.name}</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.05rem' }}>{startup.name}</h3>
+                          {isProfilePaymentVerified(founder) && <FeaturedBadge />}
+                        </div>
                         <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                           {startup.industry || 'N/A'} · by {founder.name || 'Unknown'}
                         </p>
@@ -268,7 +272,10 @@ export default function StartupsPage() {
                   )}
                 </div>
                 <div>
-                  <h3 style={{ margin: '0 0 4px', color: 'var(--text-primary)' }}>{detail.name}</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: 4 }}>
+                    <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>{detail.name}</h3>
+                    {isProfilePaymentVerified(f) && <FeaturedBadge />}
+                  </div>
                   <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                     {detail.industry || 'N/A'} · Founded by {f.name || 'Unknown'}
                   </p>
