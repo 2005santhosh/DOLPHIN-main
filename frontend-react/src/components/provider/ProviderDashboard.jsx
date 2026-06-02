@@ -5,6 +5,7 @@ import Header from '../shared/Header';
 import Sidebar from '../shared/Sidebar';
 import DashboardBottomNav from '../shared/DashboardBottomNav';
 import LoadingSpinner from '../shared/LoadingSpinner';
+import VerifiedPromoModal from '../shared/VerifiedPromoModal';
 
 const DashboardPage    = lazy(() => import('./pages/DashboardPage'));
 const ProfilePage      = lazy(() => import('./pages/ProfilePage'));
@@ -122,7 +123,7 @@ export default function ProviderDashboard() {
       <Header
         onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
       />
-      
+      <VerifiedPromoModal />
       <div style={{ display: 'flex' }}>
         <Sidebar
           isOpen={sidebarOpen}

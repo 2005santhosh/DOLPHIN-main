@@ -7,6 +7,7 @@ import Sidebar from '../shared/Sidebar';
 import ErrorBoundary from '../shared/ErrorBoundary';
 import DashboardBottomNav from '../shared/DashboardBottomNav';
 import LoadingSpinner from '../shared/LoadingSpinner';
+import VerifiedPromoModal from '../shared/VerifiedPromoModal';
 
 // Lazy-load all pages to prevent circular dependency issues at bundle time
 const DashboardPage         = lazy(() => import('./pages/DashboardPage'));
@@ -146,7 +147,7 @@ export default function FounderDashboard() {
         <Header
           onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
         />
-        
+        <VerifiedPromoModal />
         <div style={{ display: 'flex' }}>
           <Sidebar
             isOpen={sidebarOpen}

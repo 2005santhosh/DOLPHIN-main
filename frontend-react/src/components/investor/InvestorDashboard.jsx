@@ -5,6 +5,7 @@ import Header from '../shared/Header';
 import Sidebar from '../shared/Sidebar';
 import DashboardBottomNav from '../shared/DashboardBottomNav';
 import LoadingSpinner from '../shared/LoadingSpinner';
+import VerifiedPromoModal from '../shared/VerifiedPromoModal';
 
 const DashboardPage    = lazy(() => import('./pages/DashboardPage'));
 const StartupsPage     = lazy(() => import('./pages/StartupsPage'));
@@ -105,7 +106,7 @@ export default function InvestorDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Header onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
-
+      <VerifiedPromoModal />
       <div style={{ display: 'flex' }}>
         <Sidebar
           isOpen={sidebarOpen}
