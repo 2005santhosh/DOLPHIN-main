@@ -9,6 +9,149 @@ import LoadingSpinner from './LoadingSpinner';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+const PRIZE_EVENT_END   = new Date('2026-06-30T23:59:59+05:30'); // June 30 2026 IST
+const BADGE_DEADLINE    = new Date('2026-06-10T23:59:59+05:30'); // 20 days before June 30
+
+function isPaidVerified(u) {
+  return u?.isVerified === true && u?.verifiedSource === 'payment' && !!u?.verifiedUntil && new Date(u.verifiedUntil) > new Date();
+}
+
+// ─── Leaderboard Prize Announcement ──────────────────────────────────────────
+
+function LeaderboardAnnouncement({ user }) {
+  const now        = new Date();
+  const eventOver  = now > PRIZE_EVENT_END;
+  const pastDeadline = now > BADGE_DEADLINE;
+  const isVerified = isPaidVerified(user);
+
+  // Don't show after event ends
+  if (eventOver) return null;
+
+  const daysLeft = Math.ceil((PRIZE_EVENT_END - now) / 86400000);
+  const deadlineDaysLeft = Math.max(0, Math.ceil((BADGE_DEADLINE - now) / 86400000));
+
+  const scrollItems = [
+    '🏆  Leaderboard Cash Prizes — Final scores counted on June 30, 2026',
+    '🥇  1st Place  ·  ₹3,000 cash prize',
+    '🥈  2nd Place  ·  ₹2,000 cash prize',
+    '🥉  3rd Place  ·  ₹1,000 cash prize',
+    '✅  Eligibility: Verified badge required (payment-verified only)',
+    `⏰  Badge deadline: June 10, 2026  —  ${pastDeadline ? 'Deadline passed' : `${deadlineDaysLeft} day${deadlineDaysLeft !== 1 ? 's' : ''} left to get verified`}`,
+    `📅  ${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining until scores are finalised`,
+    '🚫  High scores without a verified badge will NOT be considered',
+  ];
+
+  // duplicate for seamless loop
+  const track = [...scrollItems, ...scrollItems];
+
+  return (
+    <div style={{ marginBottom: '1.25rem', borderRadius: 12, overflow: 'hidden', border: '1.5px solid #FCD34D', boxShadow: '0 2px 8px rgba(245,158,11,0.15)' }}>
+      {/* Header bar */}
+      <div style={{
+        background: 'linear-gradient(90deg, #1C1917 0%, #292524 100%)',
+        padding: '0.5rem 1rem',
+        display: 'flex', alignItems: 'center', gap: '0.5rem',
+      }}>
+        <span style={{ fontSize: '1rem' }}>🏆</span>
+        <span style={{ color: '#FCD34D', fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          Leaderboard Prize Announcement
+        </span>
+        <span style={{
+          marginLeft: 'auto',
+          background: '#EF4444',
+          color: 'white',
+          borderRadius: 9999,
+          padding: '1px 8px',
+          fontSize: '0.65rem',
+          fontWeight: 800,
+          letterSpacing: '0.04em',
+          animation: 'lb-blink 1.4s ease-in-out infinite',
+        }}>LIVE</span>
+      </div>
+
+      {/* Scrolling ticker */}
+      <div style={{
+        background: '#1C1917',
+        overflow: 'hidden',
+        position: 'relative',
+        height: 38,
+        display: 'flex',
+        alignItems: 'center',
+      }}>
+        <div style={{
+          display: 'flex',
+          gap: '3rem',
+          whiteSpace: 'nowrap',
+          animation: 'lb-scroll 40s linear infinite',
+          willChange: 'transform',
+        }}>
+          {track.map((item, i) => (
+            <span key={i} style={{ color: '#FEF3C7', fontSize: '0.82rem', fontWeight: 500, flexShrink: 0 }}>
+              {item}
+            </span>
+          ))}
+        </div>
+        {/* left + right fade masks */}
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 40, background: 'linear-gradient(90deg, #1C1917, transparent)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 40, background: 'linear-gradient(270deg, #1C1917, transparent)', pointerEvents: 'none' }} />
+      </div>
+
+      {/* User status bar */}
+      <div style={{
+        background: isVerified ? '#052e16' : (pastDeadline ? '#3B0764' : '#431407'),
+        padding: '0.5rem 1rem',
+        display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap',
+      }}>
+        {isVerified ? (
+          <>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#22C55E"><circle cx="12" cy="12" r="12"/><polyline points="7 12 10.5 15.5 17 9" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span style={{ color: '#4ADE80', fontSize: '0.8rem', fontWeight: 700 }}>
+              You are verified and eligible for the prize — keep your score high!
+            </span>
+          </>
+        ) : pastDeadline ? (
+          <>
+            <span style={{ fontSize: '0.9rem' }}>❌</span>
+            <span style={{ color: '#E9D5FF', fontSize: '0.8rem', fontWeight: 600 }}>
+              Badge deadline has passed — you are no longer eligible for this prize round.
+            </span>
+          </>
+        ) : (
+          <>
+            <span style={{ fontSize: '0.9rem' }}>⚠️</span>
+            <span style={{ color: '#FED7AA', fontSize: '0.8rem', fontWeight: 600 }}>
+              You are not yet verified. Get verified before June 10, 2026 to be eligible.
+            </span>
+            <button
+              onClick={() => { window.location.hash = 'settings'; }}
+              style={{
+                marginLeft: 'auto',
+                background: 'linear-gradient(135deg, #84CC16, #16A34A)',
+                color: 'white', border: 'none', borderRadius: 8,
+                padding: '3px 12px', fontSize: '0.75rem', fontWeight: 700,
+                cursor: 'pointer', flexShrink: 0,
+              }}
+            >
+              Get Verified →
+            </button>
+          </>
+        )}
+      </div>
+
+      <style>{`
+        @keyframes lb-scroll {
+          0%   { transform: translateX(0) }
+          100% { transform: translateX(-50%) }
+        }
+        @keyframes lb-blink {
+          0%, 100% { opacity: 1 }
+          50%       { opacity: 0.45 }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 const STREAK_REWARDS = [
   {
     milestone: 30,
@@ -444,6 +587,9 @@ export default function GamificationPage() {
       {/* ── LEADERBOARD TAB ────────────────────────────────────────────────────── */}
       {activeTab === 'leaderboard' && (
         <div>
+          {/* Prize announcement scroll */}
+          <LeaderboardAnnouncement user={user} />
+
           {/* Role selector */}
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
             {['founder', 'investor', 'provider'].map(role => (
