@@ -5,6 +5,9 @@ import StatCard from '../../shared/StatCard';
 import { useAuth } from '../../../context/AuthContext';
 import { founderAPI } from '../../../services/api';
 
+// Clear legacy localStorage cache that caused stale data to persist
+try { localStorage.removeItem('startupData'); } catch {}
+
 const STAGES = [
   { key: 'idea',     title: 'Idea Validation' },
   { key: 'problem',  title: 'Problem Definition' },
@@ -16,36 +19,25 @@ const STAGES = [
 export default function DashboardPage({ startup: startupProp, refetch, isLoading: parentLoading }) {
   const { user } = useAuth();
 
-  // Use startup from parent (React Query) if available, else fetch ourselves
-  const [startup, setStartup] = useState(() => {
-    try {
-      const cached = localStorage.getItem('startupData');
-      return cached ? JSON.parse(cached) : null;
-    } catch { return null; }
-  });
-  const [loading, setLoading] = useState(!startupProp && !startup);
+  // Use startup from parent (React Query) — no localStorage cache.
+  // localStorage was causing stale data to show when validationStages or other
+  // fields changed on the backend but the cached object wasn't refreshed.
+  const [startup, setStartup]   = useState(startupProp ?? null);
+  const [loading, setLoading]   = useState(!startupProp && parentLoading !== false);
 
-  // Sync with parent startup prop
+  // Sync with parent startup prop whenever it updates
   useEffect(() => {
     if (startupProp !== undefined) {
-      if (startupProp) {
-        localStorage.setItem('startupData', JSON.stringify(startupProp));
-        setStartup(startupProp);
-      }
+      setStartup(startupProp);
       setLoading(false);
     }
   }, [startupProp]);
 
-  // If no parent prop, fetch ourselves
+  // If no parent prop at all, fetch ourselves (fallback for direct mount)
   useEffect(() => {
     if (startupProp === undefined) {
       founderAPI.getMyStartup()
-        .then(data => {
-          if (data) {
-            localStorage.setItem('startupData', JSON.stringify(data));
-            setStartup(data);
-          }
-        })
+        .then(data => { if (data) setStartup(data); })
         .catch(() => {})
         .finally(() => setLoading(false));
     }

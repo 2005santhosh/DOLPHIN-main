@@ -26,9 +26,30 @@ router.get('/me', protect, async (req, res) => {
 
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    // Compute live connection count from both Connection and IntroRequest models
+    // This is the source of truth — stale counters on User doc may lag behind
+    const Connection   = require('../models/Connection');
+    const IntroRequest = require('../models/IntroRequest');
+    const userId = user._id;
+
+    const [connResult, introResult] = await Promise.all([
+      Connection.aggregate([
+        { $match: { status: 'accepted', $or: [{ from: userId }, { to: userId }] } },
+        { $count: 'total' },
+      ]),
+      IntroRequest.aggregate([
+        { $match: { status: 'accepted', $or: [{ founderId: userId }, { providerId: userId }] } },
+        { $count: 'total' },
+      ]),
+    ]);
+
+    const liveConnections = (connResult[0]?.total || 0) + (introResult[0]?.total || 0);
+
+    // Compute live post count
+    const Post = require('../models/Post');
+    const postResult = await Post.countDocuments({ authorId: userId });
+
     // Determine next reward milestone
-    const claimedMilestones = (user.rewards || []).map(r => r.milestone);
-    const nextReward = STREAK_REWARDS.find(r => !claimedMilestones.includes(r.milestone) || !(user.rewards.find(ur => ur.milestone === r.milestone)?.claimed));
     const nextMilestone = STREAK_REWARDS.find(r => r.milestone > (user.currentStreak || 0));
 
     res.json({
@@ -37,8 +58,8 @@ router.get('/me', protect, async (req, res) => {
       lastActivityDate: user.lastActivityDate,
       rewardPoints:     user.rewardPoints || 0,
       leaderboardScore: user.leaderboardScore || 0,
-      totalPosts:       user.totalPosts || 0,
-      totalConnections: user.totalConnections || 0,
+      totalPosts:       postResult,
+      totalConnections: liveConnections,
       totalDaysActive:  user.totalDaysActive || 0,
       rewards:          user.rewards || [],
       nextMilestone:    nextMilestone || null,
