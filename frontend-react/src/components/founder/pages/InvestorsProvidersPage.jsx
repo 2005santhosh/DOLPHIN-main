@@ -216,10 +216,21 @@ export default function InvestorsProvidersPage({ startup }) {
             // Connect button state
             let connectBtn;
             if (status === 'accepted') {
+              // Connected — show chat button
+              const chatUserId = profile.userId || profile._id;
               connectBtn = (
-                <button className="btn btn-secondary btn-sm" disabled style={{ width: '100%' }}>
-                  ✓ Connected
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', width: '100%' }}>
+                  <button className="btn btn-secondary btn-sm" disabled style={{ width: '100%', background: '#D1FAE5', color: '#065F46', border: 'none' }}>
+                    ✓ Connected
+                  </button>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    style={{ width: '100%' }}
+                    onClick={(e) => { e.stopPropagation(); window.location.hash = `chat?userId=${chatUserId}`; }}
+                  >
+                    💬 Chat
+                  </button>
+                </div>
               );
             } else if (status === 'pending') {
               connectBtn = (
@@ -359,17 +370,30 @@ export default function InvestorsProvidersPage({ startup }) {
             )}
 
             {/* Connect button */}
-            {detailProfile.requestStatus !== 'accepted' && detailProfile.requestStatus !== 'pending' ? (
+            {detailProfile.requestStatus === 'accepted' ? (
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button className="btn btn-secondary" style={{ flex: 1, background: '#D1FAE5', color: '#065F46', border: 'none' }} disabled>
+                  ✓ Connected
+                </button>
+                <button
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
+                  onClick={() => { setDetailOpen(false); window.location.hash = `chat?userId=${detailProfile.userId || detailProfile._id}`; }}
+                >
+                  💬 Chat
+                </button>
+              </div>
+            ) : detailProfile.requestStatus === 'pending' ? (
+              <button className="btn btn-secondary" style={{ width: '100%' }} disabled>
+                Request Pending
+              </button>
+            ) : (
               <button
                 className="btn btn-primary"
                 style={{ width: '100%' }}
                 onClick={() => { setDetailOpen(false); openRequest(detailProfile); }}
               >
                 Connect with {detailProfile.name}
-              </button>
-            ) : (
-              <button className="btn btn-secondary" style={{ width: '100%' }} disabled>
-                {detailProfile.requestStatus === 'accepted' ? '✓ Already Connected' : 'Request Pending'}
               </button>
             )}
           </div>

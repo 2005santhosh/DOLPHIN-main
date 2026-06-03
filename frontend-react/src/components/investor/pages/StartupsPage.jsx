@@ -165,9 +165,17 @@ export default function StartupsPage() {
             let actionBtn;
             if (reqStatus === 'accepted') {
               actionBtn = (
-                <button className="btn btn-secondary btn-sm" disabled style={{ background: '#D1FAE5', color: '#065F46', border: 'none' }}>
-                  ✓ Connected
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <button className="btn btn-secondary btn-sm" disabled style={{ background: '#D1FAE5', color: '#065F46', border: 'none' }}>
+                    ✓ Connected
+                  </button>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={e => { e.stopPropagation(); window.location.hash = `chat?userId=${startup.founderId?._id || startup.founderId}`; }}
+                  >
+                    💬 Chat
+                  </button>
+                </div>
               );
             } else if (reqStatus === 'pending') {
               actionBtn = <button className="btn btn-secondary btn-sm" disabled>Pending…</button>;
@@ -308,7 +316,16 @@ export default function StartupsPage() {
               {/* Actions */}
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 {reqStatus === 'accepted' ? (
-                  <button className="btn btn-secondary" style={{ flex: 1, background: '#D1FAE5', color: '#065F46', border: 'none' }} disabled>✓ Connected</button>
+                  <>
+                    <button className="btn btn-secondary" style={{ flex: 1, background: '#D1FAE5', color: '#065F46', border: 'none' }} disabled>✓ Connected</button>
+                    <button
+                      className="btn btn-primary"
+                      style={{ flex: 1 }}
+                      onClick={() => { setDetailOpen(false); window.location.hash = `chat?userId=${f._id}`; }}
+                    >
+                      💬 Chat
+                    </button>
+                  </>
                 ) : reqStatus === 'pending' ? (
                   <button className="btn btn-secondary" style={{ flex: 1 }} disabled>Request Pending</button>
                 ) : (

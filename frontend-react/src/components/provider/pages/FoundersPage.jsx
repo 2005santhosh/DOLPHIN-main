@@ -396,16 +396,45 @@ const FoundersPage = () => {
               )}
 
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
-                <button
-                  className="btn btn-primary"
-                  style={{ flex: 1 }}
-                  onClick={() => {
-                    setDetailOpen(false);
-                    openRequestModal(detailFounder);
-                  }}
-                >
-                  Send Request
-                </button>
+                {(() => {
+                  const req = sentRequests[detailFounder._id?.toString() || detailFounder._id];
+                  if (req?.status === 'accepted') {
+                    const chatUserId = detailFounder.founderId?._id || detailFounder.founderId;
+                    return (
+                      <>
+                        <button className="btn btn-secondary" style={{ flex: 1, background: '#D1FAE5', color: '#065F46', border: 'none' }} disabled>
+                          ✓ Connected
+                        </button>
+                        <button
+                          className="btn btn-primary"
+                          style={{ flex: 1 }}
+                          onClick={() => { setDetailOpen(false); window.location.hash = `chat?userId=${chatUserId}`; }}
+                        >
+                          💬 Chat
+                        </button>
+                      </>
+                    );
+                  }
+                  if (req?.status === 'pending') {
+                    return (
+                      <button className="btn btn-secondary" style={{ flex: 1 }} disabled>
+                        Request Pending
+                      </button>
+                    );
+                  }
+                  return (
+                    <button
+                      className="btn btn-primary"
+                      style={{ flex: 1 }}
+                      onClick={() => {
+                        setDetailOpen(false);
+                        openRequestModal(detailFounder);
+                      }}
+                    >
+                      Send Request
+                    </button>
+                  );
+                })()}
                 <button
                   className="btn btn-secondary"
                   style={{ flex: 1 }}
