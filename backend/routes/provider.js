@@ -313,6 +313,17 @@ router.put('/requests/:id', protect, async (req, res) => {
     request.status = status;
     await request.save();
 
+    // Award gamification points to both parties when accepted
+    if (status === 'accepted') {
+      const { recordActivity } = require('../services/gamificationService');
+      recordActivity(request.providerId.toString(), 'connection').catch(e =>
+        console.error('Gamification (provider accept - provider):', e)
+      );
+      recordActivity(request.founderId.toString(), 'connection').catch(e =>
+        console.error('Gamification (provider accept - founder):', e)
+      );
+    }
+
     res.json({ success: true, message: `Request ${status}` });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });

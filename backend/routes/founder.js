@@ -1265,6 +1265,11 @@ router.put('/requests/:id/accept', protect, async (req, res) => {
     request.status = 'accepted';
     await request.save();
 
+    // Award gamification points to both parties — same as Connection model accept
+    const { recordActivity } = require('../services/gamificationService');
+    recordActivity(request.founderId.toString(),    'connection').catch(e => console.error('Gamification (founder accept):', e));
+    recordActivity(request.providerId._id.toString(), 'connection').catch(e => console.error('Gamification (provider accept):', e));
+
     // ✅ NOTIFY PROVIDER
     const notification = await Notification.create({
       userId: request.providerId._id,
@@ -1277,7 +1282,6 @@ router.put('/requests/:id/accept', protect, async (req, res) => {
     const io = req.app.get('socketio');
     if (io) {
       io.to(`user:${request.providerId._id}`).emit('newNotification', notification);
-      // Also notify specifically that their sent request status changed
       io.to(request.providerId._id.toString()).emit('requestStatusUpdate', { 
         requestId: request._id, 
         status: 'accepted' 

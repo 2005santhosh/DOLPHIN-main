@@ -198,8 +198,7 @@ function computeLeaderboardScore(user) {
  * Counts actual Post and Connection documents for accuracy — not stale counters.
  */
 async function getLeaderboard(role, limit = 50, currentUserId = null) {
-  const Post       = require('../models/Post');
-  const Connection = require('../models/Connection');
+  const Post = require('../models/Post');
 
   // Fetch ALL non-blocked users of this role
   const allUsers = await User.find({
@@ -222,6 +221,10 @@ async function getLeaderboard(role, limit = 50, currentUserId = null) {
   postCounts.forEach(p => { postMap[p._id.toString()] = p.count; });
 
   // Count actual accepted connections per user (all-time)
+  // Counts BOTH Connection model (direct connect) AND IntroRequest model (founder/provider flow)
+  const Connection   = require('../models/Connection');
+  const IntroRequest = require('../models/IntroRequest');
+
   const connCounts = await Connection.aggregate([
     {
       $match: {
@@ -232,7 +235,6 @@ async function getLeaderboard(role, limit = 50, currentUserId = null) {
         ],
       },
     },
-    // Each accepted connection counts for BOTH users
     {
       $facet: {
         asSender:   [{ $group: { _id: '$from', count: { $sum: 1 } } }],
@@ -247,6 +249,34 @@ async function getLeaderboard(role, limit = 50, currentUserId = null) {
     connMap[id] = (connMap[id] || 0) + c.count;
   });
   (connCounts[0]?.asReceiver || []).forEach(c => {
+    const id = c._id.toString();
+    connMap[id] = (connMap[id] || 0) + c.count;
+  });
+
+  // Also count IntroRequest accepted connections (founder↔provider, investor↔founder)
+  const introCounts = await IntroRequest.aggregate([
+    {
+      $match: {
+        status: 'accepted',
+        $or: [
+          { founderId:  { $in: userIds } },
+          { providerId: { $in: userIds } },
+        ],
+      },
+    },
+    {
+      $facet: {
+        asFounder:  [{ $group: { _id: '$founderId',  count: { $sum: 1 } } }],
+        asProvider: [{ $group: { _id: '$providerId', count: { $sum: 1 } } }],
+      },
+    },
+  ]);
+
+  (introCounts[0]?.asFounder  || []).forEach(c => {
+    const id = c._id.toString();
+    connMap[id] = (connMap[id] || 0) + c.count;
+  });
+  (introCounts[0]?.asProvider || []).forEach(c => {
     const id = c._id.toString();
     connMap[id] = (connMap[id] || 0) + c.count;
   });
