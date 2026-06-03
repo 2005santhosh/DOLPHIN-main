@@ -78,7 +78,6 @@ router.get('/profile/:userId', protect, async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Basic user info
     const user = await User.findById(userId)
       .select('name profilePicture role state createdAt isVerified verifiedSource verifiedUntil currentStreak longestStreak totalDaysActive rewardPoints leaderboardScore interestAreas stagePreference')
       .lean();
@@ -87,18 +86,46 @@ router.get('/profile/:userId', protect, async (req, res) => {
       return res.status(404).json({ message: 'Profile not found' });
     }
 
+    // ── Live counts — same logic as /me and getLeaderboard ───────────────────
+    const Connection   = require('../models/Connection');
+    const IntroRequest = require('../models/IntroRequest');
+    const Post         = require('../models/Post');
+    const uid          = user._id;
+
+    const [connResult, introResult, postCount] = await Promise.all([
+      Connection.aggregate([
+        { $match: { status: 'accepted', $or: [{ from: uid }, { to: uid }] } },
+        { $count: 'total' },
+      ]),
+      IntroRequest.aggregate([
+        { $match: { status: 'accepted', $or: [{ founderId: uid }, { providerId: uid }] } },
+        { $count: 'total' },
+      ]),
+      Post.countDocuments({ authorId: uid }),
+    ]);
+
+    const liveConnections = (connResult[0]?.total || 0) + (introResult[0]?.total || 0);
+    const livePosts       = postCount;
+
+    // Recompute leaderboard score from live data (identical formula to getLeaderboard)
+    const daysActive = user.totalDaysActive || 0;
+    const streak     = user.currentStreak   || 0;
+    const liveScore  = liveConnections * 15 + livePosts * 10 + daysActive * 5 + streak * 3;
+
     const profile = {
-      _id:            user._id,
-      name:           user.name,
-      profilePicture: user.profilePicture || '',
-      role:           user.role,
-      joinedAt:       user.createdAt,
-      currentStreak:  user.currentStreak || 0,
-      longestStreak:  user.longestStreak || 0,
-      totalDaysActive: user.totalDaysActive || 0,
-      rewardPoints:   user.rewardPoints || 0,
-      leaderboardScore: user.leaderboardScore || 0,
-      isVerified:     !!(user.isVerified && user.verifiedSource === 'payment' && user.verifiedUntil && new Date(user.verifiedUntil) > new Date()),
+      _id:              user._id,
+      name:             user.name,
+      profilePicture:   user.profilePicture || '',
+      role:             user.role,
+      joinedAt:         user.createdAt,
+      currentStreak:    streak,
+      longestStreak:    user.longestStreak || 0,
+      totalDaysActive:  daysActive,
+      totalConnections: liveConnections,
+      totalPosts:       livePosts,
+      rewardPoints:     user.rewardPoints || 0,
+      leaderboardScore: liveScore,
+      isVerified: !!(user.isVerified && user.verifiedSource === 'payment' && user.verifiedUntil && new Date(user.verifiedUntil) > new Date()),
     };
 
     // Role-specific extra data
@@ -112,19 +139,19 @@ router.get('/profile/:userId', protect, async (req, res) => {
         const validatedCount = ['idea','problem','solution','market','business']
           .filter(k => stages[k]?.isValidated).length;
         profile.startup = {
-          name:           startup.name,
-          thesis:         startup.thesis,
-          industry:       startup.industry,
+          name:            startup.name,
+          thesis:          startup.thesis,
+          industry:        startup.industry,
           validationScore: startup.validationScore || 0,
-          currentStage:   startup.currentStage || 1,
+          currentStage:    startup.currentStage || 1,
           stagesValidated: validatedCount,
         };
       }
     }
 
     if (user.role === 'investor') {
-      profile.interestAreas    = user.interestAreas || [];
-      profile.stagePreference  = user.stagePreference || [];
+      profile.interestAreas   = user.interestAreas || [];
+      profile.stagePreference = user.stagePreference || [];
     }
 
     if (user.role === 'provider') {

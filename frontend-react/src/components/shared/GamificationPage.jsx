@@ -379,6 +379,7 @@ export default function GamificationPage() {
   const [profileOpen, setProfileOpen]   = useState(false);
   const [profileData, setProfileData]   = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [photoOpen, setPhotoOpen]       = useState(false);
 
   // Claim modal
   const [claimModal, setClaimModal] = useState(false);
@@ -715,7 +716,7 @@ export default function GamificationPage() {
       {/* ── Profile Modal ─────────────────────────────────────────────────────── */}
       <Modal
         isOpen={profileOpen}
-        onClose={() => setProfileOpen(false)}
+        onClose={() => { setProfileOpen(false); setPhotoOpen(false); }}
         title="Profile"
         maxWidth="520px"
       >
@@ -729,8 +730,12 @@ export default function GamificationPage() {
                 <img
                   src={profileData.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name || 'U')}&background=84CC16&color=fff&size=160`}
                   alt={profileData.name}
-                  style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E5E7EB' }}
+                  onClick={() => setPhotoOpen(true)}
+                  style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E5E7EB', cursor: 'pointer', transition: 'opacity 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
+                  onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
                   onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name || 'U')}&background=84CC16&color=fff&size=160`; }}
+                  title="Click to enlarge"
                 />
                 {profileData.isVerified && (
                   <span style={{ position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, background: 'linear-gradient(135deg,#84CC16,#16A34A)', borderRadius: '50%', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -756,17 +761,68 @@ export default function GamificationPage() {
               </div>
             </div>
 
-            {/* ── Stats row ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
+            {/* ── Photo lightbox ── */}
+            {photoOpen && (
+              <>
+                <div
+                  onClick={() => setPhotoOpen(false)}
+                  style={{
+                    position: 'fixed', inset: 0, zIndex: 99999,
+                    background: 'rgba(0,0,0,0.88)',
+                    backdropFilter: 'blur(6px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'zoom-out',
+                    animation: 'lb-photo-in 0.2s ease',
+                  }}
+                >
+                  <img
+                    src={profileData.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name || 'U')}&background=84CC16&color=fff&size=400`}
+                    alt={profileData.name}
+                    onClick={e => e.stopPropagation()}
+                    onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name || 'U')}&background=84CC16&color=fff&size=400`; }}
+                    style={{
+                      maxWidth: 'min(340px, calc(100vw - 48px))',
+                      maxHeight: 'min(340px, calc(100vh - 120px))',
+                      width: '100%', height: '100%',
+                      objectFit: 'cover',
+                      borderRadius: '50%',
+                      border: '3px solid rgba(255,255,255,0.2)',
+                      boxShadow: '0 8px 48px rgba(0,0,0,0.6)',
+                      animation: 'lb-photo-scale 0.22s cubic-bezier(0.34,1.46,0.64,1)',
+                    }}
+                  />
+                  {/* close hint */}
+                  <div style={{ position: 'absolute', top: 16, right: 20, color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem', fontWeight: 600, letterSpacing: '0.03em' }}>
+                    Tap anywhere to close
+                  </div>
+                  {/* Name label below photo */}
+                  <div style={{ position: 'absolute', bottom: 32, left: 0, right: 0, textAlign: 'center' }}>
+                    <div style={{ color: 'white', fontWeight: 700, fontSize: '1rem' }}>{profileData.name}</div>
+                    {profileData.isVerified && (
+                      <div style={{ color: '#84CC16', fontSize: '0.8rem', marginTop: 4 }}>✓ Verified</div>
+                    )}
+                  </div>
+                </div>
+                <style>{`
+                  @keyframes lb-photo-in    { from { opacity:0 } to { opacity:1 } }
+                  @keyframes lb-photo-scale { from { transform:scale(0.82) } to { transform:scale(1) } }
+                `}</style>
+              </>
+            )}
+
+            {/* ── Stats grid (live data) ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
               {[
-                { label: 'Score',      value: profileData.leaderboardScore || 0, color: '#111827' },
-                { label: 'Streak',     value: `${profileData.currentStreak || 0}d`, color: '#EF4444' },
-                { label: 'Best',       value: `${profileData.longestStreak || 0}d`, color: '#F59E0B' },
-                { label: 'Points',     value: profileData.rewardPoints || 0, color: '#84CC16' },
+                { label: 'Score',       value: profileData.leaderboardScore || 0,  color: '#111827' },
+                { label: 'Streak',      value: `${profileData.currentStreak || 0}d`, color: '#EF4444' },
+                { label: 'Best Streak', value: `${profileData.longestStreak || 0}d`, color: '#F59E0B' },
+                { label: 'Points',      value: profileData.rewardPoints || 0,        color: '#84CC16' },
+                { label: 'Connections', value: profileData.totalConnections ?? '—',  color: '#3B82F6' },
+                { label: 'Posts',       value: profileData.totalPosts ?? '—',        color: '#8B5CF6' },
               ].map(({ label, value, color }) => (
                 <div key={label} style={{ textAlign: 'center', padding: '0.6rem 0.5rem', background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
                   <div style={{ fontWeight: 800, fontSize: '1rem', color }}>{value}</div>
-                  <div style={{ fontSize: '0.7rem', color: '#9CA3AF', marginTop: 1 }}>{label}</div>
+                  <div style={{ fontSize: '0.68rem', color: '#9CA3AF', marginTop: 1 }}>{label}</div>
                 </div>
               ))}
             </div>
