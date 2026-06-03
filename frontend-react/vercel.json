@@ -33,7 +33,7 @@
       ]
     },
     {
-      "source": "/(favicon\\.svg|logo\\.svg|logo-icon\\.svg|favicon\\.ico|icons\\.svg)",
+      "source": "/(favicon\\.svg|logo\\.svg|logo-icon\\.svg|favicon\\.ico|icons\\.svg|vite\\.svg)",
       "headers": [
         {
           "key": "Cache-Control",
