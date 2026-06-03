@@ -133,6 +133,8 @@ export default function RequestsPage({ setRequestsCount }) {
         await founderAPI.acceptRequest(req._id);
       }
       toast.success('Request accepted!');
+      // Notify GamificationPage to refresh leaderboard & stats immediately
+      window.dispatchEvent(new CustomEvent('connection-accepted'));
       load();
     } catch (err) { toast.error(err.message || 'Failed'); }
     finally { setBusy(p => ({ ...p, [req._id]: false })); }

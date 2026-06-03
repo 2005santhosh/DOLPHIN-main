@@ -415,6 +415,23 @@ export default function GamificationPage() {
     }
   }, [activeTab, lbRole, loadLeaderboard]);
 
+  // Re-fetch stats + leaderboard immediately when the user (or the other party)
+  // accepts a connection request anywhere in the app.
+  // The RequestsPages dispatch 'connection-accepted' on every successful accept.
+  useEffect(() => {
+    const onConnectionAccepted = () => {
+      // Always refresh stats (updates Connections count + Points in streak tab)
+      loadStats();
+      // Refresh leaderboard only if it's currently visible — avoids a background
+      // request that the user would never see
+      if (activeTab === 'leaderboard') {
+        loadLeaderboard(lbRole);
+      }
+    };
+    window.addEventListener('connection-accepted', onConnectionAccepted);
+    return () => window.removeEventListener('connection-accepted', onConnectionAccepted);
+  }, [activeTab, lbRole, loadStats, loadLeaderboard]);
+
   const openClaim = (reward) => {
     setClaimReward(reward);
     setClaimForm({ fullName: user?.name || '', phone: '', address: '' });

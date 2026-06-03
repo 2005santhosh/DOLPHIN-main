@@ -336,7 +336,8 @@ export default function ChatPage({ setChatCount, openUserId }) {
             style={{
               width: '100%', padding: '0.5rem 0.75rem 0.5rem 2rem',
               border: '1px solid #E5E7EB', borderRadius: 20,
-              fontSize: '0.875rem', outline: 'none', background: '#F9FAFB',
+              fontSize: '1rem', /* min 16px prevents iOS Safari auto-zoom */
+              outline: 'none', background: '#F9FAFB',
               boxSizing: 'border-box',
             }}
           />
@@ -379,7 +380,7 @@ export default function ChatPage({ setChatCount, openUserId }) {
               >
                 <Avatar src={conv.profilePicture} name={conv.name} size={46} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 3 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', overflow: 'hidden', maxWidth: '65%' }}>
                       <span style={{ fontWeight: 600, color: '#111827', fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {conv.name}
@@ -387,12 +388,12 @@ export default function ChatPage({ setChatCount, openUserId }) {
                       {isPaidVerified(conv) && <VerifiedBadge size={13} style={{ flexShrink: 0 }} />}
                     </div>
                     {conv.updatedAt && (
-                      <span style={{ fontSize: '0.7rem', color: '#9CA3AF', flexShrink: 0 }}>
+                      <span style={{ fontSize: '0.75rem', color: '#9CA3AF', flexShrink: 0 }}>
                         {msgTime(conv.updatedAt)}
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#6B7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: '0.82rem', color: '#6B7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {conv.lastMessage || 'Start chatting…'}
                   </div>
                 </div>
@@ -467,7 +468,7 @@ export default function ChatPage({ setChatCount, openUserId }) {
                   {isPaidVerified(selected) && <VerifiedBadge size={14} style={{ flexShrink: 0 }} />}
                 </div>
                 {selected.role && (
-                  <div style={{ fontSize: '0.72rem', color: '#6B7280', textTransform: 'capitalize' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#6B7280', textTransform: 'capitalize' }}>
                     {selected.role}
                   </div>
                 )}
@@ -493,14 +494,18 @@ export default function ChatPage({ setChatCount, openUserId }) {
                   <LoadingSpinner message="Loading messages…" />
                 </div>
               ) : messages.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                <div style={{ textAlign: 'center', padding: '3rem 1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
                   <div style={{
-                    display: 'inline-block', padding: '0.625rem 1.25rem',
-                    background: 'rgba(255,255,255,0.85)', borderRadius: 12,
-                    fontSize: '0.85rem', color: '#6B7280',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                    display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem',
+                    padding: '1rem 1.5rem',
+                    background: 'rgba(255,255,255,0.9)', borderRadius: 16,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                   }}>
-                    👋 Say hi to <strong>{selected.name}</strong>!
+                    <span style={{ fontSize: '1.75rem' }}>👋</span>
+                    <span style={{ fontSize: '0.9rem', color: '#374151', fontWeight: 600 }}>
+                      Say hi to {selected.name}!
+                    </span>
+                    <span style={{ fontSize: '0.82rem', color: '#9CA3AF' }}>Be the first to send a message</span>
                   </div>
                 </div>
               ) : (
@@ -509,10 +514,10 @@ export default function ChatPage({ setChatCount, openUserId }) {
                     return (
                       <div key={item.key} style={{ display: 'flex', justifyContent: 'center', margin: '0.75rem 0' }}>
                         <span style={{
-                          background: 'rgba(255,255,255,0.85)', color: '#6B7280',
-                          fontSize: '0.72rem', fontWeight: 600,
-                          padding: '3px 12px', borderRadius: 9999,
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                          background: 'rgba(255,255,255,0.9)', color: '#6B7280',
+                          fontSize: '0.78rem', fontWeight: 600,
+                          padding: '4px 14px', borderRadius: 9999,
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                         }}>
                           {item.label}
                         </span>
@@ -532,9 +537,9 @@ export default function ChatPage({ setChatCount, openUserId }) {
                     }}>
                       {/* Show avatar for other person on first message of group */}
                       {!isOwn && (
-                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.4rem', marginBottom: '0.125rem' }}>
-                          <Avatar src={selected.profilePicture} name={selected.name} size={24} />
-                          <span style={{ fontSize: '0.72rem', color: '#6B7280', fontWeight: 600 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.4rem', marginBottom: '0.25rem' }}>
+                          <Avatar src={selected.profilePicture} name={selected.name} size={26} />
+                          <span style={{ fontSize: '0.8rem', color: '#6B7280', fontWeight: 600 }}>
                             {selected.name}
                           </span>
                         </div>
@@ -556,15 +561,15 @@ export default function ChatPage({ setChatCount, openUserId }) {
                               flexDirection: isOwn ? 'row-reverse' : 'row',
                             }}>
                               <div style={{
-                                maxWidth: isMobile ? '78%' : '60%',
-                                padding: '0.5rem 0.75rem 0.375rem',
+                                maxWidth: isMobile ? '82%' : '62%',
+                                padding: '0.55rem 0.875rem 0.4rem',
                                 borderRadius: isOwn
                                   ? `16px 16px ${isLastInGroup ? '4px' : '16px'} 16px`
                                   : `16px 16px 16px ${isLastInGroup ? '4px' : '16px'}`,
                                 background: isOwn ? '#84CC16' : 'white',
                                 color: isOwn ? '#0F172A' : '#111827',
-                                fontSize: '0.9rem',
-                                lineHeight: 1.5,
+                                fontSize: '0.925rem',
+                                lineHeight: 1.55,
                                 boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                                 wordBreak: 'break-word',
                                 overflowWrap: 'break-word',
@@ -575,30 +580,28 @@ export default function ChatPage({ setChatCount, openUserId }) {
                                 {/* Message text */}
                                 <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
 
-                                {/* Timestamp row — only on last message in group, always on its own line */}
+                                {/* Timestamp row — only on last message in group */}
                                 {isLastInGroup && (
                                   <div style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'flex-end',
                                     gap: '4px',
-                                    marginTop: '3px',
-                                    // Negative margin trick: pulls the timestamp row tight
-                                    // without affecting the bubble width
+                                    marginTop: '4px',
                                     lineHeight: 1,
                                   }}>
                                     <span style={{
-                                      fontSize: '0.65rem',
-                                      color: isOwn ? 'rgba(15,23,42,0.5)' : '#9CA3AF',
+                                      fontSize: '0.75rem',
+                                      color: isOwn ? 'rgba(15,23,42,0.55)' : '#9CA3AF',
                                       whiteSpace: 'nowrap',
                                     }}>
                                       {msgTime(msg.createdAt)}
                                     </span>
                                     {isOwn && (
                                       <span style={{
-                                        fontSize: '0.6rem',
+                                        fontSize: '0.72rem',
                                         fontWeight: 600,
-                                        color: msg.optimistic ? 'rgba(15,23,42,0.3)' : 'rgba(15,23,42,0.5)',
+                                        color: msg.optimistic ? 'rgba(15,23,42,0.3)' : 'rgba(15,23,42,0.55)',
                                         whiteSpace: 'nowrap',
                                       }}>
                                         {msg.optimistic ? 'Sending…' : 'Sent'}
@@ -676,7 +679,8 @@ export default function ChatPage({ setChatCount, openUserId }) {
                   style={{
                     width: '100%',
                     flex: 1, border: 'none', outline: 'none', resize: 'none',
-                    fontSize: '0.9rem', lineHeight: 1.5, background: 'transparent',
+                    fontSize: '1rem', /* 16px prevents iOS Safari auto-zoom */
+                    lineHeight: 1.5, background: 'transparent',
                     color: '#111827', fontFamily: 'inherit',
                     maxHeight: 120, overflowY: 'auto',
                     padding: 0, margin: 0,
@@ -729,8 +733,13 @@ export default function ChatPage({ setChatCount, openUserId }) {
       <Card style={{ padding: 0, overflow: 'hidden', borderRadius: 12 }}>
         <div style={{
           display: 'flex',
-          height: isMobile ? 'calc(100dvh - 130px)' : 620,
-          minHeight: isMobile ? 400 : 500,
+          // Desktop: fixed comfortable height
+          // Mobile: full remaining viewport after header + page header + bottom nav
+          // Using dvh (dynamic viewport height) to handle mobile browser chrome correctly
+          height: isMobile
+            ? 'calc(100dvh - 60px - 56px - 60px - env(safe-area-inset-bottom, 0px))'
+            : 640,
+          minHeight: isMobile ? 360 : 520,
           position: 'relative',
         }}>
           {renderSidebar()}
@@ -740,7 +749,23 @@ export default function ChatPage({ setChatCount, openUserId }) {
 
       <style>{`
         textarea::-webkit-scrollbar { width: 4px; }
-        textarea::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 4px; }
+        textarea::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 4px; }
+        textarea::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+
+        /* Conversation list scrollbar */
+        .chat-conv-list::-webkit-scrollbar { width: 4px; }
+        .chat-conv-list::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 4px; }
+
+        /* Messages area scrollbar */
+        .chat-messages::-webkit-scrollbar { width: 5px; }
+        .chat-messages::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 4px; }
+
+        /* Prevent content jump on iOS when keyboard opens */
+        @supports (height: 100dvh) {
+          .chat-window-mobile {
+            height: calc(100dvh - 60px - 56px - 60px - env(safe-area-inset-bottom, 0px));
+          }
+        }
       `}</style>
     </div>
   );

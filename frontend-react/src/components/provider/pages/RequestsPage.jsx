@@ -126,6 +126,10 @@ const RequestsPage = ({ setRequestsCount }) => {
         await providerAPI.updateIntroRequest(requestId, status);
       }
       toast.success(`Request ${status}!`);
+      if (status === 'accepted') {
+        // Notify GamificationPage to refresh leaderboard & stats immediately
+        window.dispatchEvent(new CustomEvent('connection-accepted'));
+      }
       loadRequests();
     } catch (error) {
       toast.error(error?.message || 'Failed to update request');
