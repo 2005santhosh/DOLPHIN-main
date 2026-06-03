@@ -107,7 +107,13 @@ export default function RequestsPage({ setRequestsCount }) {
   const acceptConn = async (req) => {
     setBusy(p => ({ ...p, [req._id]: true }));
     try {
-      await connectionsAPI.updateConnection(req._id, 'accepted');
+      if (req.type === 'connection') {
+        await connectionsAPI.updateConnection(req._id, 'accepted');
+      } else {
+        // intro request — investor is the providerId, use provider route
+        const { providerAPI } = await import('../../../services/api');
+        await providerAPI.updateIntroRequest(req._id, 'accepted');
+      }
       toast.success('Request accepted!');
       load();
     } catch (err) { toast.error(err.message || 'Failed'); }
@@ -118,7 +124,12 @@ export default function RequestsPage({ setRequestsCount }) {
     if (!window.confirm('Reject this request?')) return;
     setBusy(p => ({ ...p, [req._id]: true }));
     try {
-      await connectionsAPI.updateConnection(req._id, 'rejected');
+      if (req.type === 'connection') {
+        await connectionsAPI.updateConnection(req._id, 'rejected');
+      } else {
+        const { providerAPI } = await import('../../../services/api');
+        await providerAPI.updateIntroRequest(req._id, 'rejected');
+      }
       toast.success('Request rejected');
       load();
     } catch (err) { toast.error(err.message || 'Failed'); }
@@ -212,8 +223,8 @@ export default function RequestsPage({ setRequestsCount }) {
                       </p>
                     )}
 
-                    {/* Accept/Reject for incoming connection requests */}
-                    {tab === 'incoming' && req.type === 'connection' && req.status === 'pending' && (
+                    {/* Accept/Reject for ALL incoming pending requests (connection + intro) */}
+                    {tab === 'incoming' && req.status === 'pending' && (
                       <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
                         <button className="btn btn-primary btn-sm" onClick={() => acceptConn(req)} disabled={busy[req._id]} style={{ flex: 1 }}>
                           {busy[req._id] ? 'Processing…' : '✓ Accept'}

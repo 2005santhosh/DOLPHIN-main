@@ -2,8 +2,20 @@
  * DashboardBottomNav — mobile-only bottom navigation bar
  * Shown on all dashboards. Uses hash-based routing.
  */
+import { useState, useEffect } from 'react';
+
 export default function DashboardBottomNav({ requestsCount = 0, chatCount = 0 }) {
-  const hash = window.location.hash.replace('#', '') || 'dashboard';
+  const [hash, setHash] = useState(
+    () => window.location.hash.replace('#', '').split('?')[0] || 'dashboard'
+  );
+
+  useEffect(() => {
+    const onHashChange = () => {
+      setHash(window.location.hash.replace('#', '').split('?')[0] || 'dashboard');
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   const items = [
     {

@@ -5,14 +5,19 @@ import VerificationModal from './VerificationModal';
 import toast from 'react-hot-toast';
 
 /**
- * VerifiedPromoModal — shown once per day on dashboard load for unverified users.
+ * VerifiedPromoModal — shown once per browser session on dashboard load for unverified users.
  *
  * Display rules:
  * - Never shown to already-verified users (payment-based)
- * - Shown once per calendar day (localStorage: dolphin_promo_last_shown)
+ * - Shown ONCE per browser session — sessionStorage key: dolphin_promo_shown
+ *   • sessionStorage clears when the browser tab/window is closed
+ *   • So: open dashboard → popup shows. Close it, navigate around → no more popups.
+ *   • Close browser / reopen tab → sessionStorage gone → popup shows again.
  * - Appears after 1.5s delay so dashboard loads first
  * - "Get Verified" opens VerificationModal (Cashfree payment) directly
  */
+
+const SESSION_KEY = 'dolphin_promo_shown';
 
 function isPaymentVerified(user) {
   return (
@@ -21,6 +26,14 @@ function isPaymentVerified(user) {
     !!user?.verifiedUntil &&
     new Date(user.verifiedUntil) > new Date()
   );
+}
+
+function hasShownThisSession() {
+  try { return sessionStorage.getItem(SESSION_KEY) === '1'; } catch { return false; }
+}
+
+function markShownThisSession() {
+  try { sessionStorage.setItem(SESSION_KEY, '1'); } catch {}
 }
 
 const BENEFITS = [
@@ -37,10 +50,17 @@ export default function VerifiedPromoModal() {
   const [payModalOpen, setPayModalOpen] = useState(false);
 
   useEffect(() => {
+    // Already verified — never show
     if (isPaymentVerified(user)) return;
-    const timer = setTimeout(() => setOpen(true), 1500);
+    // Already shown this browser session — don't show again
+    if (hasShownThisSession()) return;
+
+    const timer = setTimeout(() => {
+      markShownThisSession();
+      setOpen(true);
+    }, 1500);
     return () => clearTimeout(timer);
-  }, [user]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── smooth close ── */
   const close = () => {
