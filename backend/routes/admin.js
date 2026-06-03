@@ -571,7 +571,7 @@ router.post('/advance-founder-stage', protect, authorize('admin'), async (req, r
   }
 });
 
-module.exports = router;
+// NOTE: module.exports is at the END of this file — do not add it here
 
 // Get all users
 router.get('/users', protect, authorize('admin', 'investor'), async (req, res) => {

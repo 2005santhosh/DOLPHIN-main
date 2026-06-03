@@ -25,6 +25,17 @@ router.post('/', protect, createLimiter, uploadPostMedia.array('media', 10), asy
             return res.status(400).json({ message: 'Post must have content or media' });
         }
 
+        // Validate content length
+        if (content && content.length > 2200) {
+            return res.status(400).json({ message: 'Post content cannot exceed 2200 characters' });
+        }
+
+        // Validate postType
+        const VALID_POST_TYPES = ['general', 'service_needed', 'funding_needed', 'offering_service', 'offering_funding'];
+        if (postType && !VALID_POST_TYPES.includes(postType)) {
+            return res.status(400).json({ message: 'Invalid post type' });
+        }
+
         // Process uploaded media
         const media = [];
         if (req.files && req.files.length > 0) {

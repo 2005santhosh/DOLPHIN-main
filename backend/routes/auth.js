@@ -101,6 +101,12 @@ router.post('/register', registerLimiter, sanitizeBody(['name', 'email']), async
     if (!name || !email || !password)
       return res.status(400).json({ message: 'Name, email and password are required' });
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({ message: 'Please provide a valid email address' });
+    }
+
     if (password.length < 8)
       return res.status(400).json({ message: 'Password must be at least 8 characters long' });
 
@@ -316,7 +322,7 @@ router.post('/verify-email', async (req, res) => {
     }
 
     const user = await User.findOne({
-      email,
+      email: email.toLowerCase(),
       verificationToken: crypto.createHash('sha256').update(verificationCode).digest('hex'),
       verificationExpire: { $gt: Date.now() }
     });
@@ -342,12 +348,27 @@ router.post('/send-verification-email', async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: 'Email is required' });
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.status(200).json({
-      message: 'Verification email sent',
-      nextSteps: 'Check your email for the verification code'
-    });
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      // Don't reveal whether the email exists
+      return res.status(200).json({ message: 'If that email is registered, a verification email has been sent.' });
+    }
+    if (user.emailVerified) {
+      return res.status(400).json({ message: 'This email is already verified. Please log in.' });
+    }
+    // Generate and send a fresh OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+    user.verificationToken = hashedOtp;
+    user.verificationExpire = Date.now() + 10 * 60 * 1000;
+    await user.save();
+    const { getOtpEmail } = require('../utils/emailTemplates');
+    sendEmail({
+      email: user.email,
+      subject: getOtpEmail(user.name, otp).subject,
+      message: getOtpEmail(user.name, otp).html,
+    }).catch(e => console.error('send-verification-email error:', e));
+    res.status(200).json({ message: 'Verification email sent', nextSteps: 'Check your email for the OTP' });
   } catch (error) {
     console.error('Send verification email error:', error);
     res.status(500).json({ message: 'Error sending verification email' });
@@ -510,7 +531,7 @@ router.put('/password', protect, async (req, res) => {
       return res.status(400).json({ message: 'New password must be at least 8 characters' });
     }
 
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(12); // Match registration salt rounds
     user.password = await bcrypt.hash(newPassword, salt);
     await user.save();
 
@@ -551,6 +572,11 @@ router.delete('/account', protect, async (req, res) => {
     await IntroRequest.deleteMany({ $or: [{ providerId: userId }, { founderId: userId }] });
     await Notification.deleteMany({ userId });
     await Log.deleteMany({ userId });
+    // Delete Connection records where user is sender or recipient
+    const Connection = require('../models/Connection');
+    await Connection.deleteMany({ $or: [{ from: userId }, { to: userId }] });
+    // Delete posts authored by this user
+    await Post.deleteMany({ authorId: userId });
     await User.findByIdAndDelete(userId);
 
     if (req.app.locals.tokenBlacklist) {

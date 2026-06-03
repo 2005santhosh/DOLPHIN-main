@@ -115,6 +115,10 @@ exports.protect = async (req, res, next) => {
     }
 
     req.user = user;
+    // Normalize: ensure both req.user._id (ObjectId) and req.user.id (string) work.
+    // .lean() objects don't have Mongoose virtuals, so .id doesn't exist by default.
+    // Many routes use req.user.id — this one-liner makes both safe.
+    if (user._id && !user.id) req.user.id = user._id.toString();
     next();
   } catch (err) {
     console.error('[protect] Unexpected error:', err.message);

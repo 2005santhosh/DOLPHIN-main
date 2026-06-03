@@ -1,5 +1,6 @@
 const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first');
+// build: 2026-06-03-cache-bust
 const express = require('express');
 const http = require('http');
 const dotenv = require('dotenv');
