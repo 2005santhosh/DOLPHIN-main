@@ -7,10 +7,26 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 // ─── Axios instance ────────────────────────────────────────────────────────────
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 30000,
+  // 15s is enough for normal API calls. Upload routes set their own timeout.
+  // 30s was masking slow endpoints — fail fast, let users retry.
+  timeout: 15000,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
+
+// ─── In-flight request deduplication ─────────────────────────────────────────
+// Prevents duplicate GET requests when multiple components mount simultaneously
+// and call the same endpoint (e.g., Header + Dashboard both calling /auth/profile).
+// Only GET requests are deduplicated — mutations are always sent.
+const inFlight = new Map(); // key: url+params → Promise
+
+function dedupGet(url, config = {}) {
+  const key = url + JSON.stringify(config.params || {});
+  if (inFlight.has(key)) return inFlight.get(key);
+  const promise = api.get(url, config).finally(() => inFlight.delete(key));
+  inFlight.set(key, promise);
+  return promise;
+}
 
 // ─── Request interceptor: attach Bearer token ──────────────────────────────────
 api.interceptors.request.use((config) => {
@@ -22,15 +38,20 @@ api.interceptors.request.use((config) => {
 // ─── Response interceptor: unwrap data, normalise errors ──────────────────────
 // IMPORTANT: We do NOT redirect on 401 here.
 // AuthContext.refreshProfile() handles 401 → clearAuth.
-// Redirecting here causes the refresh-to-login bug.
 api.interceptors.response.use(
   (res) => res.data,
   (error) => {
-    const data = error.response?.data;
+    // AbortError — request was intentionally cancelled; don't show error toast
+    if (axios.isCancel(error)) {
+      const cancelled = new Error('Request cancelled');
+      cancelled.cancelled = true;
+      return Promise.reject(cancelled);
+    }
+    const data   = error.response?.data;
     const status = error.response?.status;
-    const err = new Error(data?.message || error.message || `HTTP ${status}`);
-    err.status = status;
-    err.data = data;
+    const err    = new Error(data?.message || error.message || `HTTP ${status}`);
+    err.status   = status;
+    err.data     = data;
     return Promise.reject(err);
   }
 );
@@ -40,8 +61,9 @@ export const authAPI = {
   login: async (email, password) => api.post('/auth/login', { email, password }),
   register: async (name, email, password, role) => api.post('/auth/register', { name, email, password, role }),
   logout: async () => api.post('/auth/logout'),
+  // dedupGet: multiple components calling getProfile simultaneously get one request
   getProfile: async () => {
-    const res = await api.get('/auth/profile');
+    const res = await dedupGet('/auth/profile');
     return res.profile || res;
   },
   forgotPassword: async (email) => api.post('/auth/forgot-password', { email }),
@@ -50,6 +72,7 @@ export const authAPI = {
   deleteAccount: async () => api.delete('/auth/account'),
   uploadProfilePicture: async (formData) => api.post('/auth/upload-profile-picture', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
   }),
   updateProfile: async (name) => api.put('/auth/profile', { name }),
   updatePassword: async (currentPassword, newPassword) => api.put('/auth/password', { currentPassword, newPassword }),
@@ -57,8 +80,9 @@ export const authAPI = {
 
 // ─── POSTS ─────────────────────────────────────────────────────────────────────
 export const postsAPI = {
+  // dedupGet: tab switches and StrictMode double-mount won't fire duplicate feed requests
   getFeed: async (filter = 'all', page = 1, limit = 20) =>
-    api.get('/posts/feed', { params: { filter, page, limit } }),
+    dedupGet('/posts/feed', { params: { filter, page, limit } }),
 
   createPost: async (content, postType, tags, mediaFiles = []) => {
     const fd = new FormData();
@@ -73,7 +97,8 @@ export const postsAPI = {
   },
 
   toggleLike: async (postId) => api.post(`/posts/${postId}/like`),
-  trackView: async (postId) => api.post(`/posts/${postId}/view`),
+  // view tracking is fire-and-forget, no dedup needed
+  trackView: async (postId) => api.post(`/posts/${postId}/view`).catch(() => {}),
   deletePost: async (postId) => api.delete(`/posts/${postId}`),
 };
 
@@ -139,18 +164,18 @@ export const founderAPI = {
 // ─── INVESTOR ──────────────────────────────────────────────────────────────────
 export const investorAPI = {
   getValidatedStartups: async () => {
-    const data = await api.get('/investor/validated-startups');
+    const data = await dedupGet('/investor/validated-startups');
     return Array.isArray(data) ? data : (data.startups || []);
   },
   getWatchlist: async () => {
-    const data = await api.get('/investor/watchlist');
+    const data = await dedupGet('/investor/watchlist');
     return Array.isArray(data) ? data : [];
   },
   addToWatchlist: async (startupId) => api.post('/investor/watchlist', { startupId }),
   removeFromWatchlist: async (startupId) => api.delete(`/investor/watchlist/${startupId}`),
   expressInterest: async (startupId) => api.post('/investor/express-interest', { startupId }),
   getMyRequests: async () => {
-    const data = await api.get('/investor/my-requests');
+    const data = await dedupGet('/investor/my-requests');
     return Array.isArray(data) ? data : (data.requests || []);
   },
 };

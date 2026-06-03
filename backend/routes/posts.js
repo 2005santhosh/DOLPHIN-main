@@ -216,27 +216,37 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
                 : (connectionMap[p.authorId?.toString()] || null)
         }));
 
-        // Boost verified authors: sort verified posts to the top within the page
-        // Only payment-based verified authors with active (non-expired) badges
+        // Boost verified authors using the authorIds already collected above.
+        // Single indexed query: covered by verification_status index on users.
+        // No extra round-trip — authorIds is already built.
         const verifiedAuthorIds = new Set();
-        if (enrichedPosts.length > 0) {
-            const authorUserIds = [...new Set(enrichedPosts.map(p => p.authorId?.toString()).filter(Boolean))];
-            const verifiedAuthors = await User.find({
-                _id: { $in: authorUserIds },
-                isVerified: true,
-                verifiedSource: 'payment',
-                verifiedUntil: { $gt: new Date() }, // must not be expired
-            }).select('_id').lean();
+        if (authorIds.length > 0) {
+            const verifiedAuthors = await User.find(
+                {
+                    _id: { $in: authorIds },
+                    isVerified: true,
+                    verifiedSource: 'payment',
+                    verifiedUntil: { $gt: new Date() },
+                },
+                { _id: 1 }   // projection-only, fastest possible read
+            ).lean();
             verifiedAuthors.forEach(u => verifiedAuthorIds.add(u._id.toString()));
+        }
+        // Also check the current user (their own posts show badge if verified)
+        if (req.user.isVerified && req.user.verifiedSource === 'payment' &&
+            req.user.verifiedUntil && new Date(req.user.verifiedUntil) > new Date()) {
+            verifiedAuthorIds.add(req.user._id.toString());
         }
 
         const boostedPosts = enrichedPosts
-            .map(p => ({ ...p, isAuthorVerified: verifiedAuthorIds.has(p.authorId?.toString()) }))
+            .map(p => ({
+                ...p,
+                isAuthorVerified: verifiedAuthorIds.has(p.authorId?.toString())
+            }))
             .sort((a, b) => {
-                // Verified posts first, then by date
                 if (a.isAuthorVerified && !b.isAuthorVerified) return -1;
                 if (!a.isAuthorVerified && b.isAuthorVerified) return 1;
-                return 0; // already sorted by createdAt from DB
+                return 0;
             });
 
         res.json({

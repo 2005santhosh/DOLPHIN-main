@@ -13,6 +13,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const connectDB = require('./config/db');
 const { securePage } = require('./middleware/securePage');
 const { initializeSocket } = require('./services/socketService');
+const requestLogger = require('./middleware/requestLogger');
 const chatRoutes = require('./routes/chat');
 const investorRoutes = require('./routes/investor'); 
 const supportRoutes = require('./routes/support');
@@ -47,6 +48,16 @@ const app = express();
 app.set('trust proxy', 1);
 const server = http.createServer(app);
 
+// Persistent token blacklist (time-bounded Map, auto-prunes expired entries)
+const tokenBlacklist = require('./utils/tokenBlacklist');
+app.locals.tokenBlacklist = tokenBlacklist;
+
+// Wire up indexes after DB connects (idempotent — safe to run on every boot)
+const ensureIndexes = require('./config/indexes');
+mongoose.connection.once('connected', () => {
+  ensureIndexes().catch(err => console.error('[Indexes] Failed:', err.message));
+});
+
 // --- CORS SETUP (Defined BEFORE Socket Initialization) --- samesite
 const corsOptions = {
   origin: function (origin, callback) {
@@ -80,30 +91,44 @@ app.use(compression());
 // 2. USE COOKIE PARSER (Enables reading HTTP-only cookies for security)
 app.use(cookieParser());
 // Make io accessible to routes (CRITICAL)
-app.set('socketio', io); 
-app.locals.tokenBlacklist = new Set();
+app.set('socketio', io);
 
-// 3. Apply Helmet with Cross-Origin Policy
+// 3. Apply Helmet with strict but practical CSP
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.socket.io", "https://cdn.jsdelivr.net"],
-      imgSrc: ["'self'", "data:", "https:"],
-      fontSrc: ["'self'", "https:", "data:"],
-      connectSrc: ["'self'", "https://api.dolphinorg.in", "wss://api.dolphinorg.in", "https://cdn.socket.io"], // Ensure this is open for Socket connections
-      objectSrc: ["'none'"],
-      baseUri: ["'self'"],
-      formAction: ["'self'"],
+      defaultSrc:     ["'self'"],
+      styleSrc:       ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      // Removed 'unsafe-eval' — it weakens XSS protection significantly.
+      // If a third-party library requires eval, isolate it or replace it.
+      scriptSrc:      [
+        "'self'",
+        "'unsafe-inline'",   // Required for Vite HMR in dev; consider nonce-based CSP in future
+        'https://sdk.cashfree.com',       // Cashfree payment SDK
+        'https://cdn.socket.io',
+        'https://cdn.jsdelivr.net',
+      ],
+      imgSrc:         ["'self'", 'data:', 'https:'],
+      fontSrc:        ["'self'", 'https:', 'data:'],
+      connectSrc:     [
+        "'self'",
+        'https://api.dolphinorg.in',
+        'wss://api.dolphinorg.in',
+        'https://sdk.cashfree.com',
+        'https://api.cashfree.com',
+      ],
+      objectSrc:      ["'none'"],
+      baseUri:        ["'self'"],
+      formAction:     ["'self'"],
       frameAncestors: ["'none'"],
-      frameSrc: ["'none'"],
-      workerSrc: ["'self'", "blob:"],
-      childSrc: ["'self'", "blob:"],
-      manifestSrc: ["'self'"],
-      mediaSrc: ["'self'"],
-      "script-src-attr": ["'self'", "'unsafe-inline'"],
+      // Allow Cashfree checkout iframe
+      frameSrc:       ['https://sdk.cashfree.com', 'https://payments.cashfree.com'],
+      workerSrc:      ["'self'", 'blob:'],
+      childSrc:       ["'self'", 'blob:'],
+      manifestSrc:    ["'self'"],
+      mediaSrc:       ["'self'", 'https:'],
+      'script-src-attr': ["'self'", "'unsafe-inline'"],
     },
   },
 }));
@@ -112,22 +137,24 @@ app.use(helmet({
 // Note: /api/verification/webhook uses raw body for signature verification
 app.use((req, res, next) => {
   if (req.path === '/api/verification/webhook') return next();
-  express.json({ limit: '10mb' })(req, res, next);
+  express.json({ limit: '2mb' })(req, res, next);
 });
 app.use((req, res, next) => {
   if (req.path === '/api/verification/webhook') return next();
-  express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+  express.urlencoded({ extended: true, limit: '2mb' })(req, res, next);
 });
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500,                  // 500 requests per 15 min per IP — enough for normal usage
+  windowMs: 15 * 60 * 1000,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests, please try again in a few minutes.' },
-  skip: (req) => {
-    // Skip rate limiting for static assets and health checks
-    return req.path === '/health' || req.path === '/';
+  handler: (req, res, next, options) => {
+    // Add Retry-After so clients know exactly when to retry instead of hammering
+    res.setHeader('Retry-After', Math.ceil(options.windowMs / 1000));
+    res.status(options.statusCode).json(options.message);
   },
+  skip: (req) => req.path === '/health' || req.path === '/',
 });
 app.use('/api/', limiter);
 
@@ -139,6 +166,9 @@ app.use('/api/', (req, res, next) => {
   res.setHeader('Pragma', 'no-cache');
   next();
 });
+
+// Structured request timing logger (after auth so req.user is available)
+app.use('/api/', requestLogger);
 
 // --- API ROUTES ---
 // Consolidated API routes here
@@ -195,23 +225,72 @@ if (hasFrontend) {
   });
 }
 
-// Health check endpoint
+// Health check — reports real DB state
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
+  const dbState  = mongoose.connection.readyState;
+  const dbStatus = ['disconnected', 'connected', 'connecting', 'disconnecting'][dbState] || 'unknown';
+  const healthy  = dbState === 1;
+  res.status(healthy ? 200 : 503).json({
+    status:    healthy ? 'ok' : 'degraded',
+    db:        dbStatus,
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    socketio: 'enabled'
+    uptime:    process.uptime(),
+    pid:       process.pid,
   });
 });
 
-// Error handling middleware
+// Readiness probe — used by Railway/PM2 to decide if a new deploy is safe to receive traffic.
+// Returns 503 until the DB is connected and startup migrations have run.
+let startupComplete = false;
+setTimeout(() => { startupComplete = true; }, 8000); // generous grace period
+
+app.get('/api/ready', (req, res) => {
+  const dbReady = mongoose.connection.readyState === 1;
+  if (dbReady && startupComplete) {
+    return res.status(200).json({ status: 'ready' });
+  }
+  res.status(503).json({
+    status: 'not ready',
+    db:     dbReady ? 'connected' : 'connecting',
+    startup: startupComplete ? 'done' : 'pending',
+  });
+});
+
+// Global error handling middleware — never leak stack traces in production
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    message: 'Server error',
-    reason: 'An unexpected error occurred',
-    nextSteps: 'Try again later or contact support'
+  // Log full error internally
+  console.error(`[ERROR] ${req.method} ${req.path} →`, err.message);
+  if (process.env.NODE_ENV !== 'production') console.error(err.stack);
+
+  // Mongoose validation error
+  if (err.name === 'ValidationError') {
+    const messages = Object.values(err.errors).map(e => e.message);
+    return res.status(400).json({ message: 'Validation failed', errors: messages });
+  }
+  // Mongoose duplicate key
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyValue || {})[0] || 'field';
+    return res.status(409).json({ message: `${field} already in use` });
+  }
+  // JWT errors
+  if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+    return res.status(401).json({ message: 'Invalid or expired token' });
+  }
+  // Multer file size error
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ message: 'File too large' });
+  }
+  // Payload too large
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ message: 'Request payload too large' });
+  }
+
+  // Generic server error — never expose internals in production
+  const statusCode = err.statusCode || err.status || 500;
+  res.status(statusCode).json({
+    message: process.env.NODE_ENV === 'production'
+      ? 'An unexpected error occurred. Please try again.'
+      : (err.message || 'Server error'),
   });
 });
 

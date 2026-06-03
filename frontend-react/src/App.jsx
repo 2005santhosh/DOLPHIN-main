@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { lazy, Suspense } from 'react';
+import AppUpdateBanner from './components/shared/AppUpdateBanner';
 import './styles/GlobalStyles.css';
 import './styles/components.css';
 import './styles/mobile.css';
@@ -94,13 +95,35 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
-// Create React Query client
+// Create React Query client with production-tuned defaults
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      // Don't refetch on window focus — prevents a burst of requests every time
+      // the user alt-tabs back. Components that need fresh data can set their own.
       refetchOnWindowFocus: false,
+
+      // Retry once on failure with exponential backoff to avoid hammering a
+      // flaky endpoint repeatedly (e.g., temporary Railway cold-start).
       retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
+
+      // Data is considered fresh for 2 minutes. During this window, navigating
+      // back to a page that already fetched shows instant data with no spinner.
+      staleTime: 2 * 60 * 1000,
+
+      // Keep unused cached data for 5 minutes before garbage collection.
+      // Prevents re-fetching when the user navigates away and returns quickly.
+      gcTime: 5 * 60 * 1000,
+
+      // Return cached data immediately while revalidating in the background
+      // (stale-while-revalidate). Users see data instantly on repeat visits.
+      placeholderData: (prev) => prev,
+    },
+    mutations: {
+      // Don't retry mutations — they have side effects and retrying silently
+      // can cause duplicate actions (e.g., double-sending a request).
+      retry: false,
     },
   },
 });
@@ -239,6 +262,7 @@ function App() {
       <AuthProvider>
         <Router>
           <AppRoutes />
+          <AppUpdateBanner />
           <Toaster
             position="top-right"
             toastOptions={{

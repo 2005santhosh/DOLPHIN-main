@@ -17,6 +17,9 @@ dist/
 build/
 out/
 
+# Generated at build time — do not commit
+frontend-react/public/version.json
+
 # Editor & OS files
 .DS_Store
 Thumbs.db

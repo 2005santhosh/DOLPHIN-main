@@ -291,19 +291,12 @@ router.post('/login', loginLimiter, sanitizeBody(['email']), async (req, res) =>
 // @access  Private
 router.post('/logout', protect, (req, res) => {
   try {
-    // Blacklist the current token so it can't be reused
     const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
     if (token && req.app.locals.tokenBlacklist) {
-      req.app.locals.tokenBlacklist.add(token);
+      req.app.locals.tokenBlacklist.add(token); // uses new time-bounded blacklist
     }
-
-    // Clear the cookie by setting it to expire in the past
     res.cookie('token', 'none', expiredCookieOptions());
-
-    res.status(200).json({
-      success: true,
-      message: 'Logged out successfully'
-    });
+    res.status(200).json({ success: true, message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);
     res.status(500).json({ message: 'Error during logout' });
