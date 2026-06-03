@@ -8,8 +8,9 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const compression = require('compression');
-const cookieParser = require('cookie-parser'); // 1. IMPORT COOKIE PARSER
+const cookieParser = require('cookie-parser');
 const mongoSanitize = require('express-mongo-sanitize');
+const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 const { securePage } = require('./middleware/securePage');
 const { initializeSocket } = require('./services/socketService');
@@ -309,7 +310,6 @@ setInterval(async () => {
 
 // Startup migration: reset all non-payment verified badges, then reconcile from paid records
 const User = require('./models/User');
-const mongoose = require('mongoose');
 
 const runMigrations = async () => {
   try {
@@ -401,7 +401,6 @@ server.listen(PORT, '0.0.0.0', () => {
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully...');
   server.close(() => {
-    const mongoose = require('mongoose');
     mongoose.connection.close(false, () => {
       console.log('MongoDB connection closed');
       process.exit(0);
