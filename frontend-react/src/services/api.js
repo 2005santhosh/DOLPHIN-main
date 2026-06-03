@@ -234,6 +234,7 @@ export const gamificationAPI = {
   getMyStats:    async () => api.get('/gamification/me'),
   recordLogin:   async () => api.post('/gamification/activity'),
   getLeaderboard: async (role) => api.get(`/gamification/leaderboard/${role}`),
+  getLeaderboardProfile: async (userId) => api.get(`/gamification/profile/${userId}`),
   claimReward:   async (milestone, fullName, phone, address) =>
     api.post('/gamification/claim-reward', { milestone, fullName, phone, address }),
 };

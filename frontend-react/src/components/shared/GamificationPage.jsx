@@ -279,7 +279,7 @@ function RewardCard({ reward, userReward, onClaim }) {
   );
 }
 
-function LeaderboardTable({ data, currentUserId, loading }) {
+function LeaderboardTable({ data, currentUserId, loading, onRowClick }) {
   if (loading) return <LoadingSpinner message="Loading leaderboard…" />;
   if (!data || data.length === 0) {
     return <p style={{ textAlign: 'center', padding: '2rem', color: '#9CA3AF' }}>No data yet. Be the first!</p>;
@@ -296,14 +296,21 @@ function LeaderboardTable({ data, currentUserId, loading }) {
           : `https://ui-avatars.com/api/?name=${encodeURIComponent(entry.name || 'U')}&background=84CC16&color=fff&size=80`;
 
         return (
-          <div key={entry._id} style={{
-            display: 'flex', alignItems: 'center', gap: '0.875rem',
-            padding: '0.75rem 1rem',
-            background: isMe ? '#F0FDF4' : i % 2 === 0 ? '#FAFAFA' : 'white',
-            borderRadius: 10,
-            border: isMe ? '2px solid #84CC16' : '1px solid #F3F4F6',
-            transition: 'all 0.15s',
-          }}>
+          <div
+            key={entry._id}
+            onClick={() => onRowClick && onRowClick(entry)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.875rem',
+              padding: '0.75rem 1rem',
+              background: isMe ? '#F0FDF4' : i % 2 === 0 ? '#FAFAFA' : 'white',
+              borderRadius: 10,
+              border: isMe ? '2px solid #84CC16' : '1px solid #F3F4F6',
+              transition: 'all 0.15s',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={e => { if (!isMe) e.currentTarget.style.background = '#F0FDF4'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = isMe ? '#F0FDF4' : i % 2 === 0 ? '#FAFAFA' : 'white'; e.currentTarget.style.boxShadow = 'none'; }}
+          >
             {/* Rank */}
             <div style={{
               width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
@@ -367,6 +374,11 @@ export default function GamificationPage() {
   const [myEntry, setMyEntry]       = useState(null);
   const [totalUsers, setTotalUsers] = useState(0);
   const [activeTab, setActiveTab]   = useState('streak');
+
+  // Profile modal
+  const [profileOpen, setProfileOpen]   = useState(false);
+  const [profileData, setProfileData]   = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   // Claim modal
   const [claimModal, setClaimModal] = useState(false);
@@ -432,8 +444,21 @@ export default function GamificationPage() {
     return () => window.removeEventListener('connection-accepted', onConnectionAccepted);
   }, [activeTab, lbRole, loadStats, loadLeaderboard]);
 
-  const openClaim = (reward) => {
-    setClaimReward(reward);
+  const openProfile = async (entry) => {
+    setProfileData(null);
+    setProfileOpen(true);
+    setProfileLoading(true);
+    try {
+      const data = await gamificationAPI.getLeaderboardProfile(entry._id);
+      setProfileData(data);
+    } catch {
+      setProfileOpen(false);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const openClaim = (reward) => {    setClaimReward(reward);
     setClaimForm({ fullName: user?.name || '', phone: '', address: '' });
     setClaimModal(true);
   };
@@ -654,7 +679,7 @@ export default function GamificationPage() {
             <CardHeader>
               <CardTitle>{ROLE_LABELS[lbRole]} Leaderboard</CardTitle>
             </CardHeader>
-            <LeaderboardTable data={leaderboard} currentUserId={user?._id} loading={lbLoading} />
+            <LeaderboardTable data={leaderboard} currentUserId={user?._id} loading={lbLoading} onRowClick={openProfile} />
 
             {/* Show current user's entry if they're outside the top list */}
             {myEntry && myRank && !leaderboard.some(e => e._id?.toString() === user?._id?.toString()) && (
@@ -662,7 +687,7 @@ export default function GamificationPage() {
                 <p style={{ fontSize: '0.75rem', color: '#9CA3AF', marginBottom: '0.5rem', textAlign: 'center' }}>
                   Your position
                 </p>
-                <LeaderboardTable data={[myEntry]} currentUserId={user?._id} loading={false} />
+                <LeaderboardTable data={[myEntry]} currentUserId={user?._id} loading={false} onRowClick={openProfile} />
               </div>
             )}
           </Card>
@@ -686,6 +711,184 @@ export default function GamificationPage() {
           </Card>
         </div>
       )}
+
+      {/* ── Profile Modal ─────────────────────────────────────────────────────── */}
+      <Modal
+        isOpen={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        title="Profile"
+        maxWidth="520px"
+      >
+        {profileLoading ? (
+          <LoadingSpinner message="Loading profile…" />
+        ) : profileData ? (
+          <div>
+            {/* ── Header ── */}
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <img
+                  src={profileData.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name || 'U')}&background=84CC16&color=fff&size=160`}
+                  alt={profileData.name}
+                  style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E5E7EB' }}
+                  onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.name || 'U')}&background=84CC16&color=fff&size=160`; }}
+                />
+                {profileData.isVerified && (
+                  <span style={{ position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, background: 'linear-gradient(135deg,#84CC16,#16A34A)', borderRadius: '50%', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" style={{ width: 10, height: 10 }}><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#111827', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {profileData.name}
+                  {profileData.isVerified && (
+                    <span style={{ fontSize: '0.72rem', background: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0', borderRadius: 9999, padding: '2px 8px', fontWeight: 700 }}>✓ Verified</span>
+                  )}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#6B7280', marginTop: 2, textTransform: 'capitalize' }}>
+                  {profileData.role}
+                </div>
+                {profileData.joinedAt && (
+                  <div style={{ fontSize: '0.78rem', color: '#9CA3AF', marginTop: 2 }}>
+                    Joined {new Date(profileData.joinedAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ── Stats row ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '1.25rem' }}>
+              {[
+                { label: 'Score',      value: profileData.leaderboardScore || 0, color: '#111827' },
+                { label: 'Streak',     value: `${profileData.currentStreak || 0}d`, color: '#EF4444' },
+                { label: 'Best',       value: `${profileData.longestStreak || 0}d`, color: '#F59E0B' },
+                { label: 'Points',     value: profileData.rewardPoints || 0, color: '#84CC16' },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{ textAlign: 'center', padding: '0.6rem 0.5rem', background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
+                  <div style={{ fontWeight: 800, fontSize: '1rem', color }}>{value}</div>
+                  <div style={{ fontSize: '0.7rem', color: '#9CA3AF', marginTop: 1 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Role-specific details ── */}
+
+            {/* FOUNDER */}
+            {profileData.role === 'founder' && profileData.startup && (
+              <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '1.25rem' }}>
+                <h4 style={{ margin: '0 0 0.875rem', fontSize: '0.9rem', color: '#374151', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  🚀 Startup
+                </h4>
+                <div style={{ background: '#F9FAFB', borderRadius: 12, border: '1px solid #E5E7EB', padding: '1rem' }}>
+                  <div style={{ fontWeight: 700, color: '#111827', fontSize: '1rem', marginBottom: 4 }}>
+                    {profileData.startup.name}
+                  </div>
+                  {profileData.startup.industry && (
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <span style={{ padding: '2px 8px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: 9999, fontSize: '0.75rem', fontWeight: 600 }}>
+                        {profileData.startup.industry}
+                      </span>
+                    </div>
+                  )}
+                  {profileData.startup.thesis && (
+                    <p style={{ margin: '0 0 0.875rem', fontSize: '0.85rem', color: '#6B7280', lineHeight: 1.6 }}>
+                      {profileData.startup.thesis.length > 200
+                        ? `${profileData.startup.thesis.substring(0, 200)}…`
+                        : profileData.startup.thesis}
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ padding: '3px 10px', background: profileData.startup.validationScore >= 70 ? '#D1FAE5' : '#FEF3C7', color: profileData.startup.validationScore >= 70 ? '#065F46' : '#92400E', borderRadius: 9999, fontSize: '0.75rem', fontWeight: 700 }}>
+                      {profileData.startup.validationScore}% Validated
+                    </span>
+                    <span style={{ padding: '3px 10px', background: '#F5F3FF', color: '#6D28D9', borderRadius: 9999, fontSize: '0.75rem', fontWeight: 600 }}>
+                      Stage {profileData.startup.currentStage}
+                    </span>
+                    <span style={{ padding: '3px 10px', background: '#F0FDF4', color: '#166534', borderRadius: 9999, fontSize: '0.75rem', fontWeight: 600 }}>
+                      {profileData.startup.stagesValidated}/5 stages done
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* INVESTOR */}
+            {profileData.role === 'investor' && (
+              <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '1.25rem' }}>
+                <h4 style={{ margin: '0 0 0.875rem', fontSize: '0.9rem', color: '#374151', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  💼 Investor Details
+                </h4>
+                {profileData.interestAreas?.length > 0 && (
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Interest Areas</div>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      {profileData.interestAreas.map(area => (
+                        <span key={area} style={{ padding: '3px 10px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: 9999, fontSize: '0.78rem', fontWeight: 600 }}>{area}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {profileData.stagePreference?.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Stage Preference</div>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      {profileData.stagePreference.map(s => (
+                        <span key={s} style={{ padding: '3px 10px', background: '#F5F3FF', color: '#6D28D9', borderRadius: 9999, fontSize: '0.78rem', fontWeight: 600 }}>Stage {s}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(!profileData.interestAreas?.length && !profileData.stagePreference?.length) && (
+                  <p style={{ color: '#9CA3AF', fontSize: '0.85rem', margin: 0 }}>No additional details available.</p>
+                )}
+              </div>
+            )}
+
+            {/* PROVIDER */}
+            {profileData.role === 'provider' && profileData.provider && (
+              <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '1.25rem' }}>
+                <h4 style={{ margin: '0 0 0.875rem', fontSize: '0.9rem', color: '#374151', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  🔧 Service Provider
+                </h4>
+                <div style={{ background: '#F9FAFB', borderRadius: 12, border: '1px solid #E5E7EB', padding: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                    <span style={{ padding: '3px 10px', background: '#F0FDF4', color: '#16A34A', borderRadius: 9999, fontSize: '0.78rem', fontWeight: 700 }}>
+                      {profileData.provider.category}
+                    </span>
+                    {profileData.provider.experienceLevel && (
+                      <span style={{ padding: '3px 10px', background: '#FFF7ED', color: '#C2410C', borderRadius: 9999, fontSize: '0.78rem', fontWeight: 600 }}>
+                        {profileData.provider.experienceLevel}
+                      </span>
+                    )}
+                    {profileData.provider.availability && (
+                      <span style={{ padding: '3px 10px', background: '#EFF6FF', color: '#1D4ED8', borderRadius: 9999, fontSize: '0.78rem', fontWeight: 600 }}>
+                        {profileData.provider.availability}
+                      </span>
+                    )}
+                  </div>
+                  {profileData.provider.description && (
+                    <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', color: '#6B7280', lineHeight: 1.6 }}>
+                      {profileData.provider.description.length > 180
+                        ? `${profileData.provider.description.substring(0, 180)}…`
+                        : profileData.provider.description}
+                    </p>
+                  )}
+                  {profileData.provider.specialties?.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: '0.72rem', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>Specialties</div>
+                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        {profileData.provider.specialties.map(s => (
+                          <span key={s} style={{ padding: '2px 8px', background: '#F3F4F6', color: '#374151', borderRadius: 6, fontSize: '0.75rem' }}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </Modal>
 
       {/* ── Claim Reward Modal ─────────────────────────────────────────────────── */}
       <Modal
