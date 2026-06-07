@@ -10,6 +10,16 @@ function isVerifiedUser(user) {
   return user?.isVerified === true || user?.verificationStatus === 'verified';
 }
 
+/** Strip HTML tags at render time — safety net for any cached raw HTML */
+function cleanText(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+    .replace(/\s{2,}/g, ' ').trim();
+}
+
 function relativeTime(iso) {
   if (!iso) return '';
   const diff = Date.now() - new Date(iso);
@@ -121,7 +131,7 @@ function OpportunityCard({ opp, onView, onSave, onApply, verified }) {
 
       {/* Description */}
       <p style={{ margin: '0.6rem 0 0.75rem', fontSize: '0.82rem', color: '#6B7280', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-        {opp.shortDescription || opp.description?.replace(/<[^>]*>/g, '').slice(0, 160)}
+        {cleanText(opp.shortDescription || opp.description || '')}
       </p>
 
       {/* Tags row */}
@@ -360,7 +370,7 @@ function DetailDrawer({ opp, onClose, onApply, onSave, verified }) {
           <div style={{ marginBottom: '1rem' }}>
             <div style={{ fontSize: '0.78rem', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Description</div>
             <p style={{ fontSize: '0.875rem', color: '#374151', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-line' }}>
-              {opp.description || opp.shortDescription || 'No description available.'}
+              {cleanText(opp.description || opp.shortDescription || 'No description available.')}
             </p>
           </div>
         </div>
