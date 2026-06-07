@@ -37,39 +37,33 @@ export default function FounderDashboard() {
     retry: 1,
   });
 
-  // Record daily login + update streak badge on mount
+  // Record daily login + update streak badge on mount.
+  // Strategy: call recordLogin() first (writes new streak to DB), then
+  // always fetch fresh stats afterward so the Header badge reflects today's streak.
   useEffect(() => {
+    const syncStreak = (streak) => {
+      if (streak !== undefined && streak !== null) {
+        window.dispatchEvent(new CustomEvent('streak-updated', { detail: { currentStreak: streak } }));
+      }
+    };
+
+    const fetchFreshStreak = () =>
+      gamificationAPI.getMyStats()
+        .then(data => syncStreak(data?.currentStreak))
+        .catch(() => {});
+
     gamificationAPI.recordLogin()
       .then(result => {
+        // recordLogin returns the updated streak immediately — use it
         if (result?.newStreak !== undefined) {
-          window.dispatchEvent(new CustomEvent('streak-updated', {
-            detail: { currentStreak: result.newStreak }
-          }));
-        } else {
-          // recordLogin returned no streak — fetch it directly
-          gamificationAPI.getMyStats()
-            .then(data => {
-              if (data?.currentStreak !== undefined) {
-                window.dispatchEvent(new CustomEvent('streak-updated', {
-                  detail: { currentStreak: data.currentStreak }
-                }));
-              }
-            })
-            .catch(() => {});
+          syncStreak(result.newStreak);
         }
+        // Always fetch fresh stats after recordLogin to guarantee the Header
+        // shows the post-login streak (fixes the race where Header fetches
+        // before recordLogin writes to DB)
+        fetchFreshStreak();
       })
-      .catch(() => {
-        // Fallback: fetch stats directly if recordLogin fails
-        gamificationAPI.getMyStats()
-          .then(data => {
-            if (data?.currentStreak !== undefined) {
-              window.dispatchEvent(new CustomEvent('streak-updated', {
-                detail: { currentStreak: data.currentStreak }
-              }));
-            }
-          })
-          .catch(() => {});
-      });
+      .catch(() => fetchFreshStreak());
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle hash navigation — supports #chat?userId=xxx

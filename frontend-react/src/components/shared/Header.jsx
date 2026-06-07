@@ -86,27 +86,44 @@ export default function Header({ onMenuToggle }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Streak — fetch directly on mount (immediate, no waiting for events)
-  // Also listen for streak-updated events for real-time updates after activity
+  // Streak — listen for streak-updated events from dashboards (primary path),
+  // with a delayed fallback fetch so we never block on the initial getMyStats race.
+  //
+  // Race condition that this fixes:
+  //   Dashboard mounts → recordLogin() writes new streak to DB (async, ~300ms)
+  //   Header mounts    → getMyStats() reads DB immediately → gets OLD streak
+  //   Dashboard resolves → dispatches streak-updated → Header updates correctly
+  //
+  // Solution: delay the fallback fetch by 3s so recordLogin() always wins.
+  // The streak-updated event (fired by the dashboard after recordLogin) will
+  // update the Header immediately if it arrives before the 3s timeout.
   useEffect(() => {
     let mounted = true;
+    let fallbackTimer = null;
 
-    // Fetch immediately on mount — don't wait for AuthContext event
-    gamificationAPI.getMyStats()
-      .then(data => { if (mounted) setStreak(data?.currentStreak ?? 0); })
-      .catch(() => { if (mounted) setStreak(0); });
-
-    // Also listen for updates triggered by GamificationPage or AuthContext
+    // Listen for the authoritative value dispatched by the dashboard after recordLogin
     const onStreakUpdated = (e) => {
       if (!mounted) return;
       if (e.detail?.currentStreak !== undefined) {
         setStreak(e.detail.currentStreak);
+        // Cancel the fallback fetch — we already have the correct value
+        clearTimeout(fallbackTimer);
       }
     };
     window.addEventListener('streak-updated', onStreakUpdated);
 
+    // Fallback: if no streak-updated event arrives within 3s (e.g. admin dashboard
+    // that doesn't call recordLogin), fetch stats directly
+    fallbackTimer = setTimeout(() => {
+      if (!mounted) return;
+      gamificationAPI.getMyStats()
+        .then(data => { if (mounted) setStreak(data?.currentStreak ?? 0); })
+        .catch(() => {});
+    }, 3000);
+
     return () => {
       mounted = false;
+      clearTimeout(fallbackTimer);
       window.removeEventListener('streak-updated', onStreakUpdated);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

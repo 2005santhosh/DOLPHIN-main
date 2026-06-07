@@ -23,30 +23,28 @@ export default function InvestorDashboard() {
   const [requestsCount, setRequestsCount] = useState(0);
   const [chatCount, setChatCount] = useState(0);
 
-  // Record daily login + update streak badge on mount
+  // Record daily login + update streak badge on mount.
+  // Always fetch fresh stats after recordLogin to guarantee the Header
+  // shows the post-login streak (fixes the race where Header fetches
+  // before recordLogin writes to DB)
   useEffect(() => {
-    const updateStreak = () => {
-      gamificationAPI.getMyStats()
-        .then(data => {
-          if (data?.currentStreak !== undefined) {
-            window.dispatchEvent(new CustomEvent('streak-updated', {
-              detail: { currentStreak: data.currentStreak }
-            }));
-          }
-        })
-        .catch(() => {});
+    const syncStreak = (streak) => {
+      if (streak !== undefined && streak !== null) {
+        window.dispatchEvent(new CustomEvent('streak-updated', { detail: { currentStreak: streak } }));
+      }
     };
+
+    const fetchFreshStreak = () =>
+      gamificationAPI.getMyStats()
+        .then(data => syncStreak(data?.currentStreak))
+        .catch(() => {});
+
     gamificationAPI.recordLogin()
       .then(result => {
-        if (result?.newStreak !== undefined) {
-          window.dispatchEvent(new CustomEvent('streak-updated', {
-            detail: { currentStreak: result.newStreak }
-          }));
-        } else {
-          updateStreak();
-        }
+        if (result?.newStreak !== undefined) syncStreak(result.newStreak);
+        fetchFreshStreak();
       })
-      .catch(updateStreak);
+      .catch(() => fetchFreshStreak());
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
