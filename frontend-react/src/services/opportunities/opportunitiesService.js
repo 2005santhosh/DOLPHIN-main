@@ -15,8 +15,10 @@
 import { MOCK_OPPORTUNITIES } from './mockData';
 import { applyIndiaFilter    } from './indiaRelevance';
 
-// Determine backend base URL from env (Vite exposes VITE_ prefixed vars)
-const API_BASE = import.meta.env.VITE_API_URL || 'https://api.dolphinorg.in';
+// VITE_API_URL is already "https://api.dolphinorg.in/api" — strip trailing /api if present
+// so we can safely append /api/opportunities without doubling up.
+const _raw = import.meta.env.VITE_API_URL || 'https://api.dolphinorg.in';
+const API_BASE = _raw.replace(/\/api\/?$/, '');
 
 // ── In-browser micro-cache (30 seconds) ─────────────────────────────────────
 // Prevents re-fetching when the user navigates away and back quickly.
