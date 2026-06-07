@@ -1,39 +1,32 @@
 /**
  * opportunitiesService.js — Aggregates all opportunity sources with India-first ranking.
  *
- * Usage:
- *   import { fetchAllOpportunities } from '../services/opportunities/opportunitiesService';
- *   const jobs = await fetchAllOpportunities({ showGlobal: false, englishOnly: true });
+ * Sources:
+ *   Greenhouse    — Tech companies, India + global remote
+ *   Lever         — Tech + product companies, India + global remote
+ *   Arbeitnow     — Broad multi-sector international jobs board
+ *   Jobicy        — Remote-only jobs worldwide
+ *   Adzuna India  — ALL sectors: IT, healthcare, nursing, agriculture, govt, finance
+ *                   Requires free API key: VITE_ADZUNA_APP_ID + VITE_ADZUNA_APP_KEY
+ *   RemoteOK      — Remote jobs, no key required
+ *   Govt RSS      — Indian government job notifications (UPSC, SSC, NHM, Employment News)
  *
- * India-first logic:
- *   - Every job gets a relevanceScore via scoreOpportunity()
- *   - India-located jobs score 100+
- *   - Remote-eligible jobs score 60+
- *   - Non-English jobs are filtered out when englishOnly=true
- *   - Foreign non-remote jobs are filtered out when showGlobal=false
- *   - Results are sorted: relevanceScore DESC, then postedAt DESC
- *
- * To add a new source:
- *   1. Create a connector file (e.g. remoteok.js)
- *   2. Export async fetchXxxJobs() → normalized opportunities[]
- *   3. Add to the fetchers array below
- *
- * To move fetching to your backend later:
- *   Replace each fetchXxx() call with a call to your own API endpoint.
+ * India-first scoring applied to all results via indiaRelevance.js.
  */
 import { fetchGreenhouseJobs } from './greenhouse';
 import { fetchLeverJobs       } from './lever';
 import { fetchArbeitnowJobs   } from './arbeitnow';
 import { fetchJobicyJobs      } from './jobicy';
+import { fetchAdzunaJobs      } from './adzuna';
+import { fetchRemoteOkJobs    } from './remoteok';
+import { fetchGovtRssJobs     } from './govtRss';
 import { MOCK_OPPORTUNITIES   } from './mockData';
 import { applyIndiaFilter     } from './indiaRelevance';
 
-// Simple in-memory cache: keyed by option string → { data, fetchedAt }
-// Cleared on module load so stale pre-deploy data never survives a redeployment.
+// Cache keyed by option string — clears on each module load (new deploy)
 const _cache = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-/** Deduplicate by title+company+location+applyUrl */
 function deduplicateOpportunities(opps) {
   const seen = new Set();
   return opps.filter(opp => {
@@ -49,70 +42,56 @@ function deduplicateOpportunities(opps) {
   });
 }
 
-/**
- * Fetch, merge, deduplicate, score, filter, and sort all opportunities.
- *
- * @param {object}  opts
- * @param {boolean} opts.useMockFallback  — use mock data when all APIs fail
- * @param {boolean} opts.showGlobal       — include non-India, non-remote jobs
- * @param {boolean} opts.englishOnly      — exclude likely non-English listings
- * @returns {Promise<object[]>}           — scored + sorted opportunities
- */
 export async function fetchAllOpportunities({
   useMockFallback = true,
   showGlobal      = false,
   englishOnly     = true,
 } = {}) {
   const cacheKey = `${showGlobal}_${englishOnly}`;
-
-  // Return cached data if fresh
-  const cached = _cache.get(cacheKey);
+  const cached   = _cache.get(cacheKey);
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
     return cached.data;
   }
 
   // Fetch all sources in parallel — partial failures are tolerated
-  const [ghResult, lvResult, abResult, jcResult] = await Promise.allSettled([
-    fetchGreenhouseJobs(),
-    fetchLeverJobs(),
-    fetchArbeitnowJobs(),   // Secondary — global feed, lower India relevance
-    fetchJobicyJobs(),      // Secondary — remote-only, moderate India relevance
-  ]);
+  const [ghResult, lvResult, abResult, jcResult, azResult, roResult, grResult] =
+    await Promise.allSettled([
+      fetchGreenhouseJobs(),
+      fetchLeverJobs(),
+      fetchArbeitnowJobs(),
+      fetchJobicyJobs(),
+      fetchAdzunaJobs(),     // All sectors — requires free Adzuna key
+      fetchRemoteOkJobs(),   // Remote jobs, no key
+      fetchGovtRssJobs(),    // Government RSS notifications
+    ]);
 
-  let allOpps = [];
+  let allOpps     = [];
   let anySucceeded = false;
 
-  [ghResult, lvResult, abResult, jcResult].forEach(result => {
+  [ghResult, lvResult, abResult, jcResult, azResult, roResult, grResult].forEach(result => {
     if (result.status === 'fulfilled' && Array.isArray(result.value) && result.value.length > 0) {
       allOpps = allOpps.concat(result.value);
       anySucceeded = true;
     }
   });
 
-  // Fall back to mock data when all APIs failed or returned nothing
   if (!anySucceeded && useMockFallback) {
     allOpps = MOCK_OPPORTUNITIES.map(o => ({ ...o }));
   } else if (allOpps.length === 0 && useMockFallback) {
     allOpps = MOCK_OPPORTUNITIES.map(o => ({ ...o }));
   }
 
-  // Deduplicate first
   const deduped = deduplicateOpportunities(allOpps);
-
-  // Apply India-first scoring, filtering, and sorting
-  // minScore: 0 means any job with some India relevance (remote jobs pass);
-  //           jobs scoring below 0 (foreign, non-remote) are hidden unless showGlobal=true
-  const scored = applyIndiaFilter(deduped, {
+  const scored  = applyIndiaFilter(deduped, {
     showGlobal,
     englishOnly,
-    minScore: showGlobal ? -999 : 1, // score >= 1 means at least remote-eligible
+    minScore: showGlobal ? -999 : 1,
   });
 
   _cache.set(cacheKey, { data: scored, fetchedAt: Date.now() });
   return scored;
 }
 
-/** Clear cache — call when user saves/applies, or when filters change */
 export function clearOpportunitiesCache() {
   _cache.clear();
 }

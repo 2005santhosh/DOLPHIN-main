@@ -61,7 +61,7 @@ const MODE_COLORS = {
   'On-site': { bg: '#F9FAFB', color: '#374151' },
 };
 
-const CATEGORIES = ['All', 'Web Development', 'Mobile Development', 'UI/UX', 'Graphic Design', 'Marketing', 'Content Writing', 'AI', 'Data', 'Other'];
+const CATEGORIES = ['All', 'Web Development', 'Mobile Development', 'UI/UX', 'Graphic Design', 'Marketing', 'Content Writing', 'AI', 'Data', 'Healthcare', 'Agriculture', 'Engineering', 'Education', 'Finance', 'Government', 'Other'];
 const TYPES      = ['Freelance', 'Internship', 'Contract', 'Part-time', 'Full-time'];
 const MODES      = ['Remote', 'Hybrid', 'On-site'];
 const LEVELS     = ['Beginner', 'Intermediate', 'Expert'];
