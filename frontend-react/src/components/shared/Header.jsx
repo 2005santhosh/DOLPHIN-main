@@ -169,7 +169,7 @@ export default function Header({ onMenuToggle }) {
   };
 
   const clearNotifications = async () => {
-    if (!confirm('Clear all notifications?')) return;
+    if (!window.confirm('Clear all notifications?')) return;
     try {
       await notificationsAPI.clearNotifications();
       setNotifications([]);

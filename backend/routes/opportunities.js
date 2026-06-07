@@ -400,8 +400,13 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Manual cache bust — admin only (no auth guard needed, just a secret param)
+// Manual cache bust — requires admin Authorization header as basic protection
 router.post('/refresh', (req, res) => {
+  // Simple token check — prevent public cache busting
+  const auth = req.headers.authorization || '';
+  if (process.env.CACHE_BUST_SECRET && auth !== `Bearer ${process.env.CACHE_BUST_SECRET}`) {
+    return res.status(403).json({ ok: false, message: 'Forbidden' });
+  }
   _cache  = null;
   _cacheAt = 0;
   res.json({ ok: true, message: 'Cache cleared — next GET will refresh from sources' });

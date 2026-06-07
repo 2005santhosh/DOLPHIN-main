@@ -51,10 +51,23 @@ router.post('/grant-verified-badge', protect, authorize('admin'), async (req, re
 });
 
 // Get all users (read-only — investors can view but not modify)
+// Paginated to prevent loading thousands of records at once
 router.get('/users', protect, authorize('admin', 'investor'), async (req, res) => {
   try {
-    const users = await User.find().select('-password');
-    res.json(users);
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(100, parseInt(req.query.limit) || 50);
+    const skip  = (page - 1) * limit;
+
+    const [users, total] = await Promise.all([
+      User.find()
+        .select('name email role state stage isVerified verifiedSource verifiedUntil createdAt profilePicture rewardPoints leaderboardScore')
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      User.countDocuments(),
+    ]);
+
+    res.json({ users, total, page, pages: Math.ceil(total / limit) });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }

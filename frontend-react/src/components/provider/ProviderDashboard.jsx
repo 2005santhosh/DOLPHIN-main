@@ -6,6 +6,7 @@ import Sidebar from '../shared/Sidebar';
 import DashboardBottomNav from '../shared/DashboardBottomNav';
 import LoadingSpinner from '../shared/LoadingSpinner';
 import VerifiedPromoModal from '../shared/VerifiedPromoModal';
+import ErrorBoundary from '../shared/ErrorBoundary';
 
 const DashboardPage    = lazy(() => import('./pages/DashboardPage'));
 const ProfilePage      = lazy(() => import('./pages/ProfilePage'));
@@ -211,6 +212,7 @@ export default function ProviderDashboard() {
   };
 
   return (
+    <ErrorBoundary>
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Header
         onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
@@ -292,5 +294,6 @@ export default function ProviderDashboard() {
         ]}
       />
     </div>
+    </ErrorBoundary>
   );
 }

@@ -141,6 +141,7 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
 
         // Fetch posts with Instagram-like sorting (engagement-based)
         const posts = await Post.find(filter)
+            .select('authorId authorName authorRole authorImage content postType tags media mediaCount createdAt likes viewCount')
             .sort({ createdAt: -1 }) // Most recent first (can be enhanced with engagement score)
             .skip(skip)
             .limit(limit)

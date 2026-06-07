@@ -13,45 +13,55 @@ router.post('/send', protect, async (req, res) => {
     return res.status(400).json({ message: 'Missing data' });
   }
 
+  // Sanitise: trim and cap content length
+  const sanitisedContent = (content || '').toString().trim().slice(0, 2000);
+  if (!sanitisedContent) {
+    return res.status(400).json({ message: 'Message content is empty' });
+  }
+
   try {
     const newMessage = await Message.create({
       senderId: req.user.id,
       receiverId,
-      content
+      content: sanitisedContent,
     });
 
     const populatedMsg = await newMessage.populate('senderId', 'name profilePicture');
 
     const io = req.app.get('socketio');
     if (io) {
-      // Emit to RECEIVER
       io.to(`user:${receiverId}`).emit('receiveMessage', populatedMsg);
-      // Emit to SENDER (for other tabs)
       io.to(`user:${req.user.id}`).emit('receiveMessage', populatedMsg);
     }
 
+    // Respond immediately — don't block on email
     res.json(populatedMsg);
-    // Fetch sender and recipient details
-    const sender = await User.findById(req.user.id); // or req.user._id depending on your auth middleware
-    const recipient = await User.findById(receiverId);
 
-    if (recipient && recipient.email) {
+    // Fire-and-forget email notification
+    setImmediate(async () => {
       try {
-        const msgTemplate = getNewMessageEmail(sender.name, content);
-        await sendEmail({
+        const [sender, recipient] = await Promise.all([
+          User.findById(req.user.id).select('name').lean(),
+          User.findById(receiverId).select('email name').lean(),
+        ]);
+        if (recipient?.email && sender?.name) {
+          const msgTemplate = getNewMessageEmail(sender.name, sanitisedContent);
+          await sendEmail({
             email: recipient.email,
             subject: msgTemplate.subject,
-            message: msgTemplate.html
-        });
+            message: msgTemplate.html,
+          });
+        }
       } catch (err) {
-        console.error("Chat email notification failed:", err);
+        console.error('[Chat] Email notification failed:', err.message);
       }
-    }
+    });
 
-    return res.status(201).json(newMessage);
   } catch (err) {
     console.error('Chat Send Error:', err);
-    res.status(500).json({ message: 'Server Error' });
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Server Error' });
+    }
   }
 });
 
@@ -165,22 +175,34 @@ router.get('/conversations', protect, async (req, res) => {
 // ✅ This comes LAST so it doesn't override '/conversations'
 router.get('/:userId', protect, async (req, res) => {
   try {
-    const messages = await Message.find({
+    const limit = Math.min(100, parseInt(req.query.limit) || 50);
+    const before = req.query.before; // cursor-based pagination: before=<timestamp>
+
+    const baseQuery = {
       $or: [
         { senderId: req.user.id, receiverId: req.params.userId },
         { senderId: req.params.userId, receiverId: req.user.id }
       ]
-    })
-    .populate('senderId', 'name profilePicture')
-    .sort({ createdAt: 1 });
+    };
 
-    // Mark as read
-    await Message.updateMany(
+    if (before) {
+      baseQuery.createdAt = { $lt: new Date(before) };
+    }
+
+    const messages = await Message.find(baseQuery)
+      .populate('senderId', 'name profilePicture')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    // Mark as read (fire-and-forget — don't block response)
+    Message.updateMany(
       { receiverId: req.user.id, senderId: req.params.userId, read: false },
       { $set: { read: true } }
-    );
+    ).catch(() => {});
 
-    res.json(messages);
+    // Return in chronological order
+    res.json(messages.reverse());
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server Error' });
