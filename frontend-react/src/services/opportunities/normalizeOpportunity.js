@@ -7,6 +7,21 @@
 let _idCounter = 0;
 const uid = () => `opp_${Date.now()}_${++_idCounter}`;
 
+/** Strip all HTML tags and decode common HTML entities to plain text */
+function stripHtml(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .replace(/<[^>]*>/g, ' ')          // remove all tags
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s{2,}/g, ' ')           // collapse multiple spaces
+    .trim();
+}
+
 /** Clamp ms-since-epoch dates to a readable ISO string */
 function toISO(val) {
   if (!val) return null;
@@ -62,7 +77,7 @@ export function normalizeGreenhouse(job, companyHandle) {
     companyName:      companyHandle,
     companyLogo:      `https://logo.clearbit.com/${companyHandle}.com`,
     description:      job.content || '',
-    shortDescription: (job.content || '').replace(/<[^>]*>/g, '').slice(0, 160),
+    shortDescription: stripHtml(job.content || '').slice(0, 160),
     skills:           tags.slice(0, 5),
     category:         detectCategory(job.title, tags),
     opportunityType:  detectType(job.title, tags),
@@ -107,7 +122,7 @@ export function normalizeLever(job, companyHandle) {
     companyName:      companyHandle,
     companyLogo:      `https://logo.clearbit.com/${companyHandle}.com`,
     description:      job.descriptionPlain || job.description || '',
-    shortDescription: (job.descriptionPlain || job.description || '').slice(0, 160),
+    shortDescription: stripHtml(job.descriptionPlain || job.description || '').slice(0, 160),
     skills:           (job.tags || []).slice(0, 5),
     category:         detectCategory(job.text, job.tags || []),
     opportunityType:  detectType(job.text, job.tags || []),
@@ -149,8 +164,8 @@ export function normalizeArbeitnow(job) {
     title:            job.title || 'Untitled',
     companyName:      job.company_name || 'Company',
     companyLogo:      job.company_logo || null,
-    description:      job.description || '',
-    shortDescription: (job.description || '').replace(/<[^>]*>/g, '').slice(0, 160),
+    description:      stripHtml(job.description || ''),
+    shortDescription: stripHtml(job.description || '').slice(0, 160),
     skills:           tags.slice(0, 5),
     category:         detectCategory(job.title, tags),
     opportunityType:  job.job_types?.[0] || detectType(job.title, tags),
@@ -192,8 +207,8 @@ export function normalizeJobicy(job) {
     title:            job.jobTitle || 'Untitled',
     companyName:      job.companyName || 'Company',
     companyLogo:      job.companyLogo || null,
-    description:      job.jobDescription || '',
-    shortDescription: (job.jobExcerpt || job.jobDescription || '').slice(0, 160),
+    description:      stripHtml(job.jobDescription || ''),
+    shortDescription: stripHtml(job.jobExcerpt || job.jobDescription || '').slice(0, 160),
     skills:           (job.jobIndustry || []).slice(0, 5),
     category:         detectCategory(job.jobTitle, job.jobIndustry || []),
     opportunityType:  'Freelance',

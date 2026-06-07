@@ -359,8 +359,9 @@ function DetailDrawer({ opp, onClose, onApply, onSave, verified }) {
           {/* Description */}
           <div style={{ marginBottom: '1rem' }}>
             <div style={{ fontSize: '0.78rem', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Description</div>
-            <div style={{ fontSize: '0.875rem', color: '#374151', lineHeight: 1.7 }}
-              dangerouslySetInnerHTML={{ __html: opp.description || opp.shortDescription || 'No description available.' }} />
+            <p style={{ fontSize: '0.875rem', color: '#374151', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-line' }}>
+              {opp.description || opp.shortDescription || 'No description available.'}
+            </p>
           </div>
         </div>
 
