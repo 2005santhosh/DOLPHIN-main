@@ -56,14 +56,19 @@ const LoadingScreen = () => (
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { isAuthenticated, user, loading } = useAuth();
 
-  // Still initialising — show spinner
-  if (loading) return <LoadingScreen />;
+  // Show spinner only during initial bootstrap (no stored credentials).
+  // If we have stored credentials (isAuthenticated=true) don't block navigation
+  // even if loading=true — the background profile refresh will correct any issues.
+  if (loading && !isAuthenticated) return <LoadingScreen />;
 
   // Not logged in
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  // Wrong role
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+  // Correct role but user obj not loaded yet — wait briefly
+  if (!user) return <LoadingScreen />;
+
+  // Wrong role — redirect to correct dashboard
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
     const routes = {
       founder: '/dashboard',
       investor: '/investor-dashboard',
@@ -80,7 +85,9 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, user, loading } = useAuth();
 
-  if (loading) return <LoadingScreen />;
+  // Only block on loading if we don't have any auth state yet.
+  // If user has stored credentials, redirect immediately.
+  if (loading && !isAuthenticated) return <LoadingScreen />;
 
   if (isAuthenticated && user) {
     const routes = {

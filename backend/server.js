@@ -409,5 +409,15 @@ process.on('SIGTERM', () => {
     });
   });
 });
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully...');
+  server.close(() => {
+    mongoose.connection.close(false, () => {
+      console.log('MongoDB connection closed');
+      process.exit(0);
+    });
+  });
+});
 console.log("🔥SUCCESSFULLY");
 module.exports = server;

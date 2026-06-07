@@ -81,67 +81,85 @@ router.get('/user/:userId', protect, async (req, res) => {
 });
 
 // @route   GET /api/chat/conversations
-// @desc    Get all conversations — includes connected users even with no messages yet
+// @desc    Get all conversations — efficient aggregation + connected users with no messages
 router.get('/conversations', protect, async (req, res) => {
   try {
     const Connection = require('../models/Connection');
+    const userId = req.user.id;
 
-    // 1. Build conversation map from existing messages
-    const messages = await Message.find({
-      $or: [ { senderId: req.user.id }, { receiverId: req.user.id } ]
-    })
-    .populate('senderId', 'name profilePicture role isVerified verifiedSource verifiedUntil')
-    .populate('receiverId', 'name profilePicture role isVerified verifiedSource verifiedUntil')
-    .sort({ createdAt: -1 });
+    // 1. Aggregate last message per conversation partner — O(messages) but indexed
+    const msgAgg = await Message.aggregate([
+      {
+        $match: {
+          $or: [
+            { senderId: require('mongoose').Types.ObjectId.createFromHexString(userId) },
+            { receiverId: require('mongoose').Types.ObjectId.createFromHexString(userId) },
+          ],
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $eq: ['$senderId', require('mongoose').Types.ObjectId.createFromHexString(userId)] },
+              '$receiverId',
+              '$senderId',
+            ],
+          },
+          lastMessage: { $first: '$content' },
+          updatedAt:   { $first: '$createdAt' },
+        },
+      },
+      { $sort: { updatedAt: -1 } },
+      { $limit: 50 },
+    ]);
 
+    // Collect all partner IDs
+    const partnerIdsFromMsgs = msgAgg.map(m => m._id.toString());
+
+    // 2. Fetch partner user details in one query
+    const partnerUsers = await User.find(
+      { _id: { $in: partnerIdsFromMsgs } },
+      'name profilePicture role isVerified verifiedSource verifiedUntil'
+    ).lean();
+    const userMap = {};
+    partnerUsers.forEach(u => { userMap[u._id.toString()] = u; });
+
+    // Build conversation list from messages
     const conversationsMap = {};
-
-    messages.forEach(msg => {
-      if (!msg.senderId || !msg.receiverId) return;
-
-      const partner = msg.senderId._id.toString() === req.user.id.toString()
-        ? msg.receiverId
-        : msg.senderId;
-
+    msgAgg.forEach(m => {
+      const pid = m._id.toString();
+      const partner = userMap[pid];
       if (!partner) return;
-
-      if (!conversationsMap[partner._id.toString()]) {
-        conversationsMap[partner._id.toString()] = {
-          _id: partner._id,
-          name: partner.name,
-          profilePicture: partner.profilePicture || '',
-          role: partner.role || '',
-          isVerified: partner.isVerified || false,
-          verifiedSource: partner.verifiedSource || null,
-          verifiedUntil: partner.verifiedUntil || null,
-          lastMessage: msg.content,
-          updatedAt: msg.createdAt,
-        };
-      }
+      conversationsMap[pid] = {
+        _id: partner._id,
+        name: partner.name,
+        profilePicture: partner.profilePicture || '',
+        role: partner.role || '',
+        isVerified: partner.isVerified || false,
+        verifiedSource: partner.verifiedSource || null,
+        verifiedUntil: partner.verifiedUntil || null,
+        lastMessage: m.lastMessage,
+        updatedAt: m.updatedAt,
+      };
     });
 
-    // 2. Add connected users who have no messages yet
+    // 3. Add accepted connections with no messages yet
     const connections = await Connection.find({
       status: 'accepted',
-      $or: [
-        { from: req.user.id },
-        { to: req.user.id },
-      ],
+      $or: [{ from: userId }, { to: userId }],
     })
     .populate('from', 'name profilePicture role isVerified verifiedSource verifiedUntil')
     .populate('to', 'name profilePicture role isVerified verifiedSource verifiedUntil')
     .lean();
 
     connections.forEach(conn => {
-      const partner = conn.from?._id?.toString() === req.user.id.toString()
-        ? conn.to
-        : conn.from;
-
-      if (!partner || !partner._id) return;
-
-      const partnerId = partner._id.toString();
-      if (!conversationsMap[partnerId]) {
-        conversationsMap[partnerId] = {
+      const partner = conn.from?._id?.toString() === userId.toString() ? conn.to : conn.from;
+      if (!partner?._id) return;
+      const pid = partner._id.toString();
+      if (!conversationsMap[pid]) {
+        conversationsMap[pid] = {
           _id: partner._id,
           name: partner.name || 'User',
           profilePicture: partner.profilePicture || '',
@@ -155,9 +173,8 @@ router.get('/conversations', protect, async (req, res) => {
       }
     });
 
-    // 3. Sort: conversations with messages first (by updatedAt), then new connections
+    // 4. Sort: conversations with messages first, then by date
     const result = Object.values(conversationsMap).sort((a, b) => {
-      // Conversations with messages come first
       const aHasMsg = !!a.lastMessage;
       const bHasMsg = !!b.lastMessage;
       if (aHasMsg !== bHasMsg) return bHasMsg ? 1 : -1;
