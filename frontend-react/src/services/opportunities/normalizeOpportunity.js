@@ -222,7 +222,7 @@ export function normalizeJobicy(job) {
     sourceUrl:        job.url || 'https://jobicy.com',
     title:            job.jobTitle || 'Untitled',
     companyName:      job.companyName || 'Company',
-    companyLogo:      job.companyLogo || null,
+    companyLogo:      null, // CDN blocked cross-origin
     description:      stripHtml(job.jobDescription || ''),
     shortDescription: stripHtml(job.jobExcerpt || job.jobDescription || '').slice(0, 160),
     skills:           (job.jobIndustry || []).slice(0, 5),

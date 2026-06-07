@@ -7,6 +7,10 @@
  *
  * ── ADD/REMOVE COMPANIES HERE ──────────────────────────────────────────────
  * Find working slugs at: https://jobs.lever.co/{slug}
+ *
+ * REMOVED (use Greenhouse, not Lever):
+ *   airbyte, sourcegraph, posthog, retool, loom, figma, notion
+ *   netlify, miro, dunzo, zepto, swiggy, sharechat, groww, cred-club, meesho
  */
 import { normalizeLever } from './normalizeOpportunity';
 
@@ -15,16 +19,13 @@ export const LEVER_COMPANIES = [
   // India offices or strong India remote hiring
   'freshworks',    // Freshworks — Chennai/Hyderabad
   'razorpay',      // Razorpay — Bangalore
-  'groww',         // Groww — Bangalore
-  'cred-club',     // CRED — Bangalore (slug may be 'cred-club')
-  'meesho',        // Meesho — Bangalore
 
-  // Global remote-friendly
-  'dbt-labs',      // dbt Labs (slug: dbt-labs)
-  'airbyte',       // Airbyte
-  'sourcegraph',   // Sourcegraph — fully remote
-  'posthog',       // PostHog — fully remote
-  'netlify',       // Netlify
+  // Global remote-friendly confirmed on Lever
+  'dbt-labs',      // dbt Labs
+  'hashicorp',     // HashiCorp — remote-first
+  'plaid',         // Plaid
+  'robinhood',     // Robinhood
+  'segment',       // Segment (Twilio)
 ];
 
 export async function fetchLeverJobs(companies = LEVER_COMPANIES) {

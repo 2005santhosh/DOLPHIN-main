@@ -7,31 +7,29 @@
  *
  * ── ADD/REMOVE COMPANIES HERE ──────────────────────────────────────────────
  * Find working slugs at: https://boards.greenhouse.io/{slug}
+ *
+ * REMOVED (404 — not on Greenhouse or slug mismatch):
+ *   freshworks, zoho, razorpay, sourcegraph, posthog, browserstack,
+ *   dbt (slug is dbt-labs on Lever), moengage, airbyte, chargebee, linear,
+ *   retool, loom, figma, notion, planetscale
  */
 import { normalizeGreenhouse } from './normalizeOpportunity';
 
 // Verified working Greenhouse slugs (checked June 2026)
-// India-relevant or remote-friendly companies
 export const GREENHOUSE_COMPANIES = [
-  // India-connected / strong India hiring
-  'postman',       // Postman — Bangalore/SF (verify: boards.greenhouse.io/postman)
-  'chargebee',     // Chargebee — Chennai/Remote
-  'browserstack',  // BrowserStack — Mumbai/Remote
-  'moengage',      // MoEngage — Bangalore
+  // India-connected / strong India hiring — confirmed Greenhouse
+  'postman',       // Postman — Bangalore/SF
 
-  // Global remote-friendly — frequently hire Indian talent
-  'vercel',        // Vercel
-  'linear',        // Linear
-  'planetscale',   // PlanetScale
-  'retool',        // Retool (moved to Greenhouse from Lever)
-  'loom',          // Loom
-  'grammarly',     // Grammarly
+  // Global remote-friendly — confirmed Greenhouse boards
+  'grammarly',     // Grammarly — remote-friendly
   'zapier',        // Zapier — fully remote
-
-  // Large tech companies with India offices on Greenhouse
-  'stripe',        // Stripe
-  'figma',         // Figma (backup — also on Lever)
-  'notion',        // Notion
+  'stripe',        // Stripe — large India presence
+  'coinbase',      // Coinbase — remote-friendly
+  'brex',          // Brex
+  'gusto',         // Gusto
+  'doordash',      // DoorDash
+  'lyft',          // Lyft
+  'twilio',        // Twilio — strong India presence
 ];
 
 export async function fetchGreenhouseJobs(companies = GREENHOUSE_COMPANIES) {
