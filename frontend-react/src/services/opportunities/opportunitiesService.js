@@ -1,97 +1,76 @@
 /**
- * opportunitiesService.js — Aggregates all opportunity sources with India-first ranking.
+ * opportunitiesService.js
  *
- * Sources:
- *   Greenhouse    — Tech companies, India + global remote
- *   Lever         — Tech + product companies, India + global remote
- *   Arbeitnow     — Broad multi-sector international jobs board
- *   Jobicy        — Remote-only jobs worldwide
- *   Adzuna India  — ALL sectors: IT, healthcare, nursing, agriculture, govt, finance
- *                   Requires free API key: VITE_ADZUNA_APP_ID + VITE_ADZUNA_APP_KEY
- *   RemoteOK      — Remote jobs, no key required
- *   Govt RSS      — Indian government job notifications (UPSC, SSC, NHM, Employment News)
+ * All opportunity fetching now goes through the backend proxy at
+ * GET /api/opportunities
  *
- * India-first scoring applied to all results via indiaRelevance.js.
+ * Benefits:
+ *  - Zero CORS errors (server-to-server calls, not browser-to-external)
+ *  - Zero 404 noise (backend silently skips dead slugs)
+ *  - 10-minute server-side cache → 1000+ users all share one cached payload
+ *  - Fast load: single HTTP call instead of 15+ parallel browser fetches
+ *  - No external API keys needed in the browser
  */
-import { fetchGreenhouseJobs } from './greenhouse';
-import { fetchLeverJobs       } from './lever';
-import { fetchArbeitnowJobs   } from './arbeitnow';
-import { fetchJobicyJobs      } from './jobicy';
-import { fetchAdzunaJobs      } from './adzuna';
-import { fetchRemoteOkJobs    } from './remoteok';
-import { fetchGovtRssJobs     } from './govtRss';
-import { MOCK_OPPORTUNITIES   } from './mockData';
-import { applyIndiaFilter     } from './indiaRelevance';
 
-// Cache keyed by option string — clears on each module load (new deploy)
-const _cache = new Map();
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+import { MOCK_OPPORTUNITIES } from './mockData';
+import { applyIndiaFilter    } from './indiaRelevance';
 
-function deduplicateOpportunities(opps) {
-  const seen = new Set();
-  return opps.filter(opp => {
-    const key = [
-      (opp.title || '').toLowerCase().trim(),
-      (opp.companyName || '').toLowerCase().trim(),
-      (opp.location || '').toLowerCase().trim(),
-      (opp.applyUrl || '').trim(),
-    ].join('|');
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
+// Determine backend base URL from env (Vite exposes VITE_ prefixed vars)
+const API_BASE = import.meta.env.VITE_API_URL || 'https://api.dolphinorg.in';
+
+// ── In-browser micro-cache (30 seconds) ─────────────────────────────────────
+// Prevents re-fetching when the user navigates away and back quickly.
+let _localCache = null;
+let _localCacheAt = 0;
+const LOCAL_CACHE_TTL = 30 * 1000; // 30 seconds
 
 export async function fetchAllOpportunities({
   useMockFallback = true,
-  showGlobal      = false,
-  englishOnly     = true,
 } = {}) {
-  const cacheKey = `${showGlobal}_${englishOnly}`;
-  const cached   = _cache.get(cacheKey);
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-    return cached.data;
+  // Serve from local micro-cache if still fresh
+  if (_localCache && (Date.now() - _localCacheAt) < LOCAL_CACHE_TTL) {
+    return _localCache;
   }
 
-  // Fetch all sources in parallel — partial failures are tolerated
-  const [ghResult, lvResult, abResult, jcResult, azResult, roResult, grResult] =
-    await Promise.allSettled([
-      fetchGreenhouseJobs(),
-      fetchLeverJobs(),
-      fetchArbeitnowJobs(),
-      fetchJobicyJobs(),
-      fetchAdzunaJobs(),     // All sectors — requires free Adzuna key
-      fetchRemoteOkJobs(),   // Remote jobs, no key
-      fetchGovtRssJobs(),    // Government RSS notifications
-    ]);
+  try {
+    const res = await fetch(`${API_BASE}/api/opportunities`, {
+      signal: AbortSignal.timeout(20000), // generous — backend does the heavy lifting
+    });
 
-  let allOpps     = [];
-  let anySucceeded = false;
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-  [ghResult, lvResult, abResult, jcResult, azResult, roResult, grResult].forEach(result => {
-    if (result.status === 'fulfilled' && Array.isArray(result.value) && result.value.length > 0) {
-      allOpps = allOpps.concat(result.value);
-      anySucceeded = true;
+    const json = await res.json();
+    const opps = Array.isArray(json.data) ? json.data : [];
+
+    if (opps.length === 0 && useMockFallback) {
+      const fallback = applyIndiaFilter(MOCK_OPPORTUNITIES.map(o => ({ ...o })));
+      _localCache  = fallback;
+      _localCacheAt = Date.now();
+      return fallback;
     }
-  });
 
-  if (!anySucceeded && useMockFallback) {
-    allOpps = MOCK_OPPORTUNITIES.map(o => ({ ...o }));
-  } else if (allOpps.length === 0 && useMockFallback) {
-    allOpps = MOCK_OPPORTUNITIES.map(o => ({ ...o }));
+    // Re-attach client-side state (isSaved/isApplied are stored locally)
+    const withState = opps.map(o => ({
+      ...o,
+      isSaved:   false,
+      isApplied: false,
+    }));
+
+    _localCache  = withState;
+    _localCacheAt = Date.now();
+    return withState;
+
+  } catch (err) {
+    console.warn('[Opportunities] Backend fetch failed, using mock data:', err.message);
+    if (useMockFallback) {
+      const fallback = applyIndiaFilter(MOCK_OPPORTUNITIES.map(o => ({ ...o })));
+      return fallback;
+    }
+    return [];
   }
-
-  const deduped = deduplicateOpportunities(allOpps);
-  const scored  = applyIndiaFilter(deduped, {
-    showGlobal,
-    englishOnly,
-    minScore: showGlobal ? -999 : 1,
-  });
-
-  _cache.set(cacheKey, { data: scored, fetchedAt: Date.now() });
-  return scored;
 }
 
 export function clearOpportunitiesCache() {
-  _cache.clear();
+  _localCache  = null;
+  _localCacheAt = 0;
 }
