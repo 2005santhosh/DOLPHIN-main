@@ -15,6 +15,7 @@ const RequestsPage     = lazy(() => import('./pages/RequestsPage'));
 const ChatPage         = lazy(() => import('../founder/pages/ChatPage'));
 const SettingsPage     = lazy(() => import('../founder/pages/SettingsPage'));
 const GamificationPage = lazy(() => import('../shared/GamificationPage'));
+const OpportunitiesPage = lazy(() => import('./pages/OpportunitiesPage'));
 
 export default function ProviderDashboard() {
   const { user } = useAuth();
@@ -70,18 +71,18 @@ export default function ProviderDashboard() {
     return new URLSearchParams(query).get('userId') || null;
   };
 
-  // Sidebar items for provider
   const sidebarItems = [
     {
       section: 'Main',
       items: [
-        { path: '#dashboard',    icon: 'home',         label: 'Dashboard' },
-        { path: '#profile',      icon: 'profile',      label: 'Profile' },
-        { path: '#founders',     icon: 'users',        label: 'Founders' },
-        { path: '#posts',        icon: 'posts',        label: 'Posts' },
-        { path: '#requests',     icon: 'requests',     label: 'Requests', badge: requestsCount },
-        { path: '#chat',         icon: 'chat',         label: 'Chat', badge: chatCount },
-        { path: '#gamification', icon: 'gamification', label: 'Streaks & Rewards' },
+        { path: '#dashboard',      icon: 'home',         label: 'Dashboard' },
+        { path: '#profile',        icon: 'profile',      label: 'Profile' },
+        { path: '#founders',       icon: 'users',        label: 'Founders' },
+        { path: '#opportunities',  icon: 'briefcase',    label: 'Opportunities' },
+        { path: '#posts',          icon: 'posts',        label: 'Posts' },
+        { path: '#requests',       icon: 'requests',     label: 'Requests', badge: requestsCount },
+        { path: '#chat',           icon: 'chat',         label: 'Chat', badge: chatCount },
+        { path: '#gamification',   icon: 'gamification', label: 'Streaks & Rewards' },
       ]
     },
     {
@@ -111,6 +112,8 @@ export default function ProviderDashboard() {
         return <ChatPage {...pageProps} setChatCount={setChatCount} openUserId={getOpenUserId()} />;
       case 'settings':
         return <SettingsPage />;
+      case 'opportunities':
+        return <OpportunitiesPage user={user} />;
       case 'gamification':
         return <GamificationPage />;
       default:
