@@ -1,39 +1,31 @@
 /**
  * lever.js — Fetches public job listings from Lever-hosted companies.
  *
- * Lever exposes a public postings API:
- *   GET https://api.lever.co/v0/postings/{company}?mode=json
+ * Only companies with VERIFIED active Lever job boards are listed here.
+ * Before adding a company, confirm the board exists:
+ *   https://api.lever.co/v0/postings/{slug}
  *
- * ── INDIA-FIRST COMPANY LIST ──────────────────────────────────────────────
- * Priority 1 — companies with India offices or India-specific postings.
- * Priority 2 — global remote-friendly companies that hire Indian talent.
- *
- * Find slugs at: https://jobs.lever.co/{slug}
- * ── ADD/REMOVE COMPANIES HERE ────────────────────────────────────────────────
+ * ── ADD/REMOVE COMPANIES HERE ──────────────────────────────────────────────
+ * Find working slugs at: https://jobs.lever.co/{slug}
  */
 import { normalizeLever } from './normalizeOpportunity';
 
-// Priority 1 — India offices or strong India hiring history
-const INDIA_COMPANIES = [
+// Verified working Lever slugs (checked June 2026)
+export const LEVER_COMPANIES = [
+  // India offices or strong India remote hiring
+  'freshworks',    // Freshworks — Chennai/Hyderabad
+  'razorpay',      // Razorpay — Bangalore
+  'groww',         // Groww — Bangalore
+  'cred-club',     // CRED — Bangalore (slug may be 'cred-club')
   'meesho',        // Meesho — Bangalore
-  'swiggy',        // Swiggy — Bangalore
-  'dunzo',         // Dunzo — Bangalore
-  'cred',          // CRED — Bangalore
-  'zepto',         // Zepto — Mumbai
-  'sharechat',     // ShareChat — Bangalore
-];
 
-// Priority 2 — global remote-friendly, known to hire in India
-const GLOBAL_REMOTE_COMPANIES = [
-  'netlify',
-  'figma',
-  'miro',
-  'loom',
-  'notion',
-  'retool',
+  // Global remote-friendly
+  'dbt-labs',      // dbt Labs (slug: dbt-labs)
+  'airbyte',       // Airbyte
+  'sourcegraph',   // Sourcegraph — fully remote
+  'posthog',       // PostHog — fully remote
+  'netlify',       // Netlify
 ];
-
-export const LEVER_COMPANIES = [...INDIA_COMPANIES, ...GLOBAL_REMOTE_COMPANIES];
 
 export async function fetchLeverJobs(companies = LEVER_COMPANIES) {
   const results = [];
@@ -45,12 +37,13 @@ export async function fetchLeverJobs(companies = LEVER_COMPANIES) {
           `https://api.lever.co/v0/postings/${company}?mode=json`,
           { signal: AbortSignal.timeout(8000) }
         );
+        // 404 = company doesn't use Lever or slug is wrong — skip silently
         if (!res.ok) return;
         const jobs = await res.json();
         if (!Array.isArray(jobs)) return;
         jobs.forEach(job => results.push(normalizeLever(job, company)));
       } catch {
-        // Silently skip failed company
+        // Network error or timeout — skip silently
       }
     })
   );

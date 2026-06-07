@@ -81,7 +81,7 @@ export function normalizeGreenhouse(job, companyHandle) {
     sourceUrl:        job.absolute_url || `https://jobs.greenhouse.io/${companyHandle}`,
     title:            job.title || 'Untitled',
     companyName:      companyHandle,
-    companyLogo:      `https://logo.clearbit.com/${companyHandle}.com`,
+    companyLogo:      null, // Clearbit blocked cross-origin,
     description:      stripHtml(job.content || ''),
     shortDescription: stripHtml(job.content || '').slice(0, 160),
     skills:           tags.slice(0, 5),
@@ -126,7 +126,7 @@ export function normalizeLever(job, companyHandle) {
     sourceUrl:        job.hostedUrl || `https://jobs.lever.co/${companyHandle}`,
     title:            job.text || 'Untitled',
     companyName:      companyHandle,
-    companyLogo:      `https://logo.clearbit.com/${companyHandle}.com`,
+    companyLogo:      null, // Clearbit blocked cross-origin,
     description:      stripHtml(job.descriptionPlain || job.description || ''),
     shortDescription: stripHtml(job.descriptionPlain || job.description || '').slice(0, 160),
     skills:           (job.tags || []).slice(0, 5),
@@ -169,7 +169,7 @@ export function normalizeArbeitnow(job) {
     sourceUrl:        job.url || 'https://www.arbeitnow.com',
     title:            job.title || 'Untitled',
     companyName:      job.company_name || 'Company',
-    companyLogo:      job.company_logo || null,
+    companyLogo:      null, // blocked cross-origin
     description:      stripHtml(job.description || ''),
     shortDescription: stripHtml(job.description || '').slice(0, 160),
     skills:           tags.slice(0, 5),
@@ -276,9 +276,7 @@ export function normalizeAdzuna(job, searchTerm) {
     sourceUrl:        job.redirect_url || 'https://www.adzuna.in',
     title:            job.title || 'Untitled',
     companyName:      job.company?.display_name || 'Company',
-    companyLogo:      job.company?.display_name
-      ? `https://logo.clearbit.com/${job.company.display_name.toLowerCase().replace(/\s+/g, '')}.com`
-      : null,
+    companyLogo:      null, // Skip logo fetch — CORS blocked in browser
     description:      stripHtml(job.description || ''),
     shortDescription: stripHtml(job.description || '').slice(0, 160),
     skills:           tags.slice(0, 5),
@@ -324,7 +322,7 @@ export function normalizeRemoteOk(job) {
     sourceUrl:        job.url || 'https://remoteok.com',
     title:            job.position || 'Untitled',
     companyName:      job.company || 'Company',
-    companyLogo:      job.company_logo || null,
+    companyLogo:      null, // blocked cross-origin
     description:      stripHtml(job.description || ''),
     shortDescription: stripHtml(job.description || '').slice(0, 160),
     skills:           tags,
