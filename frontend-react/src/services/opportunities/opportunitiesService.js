@@ -29,6 +29,7 @@ import { MOCK_OPPORTUNITIES   } from './mockData';
 import { applyIndiaFilter     } from './indiaRelevance';
 
 // Simple in-memory cache: keyed by option string → { data, fetchedAt }
+// Cleared on module load so stale pre-deploy data never survives a redeployment.
 const _cache = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 

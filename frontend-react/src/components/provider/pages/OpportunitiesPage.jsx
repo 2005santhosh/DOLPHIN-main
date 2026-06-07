@@ -545,7 +545,9 @@ export default function OpportunitiesPage({ user }) {
     return () => clearTimeout(searchTimer.current);
   }, [search]);
 
-  // Fetch — re-runs when showGlobal or englishOnly changes
+  // Fetch — re-runs when showGlobal or englishOnly changes.
+  // clearOpportunitiesCache() is called first to ensure we never show
+  // stale cached data that might still contain raw HTML from a previous session.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
