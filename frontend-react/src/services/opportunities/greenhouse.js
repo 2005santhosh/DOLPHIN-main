@@ -4,20 +4,41 @@
  * Greenhouse exposes a public API for any company that uses their ATS:
  *   GET https://api.greenhouse.io/v1/boards/{company}/jobs?content=true
  *
- * ── ADD/REMOVE COMPANIES HERE ──────────────────────────────────────────────
- * Replace or extend this array with any Greenhouse company slug.
+ * ── INDIA-FIRST COMPANY LIST ──────────────────────────────────────────────
+ * Priority 1 — Companies known to hire in India:
+ *   Companies with India offices that post India-based or India-eligible remote roles.
+ *
+ * Priority 2 — Global remote-friendly companies that commonly hire Indian talent.
+ *
  * Find slugs at: https://boards.greenhouse.io/{slug}
+ * ── ADD/REMOVE COMPANIES HERE ────────────────────────────────────────────────
  */
 import { normalizeGreenhouse } from './normalizeOpportunity';
 
-const GREENHOUSE_COMPANIES = [
+// Priority 1 — companies with India offices or India-specific postings
+const INDIA_COMPANIES = [
+  'freshworks',    // Freshworks — Chennai/Hyderabad HQ
+  'zoho',          // Zoho Corp — Chennai HQ
+  'razorpay',      // Razorpay — Bangalore
+  'groww',         // Groww — Bangalore
+  'moengage',      // MoEngage — Bangalore
+  'browserstack',  // BrowserStack — Mumbai/Remote
+  'postman',       // Postman — Bangalore/San Francisco
+  'chargebee',     // Chargebee — Chennai/Remote
+];
+
+// Priority 2 — global companies that actively hire Indian talent remotely
+const GLOBAL_REMOTE_COMPANIES = [
   'airbyte',
   'sourcegraph',
   'posthog',
-  'linear',
-  'dbt',
   'vercel',
+  'dbt',
+  'linear',
 ];
+
+// All companies: India-first, then global
+export const GREENHOUSE_COMPANIES = [...INDIA_COMPANIES, ...GLOBAL_REMOTE_COMPANIES];
 
 export async function fetchGreenhouseJobs(companies = GREENHOUSE_COMPANIES) {
   const results = [];

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { fetchAllOpportunities } from '../../../services/opportunities/opportunitiesService';
+import { fetchAllOpportunities, clearOpportunitiesCache } from '../../../services/opportunities/opportunitiesService';
 import PageHeader from '../../shared/PageHeader';
 import Card from '../../shared/Card';
 import LoadingSpinner from '../../shared/LoadingSpinner';
@@ -490,7 +490,7 @@ function FiltersPanel({ filters, onChange, onClear, isMobile, onClose }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 const TABS = ['All', 'Recommended', 'Saved', 'Applied', 'Verified Only'];
-const SORT_OPTIONS = ['Newest first', 'Oldest first', 'Highest budget', 'Lowest budget', 'Most relevant'];
+const SORT_OPTIONS = ['Most Relevant', 'Newest first', 'Oldest first', 'Highest budget', 'Lowest budget'];
 
 const DEFAULT_FILTERS = { types: [], modes: [], levels: [], categories: [], dateRange: '' };
 
@@ -508,19 +508,22 @@ function matchesDateRange(postedAt, range) {
 
 export default function OpportunitiesPage({ user }) {
   const [opportunities, setOpportunities] = useState([]);
-  const [saved, setSaved]         = useState(new Set()); // Set of opp ids
+  const [saved, setSaved]         = useState(new Set());
   const [applied, setApplied]     = useState(new Set());
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
   const [search, setSearch]       = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeTab, setActiveTab] = useState('All');
-  const [sort, setSort]           = useState('Newest first');
+  const [sort, setSort]           = useState('Most Relevant');
   const [filters, setFilters]     = useState(DEFAULT_FILTERS);
+  // India-first defaults
+  const [showGlobal, setShowGlobal]   = useState(false);
+  const [englishOnly, setEnglishOnly] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [isMobile, setIsMobile]   = useState(window.innerWidth < 768);
-  const [viewOpp, setViewOpp]     = useState(null);   // detail drawer
-  const [applyOpp, setApplyOpp]   = useState(null);   // apply modal
+  const [viewOpp, setViewOpp]     = useState(null);
+  const [applyOpp, setApplyOpp]   = useState(null);
   const [showVerifModal, setShowVerifModal] = useState(false);
   const [pendingApply, setPendingApply]     = useState(null);
 
@@ -541,16 +544,17 @@ export default function OpportunitiesPage({ user }) {
     return () => clearTimeout(searchTimer.current);
   }, [search]);
 
-  // Fetch
+  // Fetch — re-runs when showGlobal or englishOnly changes
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError('');
-    fetchAllOpportunities()
+    clearOpportunitiesCache();
+    fetchAllOpportunities({ showGlobal, englishOnly })
       .then(data => { if (!cancelled) { setOpportunities(data); setLoading(false); } })
       .catch(() => { if (!cancelled) { setError('Failed to load opportunities. Showing demo data.'); setLoading(false); } });
     return () => { cancelled = true; };
-  }, []);
+  }, [showGlobal, englishOnly]);
 
   const filterChange = useCallback((field, val) => {
     setFilters(f => ({ ...f, [field]: val }));
@@ -596,9 +600,11 @@ export default function OpportunitiesPage({ user }) {
     }
 
     // Sort
+    if (sort === 'Newest first')    list = [...list].sort((a, b) => new Date(b.postedAt) - new Date(a.postedAt));
     if (sort === 'Oldest first')    list = [...list].sort((a, b) => new Date(a.postedAt) - new Date(b.postedAt));
     if (sort === 'Highest budget')  list = [...list].sort((a, b) => (b.budgetMax || b.budgetMin || 0) - (a.budgetMax || a.budgetMin || 0));
     if (sort === 'Lowest budget')   list = [...list].sort((a, b) => (a.budgetMin || 0) - (b.budgetMin || 0));
+    // 'Most Relevant' keeps the order from the service (relevanceScore DESC already applied)
 
     return list;
   }, [opportunities, saved, applied, activeTab, filters, debouncedSearch, sort]);
@@ -705,6 +711,42 @@ export default function OpportunitiesPage({ user }) {
 
         {/* Results */}
         <div style={{ flex: 1, minWidth: 0 }}>
+          {/* India-first banner + global toggle */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            flexWrap: 'wrap', gap: '0.5rem',
+            background: showGlobal ? '#F9FAFB' : '#F0FDF4',
+            border: `1px solid ${showGlobal ? '#E5E7EB' : '#BBF7D0'}`,
+            borderRadius: 10, padding: '0.5rem 0.875rem', marginBottom: '0.875rem',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.8rem' }}>🇮🇳</span>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: showGlobal ? '#6B7280' : '#166534' }}>
+                {showGlobal ? 'Showing all global opportunities' : 'Showing India-first opportunities'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* English only toggle */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.78rem', color: '#6B7280' }}>
+                <input
+                  type="checkbox" checked={englishOnly}
+                  onChange={e => setEnglishOnly(e.target.checked)}
+                  style={{ accentColor: '#84CC16', width: 14, height: 14, cursor: 'pointer' }}
+                />
+                English only
+              </label>
+              {/* Show global toggle */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.78rem', color: '#6B7280' }}>
+                <input
+                  type="checkbox" checked={showGlobal}
+                  onChange={e => setShowGlobal(e.target.checked)}
+                  style={{ accentColor: '#84CC16', width: 14, height: 14, cursor: 'pointer' }}
+                />
+                Show global
+              </label>
+            </div>
+          </div>
+
           {/* Count */}
           {!loading && (
             <div style={{ fontSize: '0.82rem', color: '#9CA3AF', marginBottom: '0.875rem' }}>

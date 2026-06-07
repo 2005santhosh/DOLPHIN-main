@@ -1,14 +1,22 @@
 /**
- * opportunitiesService.js — Aggregates all opportunity sources.
+ * opportunitiesService.js — Aggregates all opportunity sources with India-first ranking.
  *
  * Usage:
  *   import { fetchAllOpportunities } from '../services/opportunities/opportunitiesService';
- *   const jobs = await fetchAllOpportunities();
+ *   const jobs = await fetchAllOpportunities({ showGlobal: false, englishOnly: true });
+ *
+ * India-first logic:
+ *   - Every job gets a relevanceScore via scoreOpportunity()
+ *   - India-located jobs score 100+
+ *   - Remote-eligible jobs score 60+
+ *   - Non-English jobs are filtered out when englishOnly=true
+ *   - Foreign non-remote jobs are filtered out when showGlobal=false
+ *   - Results are sorted: relevanceScore DESC, then postedAt DESC
  *
  * To add a new source:
- *   1. Create a new file in this folder (e.g. remoteok.js)
- *   2. Export an async fetchXxxJobs() function that returns normalized opportunities
- *   3. Add it to the fetchers array below
+ *   1. Create a connector file (e.g. remoteok.js)
+ *   2. Export async fetchXxxJobs() → normalized opportunities[]
+ *   3. Add to the fetchers array below
  *
  * To move fetching to your backend later:
  *   Replace each fetchXxx() call with a call to your own API endpoint.
@@ -18,9 +26,10 @@ import { fetchLeverJobs       } from './lever';
 import { fetchArbeitnowJobs   } from './arbeitnow';
 import { fetchJobicyJobs      } from './jobicy';
 import { MOCK_OPPORTUNITIES   } from './mockData';
+import { applyIndiaFilter     } from './indiaRelevance';
 
-// Simple in-memory cache: { data, fetchedAt }
-let _cache = null;
+// Simple in-memory cache: keyed by option string → { data, fetchedAt }
+const _cache = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 /** Deduplicate by title+company+location+applyUrl */
@@ -39,51 +48,70 @@ function deduplicateOpportunities(opps) {
   });
 }
 
-export async function fetchAllOpportunities({ useMockFallback = true } = {}) {
+/**
+ * Fetch, merge, deduplicate, score, filter, and sort all opportunities.
+ *
+ * @param {object}  opts
+ * @param {boolean} opts.useMockFallback  — use mock data when all APIs fail
+ * @param {boolean} opts.showGlobal       — include non-India, non-remote jobs
+ * @param {boolean} opts.englishOnly      — exclude likely non-English listings
+ * @returns {Promise<object[]>}           — scored + sorted opportunities
+ */
+export async function fetchAllOpportunities({
+  useMockFallback = true,
+  showGlobal      = false,
+  englishOnly     = true,
+} = {}) {
+  const cacheKey = `${showGlobal}_${englishOnly}`;
+
   // Return cached data if fresh
-  if (_cache && Date.now() - _cache.fetchedAt < CACHE_TTL_MS) {
-    return _cache.data;
+  const cached = _cache.get(cacheKey);
+  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+    return cached.data;
   }
 
-  const fetchers = [
+  // Fetch all sources in parallel — partial failures are tolerated
+  const [ghResult, lvResult, abResult, jcResult] = await Promise.allSettled([
     fetchGreenhouseJobs(),
     fetchLeverJobs(),
-    fetchArbeitnowJobs(),
-    fetchJobicyJobs(),
-  ];
-
-  const results = await Promise.allSettled(fetchers);
+    fetchArbeitnowJobs(),   // Secondary — global feed, lower India relevance
+    fetchJobicyJobs(),      // Secondary — remote-only, moderate India relevance
+  ]);
 
   let allOpps = [];
   let anySucceeded = false;
 
-  results.forEach(result => {
-    if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+  [ghResult, lvResult, abResult, jcResult].forEach(result => {
+    if (result.status === 'fulfilled' && Array.isArray(result.value) && result.value.length > 0) {
       allOpps = allOpps.concat(result.value);
-      if (result.value.length > 0) anySucceeded = true;
+      anySucceeded = true;
     }
   });
 
-  // Fall back to mock data if all APIs failed or returned nothing
+  // Fall back to mock data when all APIs failed or returned nothing
   if (!anySucceeded && useMockFallback) {
     allOpps = MOCK_OPPORTUNITIES.map(o => ({ ...o }));
   } else if (allOpps.length === 0 && useMockFallback) {
     allOpps = MOCK_OPPORTUNITIES.map(o => ({ ...o }));
   }
 
-  // Deduplicate and sort newest first
+  // Deduplicate first
   const deduped = deduplicateOpportunities(allOpps);
-  deduped.sort((a, b) => {
-    const da = a.postedAt ? new Date(a.postedAt) : new Date(0);
-    const db = b.postedAt ? new Date(b.postedAt) : new Date(0);
-    return db - da;
+
+  // Apply India-first scoring, filtering, and sorting
+  // minScore: 0 means any job with some India relevance (remote jobs pass);
+  //           jobs scoring below 0 (foreign, non-remote) are hidden unless showGlobal=true
+  const scored = applyIndiaFilter(deduped, {
+    showGlobal,
+    englishOnly,
+    minScore: showGlobal ? -999 : 1, // score >= 1 means at least remote-eligible
   });
 
-  _cache = { data: deduped, fetchedAt: Date.now() };
-  return deduped;
+  _cache.set(cacheKey, { data: scored, fetchedAt: Date.now() });
+  return scored;
 }
 
-/** Clear cache (call after user saves/applies to an opportunity) */
+/** Clear cache — call when user saves/applies, or when filters change */
 export function clearOpportunitiesCache() {
-  _cache = null;
+  _cache.clear();
 }
