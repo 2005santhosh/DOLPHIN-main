@@ -65,6 +65,7 @@ const CATEGORIES = ['All', 'Web Development', 'Mobile Development', 'UI/UX', 'Gr
 const TYPES      = ['Freelance', 'Internship', 'Contract', 'Part-time', 'Full-time'];
 const MODES      = ['Remote', 'Hybrid', 'On-site'];
 const LEVELS     = ['Beginner', 'Intermediate', 'Expert'];
+const SECTORS    = ['Private', 'Government'];
 const DATE_OPTIONS = ['Any time', 'Today', 'Last 3 days', 'Last 7 days', 'Last 30 days'];
 
 // ── OpportunityCard ────────────────────────────────────────────────────────────
@@ -451,6 +452,7 @@ function FiltersPanel({ filters, onChange, onClear, isMobile, onClose }) {
         </div>
       )}
       <F label="Opportunity Type" options={TYPES} field="types" />
+      <F label="Sector" options={SECTORS} field="sectors" />
       <F label="Work Mode" options={MODES} field="modes" />
       <F label="Experience Level" options={LEVELS} field="levels" />
       <F label="Category" options={CATEGORIES.slice(1)} field="categories" />
@@ -503,7 +505,7 @@ function FiltersPanel({ filters, onChange, onClear, isMobile, onClose }) {
 const TABS = ['All', 'Recommended', 'Saved', 'Applied', 'Verified Only'];
 const SORT_OPTIONS = ['Most Relevant', 'Newest first', 'Oldest first', 'Highest budget', 'Lowest budget'];
 
-const DEFAULT_FILTERS = { types: [], modes: [], levels: [], categories: [], dateRange: '' };
+const DEFAULT_FILTERS = { types: [], modes: [], levels: [], categories: [], sectors: [], dateRange: '' };
 
 function matchesDateRange(postedAt, range) {
   if (!range || range === 'Any time') return true;
@@ -576,7 +578,7 @@ export default function OpportunitiesPage({ user }) {
   const clearFilters = useCallback(() => setFilters(DEFAULT_FILTERS), []);
 
   const activeFilterCount = useMemo(() => {
-    return filters.types.length + filters.modes.length + filters.levels.length + filters.categories.length + (filters.dateRange ? 1 : 0);
+    return filters.types.length + filters.sectors.length + filters.modes.length + filters.levels.length + filters.categories.length + (filters.dateRange ? 1 : 0);
   }, [filters]);
 
   // Computed list
@@ -595,6 +597,7 @@ export default function OpportunitiesPage({ user }) {
 
     // Filters
     if (filters.types.length)      list = list.filter(o => filters.types.includes(o.opportunityType));
+    if (filters.sectors.length)    list = list.filter(o => filters.sectors.includes(o.sector || 'Private'));
     if (filters.modes.length)      list = list.filter(o => filters.modes.includes(o.workMode));
     if (filters.levels.length)     list = list.filter(o => filters.levels.includes(o.experienceLevel));
     if (filters.categories.length) list = list.filter(o => filters.categories.includes(o.category));
@@ -698,13 +701,14 @@ export default function OpportunitiesPage({ user }) {
         {/* Active filter chips */}
         {activeFilterCount > 0 && (
           <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', paddingTop: '0.625rem' }}>
-            {[...filters.types, ...filters.modes, ...filters.levels, ...filters.categories, ...(filters.dateRange ? [filters.dateRange] : [])].map(chip => (
+            {[...filters.types, ...filters.sectors, ...filters.modes, ...filters.levels, ...filters.categories, ...(filters.dateRange ? [filters.dateRange] : [])].map(chip => (
               <span key={chip} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', borderRadius: 9999, fontSize: '0.75rem', fontWeight: 600 }}>
                 {chip}
                 <button onClick={() => {
-                  if (filters.types.includes(chip)) filterChange('types', filters.types.filter(v => v !== chip));
-                  else if (filters.modes.includes(chip)) filterChange('modes', filters.modes.filter(v => v !== chip));
-                  else if (filters.levels.includes(chip)) filterChange('levels', filters.levels.filter(v => v !== chip));
+                  if (filters.types.includes(chip))           filterChange('types',      filters.types.filter(v => v !== chip));
+                  else if (filters.sectors.includes(chip))    filterChange('sectors',    filters.sectors.filter(v => v !== chip));
+                  else if (filters.modes.includes(chip))      filterChange('modes',      filters.modes.filter(v => v !== chip));
+                  else if (filters.levels.includes(chip))     filterChange('levels',     filters.levels.filter(v => v !== chip));
                   else if (filters.categories.includes(chip)) filterChange('categories', filters.categories.filter(v => v !== chip));
                   else filterChange('dateRange', '');
                 }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#16A34A', lineHeight: 1, fontSize: '0.9rem', padding: 0 }}>×</button>

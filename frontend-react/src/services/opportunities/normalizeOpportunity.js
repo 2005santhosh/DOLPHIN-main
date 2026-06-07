@@ -28,7 +28,14 @@ function toISO(val) {
   try { return new Date(val).toISOString(); } catch { return null; }
 }
 
-/** Best-effort type detector */
+/** Detect sector: 'Government' or 'Private' */
+function detectSector(title = '', companyName = '', tags = [], sourceName = '') {
+  const t = (title + ' ' + companyName + ' ' + tags.join(' ') + ' ' + sourceName).toLowerCase();
+  if (t.match(/government|govt|upsc|ssc|psc|ias|ips|defence|army|navy|air force|police|railway|municipal|public sector|employment news|sarkari|nhm|icar|central government|state government/)) {
+    return 'Government';
+  }
+  return 'Private';
+}
 function detectType(title = '', tags = []) {
   const t = (title + ' ' + tags.join(' ')).toLowerCase();
   if (t.includes('intern')) return 'Internship';
@@ -92,6 +99,7 @@ export function normalizeGreenhouse(job, companyHandle) {
     location:         job.location?.name || 'Remote',
     country:          '',
     city:             job.location?.name || '',
+    sector:           detectSector(job.title, companyHandle, tags, 'Greenhouse'),
     budgetMin:        null,
     budgetMax:        null,
     stipend:          null,
@@ -137,6 +145,7 @@ export function normalizeLever(job, companyHandle) {
     location:         job.categories?.location || job.categories?.allLocations?.[0] || 'Remote',
     country:          '',
     city:             job.categories?.location || '',
+    sector:           detectSector(job.text, companyHandle, job.tags || [], 'Lever'),
     budgetMin:        null,
     budgetMax:        null,
     stipend:          null,
@@ -180,6 +189,7 @@ export function normalizeArbeitnow(job) {
     location:         job.location || 'Remote',
     country:          '',
     city:             job.location || '',
+    sector:           detectSector(job.title, job.company_name || '', tags, 'Arbeitnow'),
     budgetMin:        null,
     budgetMax:        null,
     stipend:          null,
@@ -223,6 +233,7 @@ export function normalizeJobicy(job) {
     location:         'Remote',
     country:          job.jobGeo || '',
     city:             '',
+    sector:           'Private',
     budgetMin:        job.annualSalaryMin ? Math.round(job.annualSalaryMin / 12) : null,
     budgetMax:        job.annualSalaryMax ? Math.round(job.annualSalaryMax / 12) : null,
     stipend:          null,
@@ -290,6 +301,7 @@ export function normalizeAdzuna(job, searchTerm) {
     location:         loc,
     country:          'IN',
     city,
+    sector:           detectSector(job.title, job.company?.display_name || '', tags, 'Adzuna'),
     budgetMin:        salMin,
     budgetMax:        salMax,
     stipend:          null,
@@ -333,6 +345,7 @@ export function normalizeRemoteOk(job) {
     location:         'Remote (Worldwide)',
     country:          '',
     city:             '',
+    sector:           'Private',
     budgetMin:        job.salary_min || null,
     budgetMax:        job.salary_max || null,
     stipend:          null,
@@ -387,6 +400,7 @@ export function normalizeGovtRss(item, sourceName, sector) {
     location:         'India',
     country:          'IN',
     city:             '',
+    sector:           'Government',
     budgetMin:        null,
     budgetMax:        null,
     stipend:          null,
