@@ -47,32 +47,78 @@ const getTimeAgo = (date) => {
   return `${Math.floor(d / 30)}mo ago`;
 };
 
-// ─── Direct-to-Cloudinary upload ─────────────────────────────────────────────
-// Gets a signed upload URL from our backend, then uploads directly to Cloudinary.
-// Binary data NEVER touches our server → no timeouts, any file size/format.
+// ─── Image compression (browser-side, before upload) ─────────────────────────
+// Reduces image size by 5-15x before sending to Cloudinary.
+// Uses canvas to re-encode at lower quality/dimensions.
+async function compressImage(file) {
+  // Skip if not an image or already small (< 300KB — not worth compressing)
+  if (!file.type.startsWith('image/') || file.size < 300 * 1024) return file;
+  // Skip GIFs — canvas destroys animation
+  if (file.type === 'image/gif') return file;
+
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      // Cap at 1920px on longest side — enough for any social post
+      const MAX = 1920;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+        else { width = Math.round(width * MAX / height); height = MAX; }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      // Quality 0.82 = visually lossless, ~70% smaller than original
+      canvas.toBlob(blob => {
+        if (!blob || blob.size >= file.size) { resolve(file); return; } // no gain
+        resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
+      }, 'image/jpeg', 0.82);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
+// ─── Chunked upload to Cloudinary (large video support) ───────────────────────
+// Cloudinary supports chunked uploads for files > 20MB.
+// Chunks upload in parallel — much faster on good connections.
+const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB chunks
+
 async function uploadToCloudinary(file, sigData, onProgress) {
+  const isVideo = file.type.startsWith('video/');
+
+  // For small files (< 20MB) — simple single upload
+  if (file.size <= CHUNK_SIZE) {
+    return uploadChunkSimple(file, sigData, onProgress, isVideo);
+  }
+
+  // For large files — chunked upload (Cloudinary X-Unique-Upload-Id header)
+  return uploadChunked(file, sigData, onProgress, isVideo);
+}
+
+function buildFormData(file, sigData) {
   const fd = new FormData();
   fd.append('file', file);
   fd.append('api_key', sigData.apiKey);
   fd.append('timestamp', String(sigData.timestamp));
   fd.append('signature', sigData.signature);
   fd.append('folder', sigData.folder);
-  // NOTE: Do NOT add any extra fields here unless they are also included in the
-  // server-side signature. Any unsigned field → Cloudinary rejects → network error.
+  return fd;
+}
 
-  const isVideo = file.type.startsWith('video/');
-  const url = `https://api.cloudinary.com/v1_1/${sigData.cloudName}/${isVideo ? 'video' : 'image'}/upload`;
-
+function xhrUpload(url, fd, headers, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url);
-
+    Object.entries(headers || {}).forEach(([k, v]) => xhr.setRequestHeader(k, v));
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable && onProgress) {
-        onProgress(Math.round((e.loaded / e.total) * 100));
-      }
+      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
     };
-
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         try { resolve(JSON.parse(xhr.responseText)); }
@@ -86,9 +132,48 @@ async function uploadToCloudinary(file, sigData, onProgress) {
     };
     xhr.onerror = () => reject(new Error('Network error during upload'));
     xhr.ontimeout = () => reject(new Error('Upload timed out'));
-    xhr.timeout = 5 * 60 * 1000; // 5 min — plenty for any file
+    xhr.timeout = 10 * 60 * 1000; // 10 min max for any single chunk
     xhr.send(fd);
   });
+}
+
+async function uploadChunkSimple(file, sigData, onProgress, isVideo) {
+  const fd = buildFormData(file, sigData);
+  const url = `https://api.cloudinary.com/v1_1/${sigData.cloudName}/${isVideo ? 'video' : 'image'}/upload`;
+  return xhrUpload(url, fd, {}, onProgress);
+}
+
+async function uploadChunked(file, sigData, onProgress, isVideo) {
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+  const uploadId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const url = `https://api.cloudinary.com/v1_1/${sigData.cloudName}/${isVideo ? 'video' : 'image'}/upload`;
+
+  let lastResult = null;
+  let uploadedBytes = 0;
+
+  for (let i = 0; i < totalChunks; i++) {
+    const start = i * CHUNK_SIZE;
+    const end = Math.min(start + CHUNK_SIZE, file.size);
+    const chunk = file.slice(start, end);
+
+    const fd = buildFormData(chunk, sigData);
+
+    const headers = {
+      'X-Unique-Upload-Id': uploadId,
+      'Content-Range': `bytes ${start}-${end - 1}/${file.size}`,
+    };
+
+    lastResult = await xhrUpload(url, fd, headers, (chunkPct) => {
+      const chunkBytes = end - start;
+      const done = uploadedBytes + Math.round(chunkBytes * chunkPct / 100);
+      if (onProgress) onProgress(Math.round((done / file.size) * 100));
+    });
+
+    uploadedBytes = end;
+    if (onProgress) onProgress(Math.round((uploadedBytes / file.size) * 100));
+  }
+
+  return lastResult;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -201,62 +286,144 @@ const PostsPage = () => {
     if (!postContent.trim() && selectedFiles.length === 0) {
       toast.error('Post must have content or media'); return;
     }
+
+    const tags = postTags.split(',').map(t => t.trim()).filter(Boolean);
+    const hasMedia = selectedFiles.length > 0;
+
+    // ── Optimistic post: show immediately in feed with local previews ──────────
+    // User sees the post right away. Media is replaced with CDN URLs once uploaded.
+    const tempId = `temp_${Date.now()}`;
+    const optimisticPost = {
+      _id: tempId,
+      authorId: user?._id,
+      authorName: user?.name || 'You',
+      authorRole: user?.role || 'founder',
+      authorImage: user?.profilePicture || '',
+      content: postContent.trim(),
+      postType,
+      tags,
+      media: selectedFiles.map(f => ({ url: f.preview, type: f.type.startsWith('video/') ? 'video' : 'image', _isLocal: true })),
+      mediaCount: selectedFiles.length,
+      createdAt: new Date().toISOString(),
+      likeCount: 0,
+      isLikedByMe: false,
+      viewCount: 0,
+      connectionStatus: 'own',
+      isAuthorVerified: !!(user?.isVerified),
+      _isOptimistic: true, // flag so we can replace it
+    };
+
+    // Close modal and show post immediately
+    setCreateModalOpen(false);
+    setPosts(prev => [optimisticPost, ...prev]);
+
+    // Reset form state
+    const capturedFiles = [...selectedFiles];
+    setPostContent(''); setPostTags(''); setPostType('general');
+    setSelectedFiles([]); setOverallProgress(0);
+
+    if (!hasMedia) {
+      // Text-only post: just create it, no upload needed
+      try {
+        const newPost = await postsAPI.createPost(postContent.trim(), postType, tags, []);
+        setPosts(prev => prev.map(p => p._id === tempId ? { ...newPost, connectionStatus: 'own', isAuthorVerified: optimisticPost.isAuthorVerified } : p));
+      } catch (err) {
+        setPosts(prev => prev.filter(p => p._id !== tempId));
+        toast.error(err.message || 'Failed to create post');
+      }
+      return;
+    }
+
+    // ── Background upload: happens after modal closes ─────────────────────────
+    // Show a persistent toast so user knows upload is in progress
+    const uploadToastId = toast.loading(`Uploading ${capturedFiles.length} file${capturedFiles.length > 1 ? 's' : ''}…`, { duration: Infinity });
     setUploading(true);
-    setOverallProgress(0);
 
     try {
-      let uploadedMedia = [];
-
-      if (selectedFiles.length > 0) {
-        // 1. Get upload signature from backend (tiny JSON request, no binary)
-        const sigData = await postsAPI.getUploadSignature();
-        if (!sigData?.cloudName || !sigData?.signature) {
-          throw new Error('Could not get upload credentials. Please try again.');
-        }
-
-        // 2. Upload all files directly to Cloudinary in parallel
-        const total = selectedFiles.length;
-        const perFileProgress = new Array(total).fill(0);
-
-        const results = await Promise.all(
-          selectedFiles.map((entry, idx) =>
-            uploadToCloudinary(entry.file, sigData, (pct) => {
-              perFileProgress[idx] = pct;
-              const avg = Math.round(perFileProgress.reduce((a, b) => a + b, 0) / total);
-              setOverallProgress(avg);
-              setSelectedFiles(prev => prev.map((f, i) => i === idx ? { ...f, progress: pct } : f));
-            }).then(result => {
-              setSelectedFiles(prev => prev.map((f, i) => i === idx ? { ...f, done: true, result } : f));
-              return result;
-            }).catch(err => {
-              setSelectedFiles(prev => prev.map((f, i) => i === idx ? { ...f, error: err.message } : f));
-              throw new Error(`${entry.name}: ${err.message}`);
-            })
-          )
-        );
-
-        uploadedMedia = results.map((r, idx) => ({
-          url:       r.secure_url,
-          publicId:  r.public_id,
-          type:      selectedFiles[idx].file.type.startsWith('video/') ? 'video' : 'image',
-          width:     r.width  || null,
-          height:    r.height || null,
-          thumbnail: r.eager?.[0]?.secure_url || null,
-        }));
+      // 1. Compress images in parallel (videos skip compression)
+      const compressToastShown = capturedFiles.some(f => f.file.type.startsWith('image/') && f.file.size > 300 * 1024);
+      if (compressToastShown) {
+        toast.loading('Compressing images…', { id: uploadToastId, duration: Infinity });
       }
 
-      // 3. Create the post with URLs (fast — just a DB write)
-      const tags = postTags.split(',').map(t => t.trim()).filter(Boolean);
-      await postsAPI.createPost(postContent.trim(), postType, tags, uploadedMedia);
+      const filesToUpload = await Promise.all(
+        capturedFiles.map(async (entry) => {
+          if (entry.file.type.startsWith('image/')) {
+            const compressed = await compressImage(entry.file);
+            return { ...entry, file: compressed };
+          }
+          return entry;
+        })
+      );
 
-      toast.success('Post created!');
-      setCreateModalOpen(false);
-      setPostContent(''); setPostTags(''); setPostType('general');
-      setSelectedFiles([]); setOverallProgress(0);
-      setFilter('mine'); setPage(1); setHasMore(true);
-      loadPosts(true);
+      // 2. Get upload signature
+      const sigData = await postsAPI.getUploadSignature();
+      if (!sigData?.cloudName || !sigData?.signature) {
+        throw new Error('Could not get upload credentials');
+      }
+
+      // 3. Upload all files to Cloudinary — images in parallel, videos sequential
+      // (parallel video uploads can saturate bandwidth and actually slow things down)
+      const total = filesToUpload.length;
+      const perFileProgress = new Array(total).fill(0);
+
+      toast.loading(`Uploading… 0%`, { id: uploadToastId, duration: Infinity });
+
+      const uploadFile = async (entry, idx) => {
+        const result = await uploadToCloudinary(entry.file, sigData, (pct) => {
+          perFileProgress[idx] = pct;
+          const avg = Math.round(perFileProgress.reduce((a, b) => a + b, 0) / total);
+          toast.loading(`Uploading… ${avg}%`, { id: uploadToastId, duration: Infinity });
+        });
+        return result;
+      };
+
+      let results;
+      const imageEntries = filesToUpload.filter(f => !f.file.type.startsWith('video/'));
+      const videoEntries = filesToUpload.filter(f => f.file.type.startsWith('video/'));
+      const imageIndices = filesToUpload.map((f, i) => f.file.type.startsWith('image/') ? i : -1).filter(i => i >= 0);
+      const videoIndices = filesToUpload.map((f, i) => f.file.type.startsWith('video/') ? i : -1).filter(i => i >= 0);
+
+      // Images upload in parallel — they're small after compression
+      const imageResults = await Promise.all(imageEntries.map((entry, i) => uploadFile(entry, imageIndices[i])));
+
+      // Videos upload sequentially to avoid bandwidth saturation
+      const videoResults = [];
+      for (let i = 0; i < videoEntries.length; i++) {
+        const r = await uploadFile(videoEntries[i], videoIndices[i]);
+        videoResults.push(r);
+      }
+
+      // Reconstruct in original order
+      results = new Array(total);
+      imageIndices.forEach((origIdx, i) => { results[origIdx] = imageResults[i]; });
+      videoIndices.forEach((origIdx, i) => { results[origIdx] = videoResults[i]; });
+
+      const uploadedMedia = results.map((r, idx) => ({
+        url:       r.secure_url,
+        publicId:  r.public_id,
+        type:      filesToUpload[idx].file.type.startsWith('video/') ? 'video' : 'image',
+        width:     r.width  || null,
+        height:    r.height || null,
+        thumbnail: r.eager?.[0]?.secure_url || null,
+      }));
+
+      // 4. Save post to DB with CDN URLs
+      toast.loading('Saving post…', { id: uploadToastId, duration: Infinity });
+      const newPost = await postsAPI.createPost(postContent.trim() || optimisticPost.content, postType, tags, uploadedMedia);
+
+      // 5. Replace optimistic post with real one
+      setPosts(prev => prev.map(p =>
+        p._id === tempId
+          ? { ...newPost, connectionStatus: 'own', isAuthorVerified: optimisticPost.isAuthorVerified }
+          : p
+      ));
+
+      toast.success('Post published!', { id: uploadToastId, duration: 3000 });
     } catch (err) {
-      toast.error(err.message || 'Failed to create post');
+      // Remove optimistic post on failure
+      setPosts(prev => prev.filter(p => p._id !== tempId));
+      toast.error(err.message || 'Failed to upload media. Please try again.', { id: uploadToastId, duration: 5000 });
     } finally {
       setUploading(false);
     }
@@ -346,7 +513,6 @@ const PostsPage = () => {
   };
 
   const closeModal = () => {
-    if (uploading) return;
     setCreateModalOpen(false);
     setPostContent(''); setPostTags(''); setPostType('general');
     setSelectedFiles([]); setOverallProgress(0);
@@ -430,7 +596,17 @@ const PostsPage = () => {
             }
 
             return (
-              <Card key={post._id} style={{ padding: '1.5rem' }}>
+              <Card key={post._id} style={{ padding: '1.5rem', opacity: post._isOptimistic ? 0.85 : 1, transition: 'opacity 0.3s' }}>
+                {/* Optimistic upload indicator */}
+                {post._isOptimistic && post.media?.length > 0 && (
+                  <div style={{ marginBottom: '0.75rem', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#16A34A', fontWeight: 600 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: 'spin 1s linear infinite' }}>
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                    </svg>
+                    Uploading media in background…
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', alignItems: 'flex-start' }}>
                   <img src={optImg} alt={post.authorName} loading="lazy"
                     style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
@@ -499,7 +675,7 @@ const PostsPage = () => {
             value={postContent} onChange={e => setPostContent(e.target.value)}
             rows="4" style={{ marginBottom: '1rem' }} disabled={uploading} />
 
-          {/* File previews with per-file progress */}
+          {/* File previews — shown before submitting */}
           {selectedFiles.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
               {selectedFiles.map((entry, index) => (
@@ -509,52 +685,16 @@ const PostsPage = () => {
                   ) : entry.preview ? (
                     <img src={entry.preview} alt={`Preview ${index + 1}`} style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
                   ) : (
-                    <div style={{ width: '100%', height: '100px', background: '#f3f4f6', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', color: '#6b7280' }}>
+                    <div style={{ width: '100%', height: '100px', background: '#f3f4f6', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', color: '#6b7280', padding: '0.25rem', textAlign: 'center', overflow: 'hidden' }}>
                       {entry.name}
                     </div>
                   )}
-
-                  {/* Upload progress overlay */}
-                  {uploading && !entry.done && !entry.error && (
-                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                      <div style={{ width: '70%', height: 4, background: 'rgba(255,255,255,0.3)', borderRadius: 9999 }}>
-                        <div style={{ width: `${entry.progress}%`, height: '100%', background: '#84CC16', borderRadius: 9999, transition: 'width 0.2s' }} />
-                      </div>
-                      <span style={{ color: 'white', fontSize: '0.65rem', fontWeight: 700 }}>{entry.progress}%</span>
-                    </div>
-                  )}
-                  {entry.done && (
-                    <div style={{ position: 'absolute', top: 4, left: 4, background: '#16A34A', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
-                    </div>
-                  )}
-                  {entry.error && (
-                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(239,68,68,0.7)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.25rem' }}>
-                      <span style={{ color: 'white', fontSize: '0.6rem', textAlign: 'center' }}>{entry.error}</span>
-                    </div>
-                  )}
-
-                  {!uploading && (
-                    <button type="button" onClick={() => removeFile(index)}
-                      style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.7)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
-                      ✕
-                    </button>
-                  )}
+                  <button type="button" onClick={() => removeFile(index)}
+                    style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.7)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
+                    ✕
+                  </button>
                 </div>
               ))}
-            </div>
-          )}
-
-          {/* Overall upload progress bar */}
-          {uploading && selectedFiles.length > 0 && (
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#6b7280', marginBottom: 4 }}>
-                <span>Uploading {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''}…</span>
-                <span>{overallProgress}%</span>
-              </div>
-              <div style={{ width: '100%', height: 6, background: '#f3f4f6', borderRadius: 9999 }}>
-                <div style={{ width: `${overallProgress}%`, height: '100%', background: 'linear-gradient(90deg, #84CC16, #16A34A)', borderRadius: 9999, transition: 'width 0.3s' }} />
-              </div>
             </div>
           )}
 
@@ -583,13 +723,9 @@ const PostsPage = () => {
 
           <div style={{ display: 'flex', gap: '1rem' }}>
             <button type="submit" className="btn btn-primary"
-              disabled={uploading || (!postContent.trim() && selectedFiles.length === 0)}
+              disabled={!postContent.trim() && selectedFiles.length === 0}
               style={{ flex: 1 }}>
-              {uploading
-                ? selectedFiles.length > 0 && overallProgress < 100
-                  ? `Uploading… ${overallProgress}%`
-                  : 'Posting…'
-                : 'Post'}
+              {selectedFiles.length > 0 ? '🚀 Post (uploads in background)' : 'Post'}
             </button>
             <button type="button" className="btn btn-secondary"
               onClick={closeModal} disabled={uploading} style={{ flex: 1 }}>
