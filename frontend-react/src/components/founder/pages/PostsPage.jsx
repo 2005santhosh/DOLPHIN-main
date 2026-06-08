@@ -54,10 +54,11 @@ async function uploadToCloudinary(file, sigData, onProgress) {
   const fd = new FormData();
   fd.append('file', file);
   fd.append('api_key', sigData.apiKey);
-  fd.append('timestamp', sigData.timestamp);
+  fd.append('timestamp', String(sigData.timestamp));
   fd.append('signature', sigData.signature);
   fd.append('folder', sigData.folder);
-  fd.append('context', `user_id=${sigData.userId || ''}`);
+  // NOTE: Do NOT add any extra fields here unless they are also included in the
+  // server-side signature. Any unsigned field → Cloudinary rejects → network error.
 
   const isVideo = file.type.startsWith('video/');
   const url = `https://api.cloudinary.com/v1_1/${sigData.cloudName}/${isVideo ? 'video' : 'image'}/upload`;
@@ -207,17 +208,11 @@ const PostsPage = () => {
       let uploadedMedia = [];
 
       if (selectedFiles.length > 0) {
-        // 1. Get upload signature from backend (one round trip, no binary data)
-        const sigRes = await fetch(
-          `${import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '')}/api/posts/upload-signature`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token') || ''}`,
-            },
-          }
-        );
-        if (!sigRes.ok) throw new Error('Could not get upload credentials');
-        const sigData = await sigRes.json();
+        // 1. Get upload signature from backend (tiny JSON request, no binary)
+        const sigData = await postsAPI.getUploadSignature();
+        if (!sigData?.cloudName || !sigData?.signature) {
+          throw new Error('Could not get upload credentials. Please try again.');
+        }
 
         // 2. Upload all files directly to Cloudinary in parallel
         const total = selectedFiles.length;

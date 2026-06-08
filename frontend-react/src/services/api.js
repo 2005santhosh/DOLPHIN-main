@@ -84,6 +84,9 @@ export const postsAPI = {
   getFeed: async (filter = 'all', page = 1, limit = 20) =>
     dedupGet('/posts/feed', { params: { filter, page, limit } }),
 
+  // Get a Cloudinary-signed upload credential (no binary data sent to our server)
+  getUploadSignature: async () => api.get('/posts/upload-signature'),
+
   createPost: async (content, postType, tags, uploadedMedia = []) => {
     // Media files are already uploaded to Cloudinary directly from the browser.
     // We only send the resulting URLs/metadata as JSON — no binary data through our server.

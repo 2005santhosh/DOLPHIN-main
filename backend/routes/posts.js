@@ -19,21 +19,14 @@ const uploadLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 30 });
 // Cloudinary (browser → CDN). No binary data passes through our server.
 router.get('/upload-signature', protect, async (req, res) => {
     try {
+        const crypto = require('crypto');
         const timestamp = Math.round(Date.now() / 1000);
         const folder = 'dolphin-posts';
-        const paramsToSign = {
-            folder,
-            timestamp,
-            context: `user_id=${req.user._id}`,
-        };
 
-        // Build the string to sign (sorted key=value pairs)
-        const str = Object.keys(paramsToSign)
-            .sort()
-            .map(k => `${k}=${paramsToSign[k]}`)
-            .join('&') + process.env.CLOUDINARY_API_SECRET;
-
-        const crypto = require('crypto');
+        // CRITICAL: Only sign exactly the params you send in the XHR FormData.
+        // Any unsigned param sent to Cloudinary → "Invalid Signature" → network error.
+        // We only send folder + timestamp, nothing else.
+        const str = `folder=${folder}&timestamp=${timestamp}${process.env.CLOUDINARY_API_SECRET}`;
         const signature = crypto.createHash('sha256').update(str).digest('hex');
 
         res.json({
