@@ -84,20 +84,65 @@ async function compressImage(file) {
   });
 }
 
+// ─── Format helpers for speed/ETA display ────────────────────────────────────
+function fmtSpeed(bps) {
+  if (bps <= 0) return '—';
+  if (bps >= 1024 * 1024) return `${(bps / (1024 * 1024)).toFixed(1)} MB/s`;
+  if (bps >= 1024) return `${(bps / 1024).toFixed(0)} KB/s`;
+  return `${bps.toFixed(0)} B/s`;
+}
+
+function fmtEta(seconds) {
+  if (!isFinite(seconds) || seconds <= 0) return null;
+  if (seconds < 60) return `~${Math.ceil(seconds)}s left`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.ceil(seconds % 60);
+  return `~${m}m ${s}s left`;
+}
+
+function fmtBytes(bytes) {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${bytes} B`;
+}
+
+// ─── Speed tracker (rolling 3-second window) ─────────────────────────────────
+// Returns { speedBps, etaSec } given current loaded/total bytes.
+function makeSpeedTracker(totalBytes) {
+  // Sliding window: store [{ t, loaded }] for the last 3 seconds
+  const window = [];
+  const WINDOW_MS = 3000;
+
+  return function track(loadedBytes) {
+    const now = Date.now();
+    window.push({ t: now, loaded: loadedBytes });
+
+    // Prune entries older than WINDOW_MS
+    while (window.length > 1 && now - window[0].t > WINDOW_MS) window.shift();
+
+    if (window.length < 2) return { speedBps: 0, etaSec: Infinity };
+
+    const oldest = window[0];
+    const elapsed = (now - oldest.t) / 1000; // seconds
+    if (elapsed <= 0) return { speedBps: 0, etaSec: Infinity };
+
+    const bytesDelta = loadedBytes - oldest.loaded;
+    const speedBps = bytesDelta / elapsed;
+    const remaining = totalBytes - loadedBytes;
+    const etaSec = speedBps > 0 ? remaining / speedBps : Infinity;
+
+    return { speedBps, etaSec };
+  };
+}
+
 // ─── Chunked upload to Cloudinary (large video support) ───────────────────────
-// Cloudinary supports chunked uploads for files > 20MB.
-// Chunks upload in parallel — much faster on good connections.
 const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB chunks
 
 async function uploadToCloudinary(file, sigData, onProgress) {
   const isVideo = file.type.startsWith('video/');
-
-  // For small files (< 20MB) — simple single upload
   if (file.size <= CHUNK_SIZE) {
     return uploadChunkSimple(file, sigData, onProgress, isVideo);
   }
-
-  // For large files — chunked upload (Cloudinary X-Unique-Upload-Id header)
   return uploadChunked(file, sigData, onProgress, isVideo);
 }
 
@@ -111,13 +156,14 @@ function buildFormData(file, sigData) {
   return fd;
 }
 
+// onProgress(loadedBytes, totalBytes) — passes raw bytes for speed calculation
 function xhrUpload(url, fd, headers, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url);
     Object.entries(headers || {}).forEach(([k, v]) => xhr.setRequestHeader(k, v));
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+      if (e.lengthComputable && onProgress) onProgress(e.loaded, e.total);
     };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
@@ -132,7 +178,7 @@ function xhrUpload(url, fd, headers, onProgress) {
     };
     xhr.onerror = () => reject(new Error('Network error during upload'));
     xhr.ontimeout = () => reject(new Error('Upload timed out'));
-    xhr.timeout = 10 * 60 * 1000; // 10 min max for any single chunk
+    xhr.timeout = 10 * 60 * 1000;
     xhr.send(fd);
   });
 }
@@ -155,22 +201,19 @@ async function uploadChunked(file, sigData, onProgress, isVideo) {
     const start = i * CHUNK_SIZE;
     const end = Math.min(start + CHUNK_SIZE, file.size);
     const chunk = file.slice(start, end);
-
     const fd = buildFormData(chunk, sigData);
-
     const headers = {
       'X-Unique-Upload-Id': uploadId,
       'Content-Range': `bytes ${start}-${end - 1}/${file.size}`,
     };
 
-    lastResult = await xhrUpload(url, fd, headers, (chunkPct) => {
-      const chunkBytes = end - start;
-      const done = uploadedBytes + Math.round(chunkBytes * chunkPct / 100);
-      if (onProgress) onProgress(Math.round((done / file.size) * 100));
+    lastResult = await xhrUpload(url, fd, headers, (chunkLoaded, chunkTotal) => {
+      const totalLoaded = uploadedBytes + chunkLoaded;
+      if (onProgress) onProgress(totalLoaded, file.size);
     });
 
     uploadedBytes = end;
-    if (onProgress) onProgress(Math.round((uploadedBytes / file.size) * 100));
+    if (onProgress) onProgress(uploadedBytes, file.size);
   }
 
   return lastResult;
@@ -363,18 +406,55 @@ const PostsPage = () => {
       }
 
       // 3. Upload all files to Cloudinary — images in parallel, videos sequential
-      // (parallel video uploads can saturate bandwidth and actually slow things down)
       const total = filesToUpload.length;
-      const perFileProgress = new Array(total).fill(0);
+      const totalBytes = filesToUpload.reduce((s, e) => s + e.file.size, 0);
+      const perFileLoaded = new Array(total).fill(0);
 
-      toast.loading(`Uploading… 0%`, { id: uploadToastId, duration: Infinity });
+      // One shared speed tracker across all files
+      const tracker = makeSpeedTracker(totalBytes);
+
+      // Throttle toast updates to max once per 300ms to avoid UI spam
+      let lastToastUpdate = 0;
+      const updateToast = (forceMsg) => {
+        const now = Date.now();
+        if (!forceMsg && now - lastToastUpdate < 300) return;
+        lastToastUpdate = now;
+
+        const totalLoaded = perFileLoaded.reduce((a, b) => a + b, 0);
+        const pct = Math.round((totalLoaded / totalBytes) * 100);
+        const { speedBps, etaSec } = tracker(totalLoaded);
+
+        const speed = fmtSpeed(speedBps);
+        const eta   = fmtEta(etaSec);
+        const done  = fmtBytes(totalLoaded);
+        const tot   = fmtBytes(totalBytes);
+
+        const line1 = `Uploading ${total} file${total > 1 ? 's' : ''}… ${pct}%`;
+        const line2 = [speed !== '—' ? `🚀 ${speed}` : null, eta].filter(Boolean).join('  •  ');
+        const line3 = `${done} / ${tot}`;
+
+        toast.loading(
+          <div style={{ lineHeight: 1.6 }}>
+            <div style={{ fontWeight: 700, marginBottom: 2 }}>{line1}</div>
+            <div style={{ width: '100%', height: 4, background: 'rgba(0,0,0,0.1)', borderRadius: 9999, marginBottom: 3 }}>
+              <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg,#84CC16,#16A34A)', borderRadius: 9999, transition: 'width 0.3s' }} />
+            </div>
+            {line2 ? <div style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 600 }}>{line2}</div> : null}
+            <div style={{ fontSize: '0.72rem', color: '#9CA3AF' }}>{line3}</div>
+          </div>,
+          { id: uploadToastId, duration: Infinity }
+        );
+      };
+
+      updateToast(true); // show immediately at 0%
 
       const uploadFile = async (entry, idx) => {
-        const result = await uploadToCloudinary(entry.file, sigData, (pct) => {
-          perFileProgress[idx] = pct;
-          const avg = Math.round(perFileProgress.reduce((a, b) => a + b, 0) / total);
-          toast.loading(`Uploading… ${avg}%`, { id: uploadToastId, duration: Infinity });
+        const result = await uploadToCloudinary(entry.file, sigData, (loaded, _total) => {
+          perFileLoaded[idx] = loaded;
+          updateToast(false);
         });
+        perFileLoaded[idx] = entry.file.size; // mark 100% for this file
+        updateToast(false);
         return result;
       };
 
