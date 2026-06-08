@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import PageHeader from '../../shared/PageHeader';
 import Card from '../../shared/Card';
 import Modal from '../../shared/Modal';
@@ -11,54 +11,20 @@ import { Edit3, Heart, Eye, MessageCircle, Image } from '../../shared/Icons';
 import VerifiedBadge from '../../shared/VerifiedBadge';
 
 // ─── Post type config per role ────────────────────────────────────────────────
-
 const POST_TYPES_BY_ROLE = {
-  founder: [
-    { value: 'general',          label: 'General' },
-    { value: 'service_needed',   label: 'Need Service' },
-    { value: 'funding_needed',   label: 'Need Investment' },
-  ],
-  provider: [
-    { value: 'general',          label: 'General' },
-    { value: 'offering_service', label: 'Offer Service' },
-  ],
-  investor: [
-    { value: 'general',          label: 'General' },
-    { value: 'offering_funding', label: 'Offer Investment' },
-  ],
-  admin: [
-    { value: 'general',          label: 'General' },
-  ],
+  founder:  [{ value: 'general', label: 'General' }, { value: 'service_needed', label: 'Need Service' }, { value: 'funding_needed', label: 'Need Investment' }],
+  provider: [{ value: 'general', label: 'General' }, { value: 'offering_service', label: 'Offer Service' }],
+  investor: [{ value: 'general', label: 'General' }, { value: 'offering_funding', label: 'Offer Investment' }],
+  admin:    [{ value: 'general', label: 'General' }],
 };
 
-// Feed filter tabs per role (what the user wants to see in the feed)
 const FEED_FILTERS_BY_ROLE = {
-  founder: [
-    { value: 'all',              label: 'All Posts' },
-    { value: 'offering_service', label: 'Offer Service' },
-    { value: 'offering_funding', label: 'Offer Investment' },
-    { value: 'general',          label: 'General' },
-    { value: 'mine',             label: 'My Posts' },
-  ],
-  provider: [
-    { value: 'all',              label: 'All Posts' },
-    { value: 'service_needed',   label: 'Need Service' },
-    { value: 'general',          label: 'General' },
-    { value: 'mine',             label: 'My Posts' },
-  ],
-  investor: [
-    { value: 'all',              label: 'All Posts' },
-    { value: 'funding_needed',   label: 'Need Investment' },
-    { value: 'general',          label: 'General' },
-    { value: 'mine',             label: 'My Posts' },
-  ],
-  admin: [
-    { value: 'all',              label: 'All Posts' },
-    { value: 'mine',             label: 'My Posts' },
-  ],
+  founder:  [{ value: 'all', label: 'All Posts' }, { value: 'offering_service', label: 'Offer Service' }, { value: 'offering_funding', label: 'Offer Investment' }, { value: 'general', label: 'General' }, { value: 'mine', label: 'My Posts' }],
+  provider: [{ value: 'all', label: 'All Posts' }, { value: 'service_needed', label: 'Need Service' }, { value: 'general', label: 'General' }, { value: 'mine', label: 'My Posts' }],
+  investor: [{ value: 'all', label: 'All Posts' }, { value: 'funding_needed', label: 'Need Investment' }, { value: 'general', label: 'General' }, { value: 'mine', label: 'My Posts' }],
+  admin:    [{ value: 'all', label: 'All Posts' }, { value: 'mine', label: 'My Posts' }],
 };
 
-// Badge styles for each post type
 const POST_TYPE_BADGE = {
   general:          { bg: '#F3F4F6', color: '#374151', border: '#E5E7EB', text: 'General' },
   service_needed:   { bg: '#FEF2F2', color: '#DC2626', border: '#FECACA', text: 'Need Service' },
@@ -69,19 +35,8 @@ const POST_TYPE_BADGE = {
 
 const getPostTypeBadge = (postType) => {
   const s = POST_TYPE_BADGE[postType] || POST_TYPE_BADGE.general;
-  return (
-    <span style={{
-      background: s.bg, color: s.color,
-      border: `1px solid ${s.border}`,
-      padding: '4px 10px', borderRadius: '20px',
-      fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap',
-    }}>
-      {s.text}
-    </span>
-  );
+  return <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>{s.text}</span>;
 };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const getTimeAgo = (date) => {
   const s = Math.floor((new Date() - new Date(date)) / 1000);
@@ -92,39 +47,79 @@ const getTimeAgo = (date) => {
   return `${Math.floor(d / 30)}mo ago`;
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Direct-to-Cloudinary upload ─────────────────────────────────────────────
+// Gets a signed upload URL from our backend, then uploads directly to Cloudinary.
+// Binary data NEVER touches our server → no timeouts, any file size/format.
+async function uploadToCloudinary(file, sigData, onProgress) {
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('api_key', sigData.apiKey);
+  fd.append('timestamp', sigData.timestamp);
+  fd.append('signature', sigData.signature);
+  fd.append('folder', sigData.folder);
+  fd.append('context', `user_id=${sigData.userId || ''}`);
 
+  const isVideo = file.type.startsWith('video/');
+  const url = `https://api.cloudinary.com/v1_1/${sigData.cloudName}/${isVideo ? 'video' : 'image'}/upload`;
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch { reject(new Error('Invalid Cloudinary response')); }
+      } else {
+        try {
+          const err = JSON.parse(xhr.responseText);
+          reject(new Error(err?.error?.message || `Upload failed (${xhr.status})`));
+        } catch { reject(new Error(`Upload failed (${xhr.status})`)); }
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.ontimeout = () => reject(new Error('Upload timed out'));
+    xhr.timeout = 5 * 60 * 1000; // 5 min — plenty for any file
+    xhr.send(fd);
+  });
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 const PostsPage = () => {
   const { user } = useAuth();
   const role = user?.role || 'founder';
+  const postTypes   = POST_TYPES_BY_ROLE[role]  || POST_TYPES_BY_ROLE.founder;
+  const feedFilters = FEED_FILTERS_BY_ROLE[role] || FEED_FILTERS_BY_ROLE.founder;
 
-  const postTypes   = POST_TYPES_BY_ROLE[role]   || POST_TYPES_BY_ROLE.founder;
-  const feedFilters = FEED_FILTERS_BY_ROLE[role]  || FEED_FILTERS_BY_ROLE.founder;
+  const [posts, setPosts]       = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [hasMore, setHasMore]   = useState(true);
+  const [page, setPage]         = useState(1);
+  const [filter, setFilter]     = useState('all');
 
-  const [posts, setPosts]           = useState([]);
-  const [loading, setLoading]       = useState(false);
-  const [hasMore, setHasMore]       = useState(true);
-  const [page, setPage]             = useState(1);
-  const [filter, setFilter]         = useState('all');
-
-  // Create modal
+  // Create modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [postContent, setPostContent]         = useState('');
-  const [postType, setPostType]               = useState('general'); // default: general
+  const [postType, setPostType]               = useState('general');
   const [postTags, setPostTags]               = useState('');
-  const [selectedMediaFiles, setSelectedMediaFiles] = useState([]);
-  const [mediaPreview, setMediaPreview]       = useState([]);
+  const [selectedFiles, setSelectedFiles]     = useState([]); // { file, preview, progress, done, result }
   const [uploading, setUploading]             = useState(false);
+  const [overallProgress, setOverallProgress] = useState(0);
 
   const [stateLocks, setStateLocks] = useState({});
   const [reelsOpen, setReelsOpen]   = useState(false);
   const [reelsStartIndex, setReelsStartIndex] = useState(0);
-
   const observerTarget = useRef(null);
-  const MAX_FILES = 10;
-  const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
-  useEffect(() => { loadPosts(true); }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
+  const MAX_FILES = 10;
+
+  useEffect(() => { loadPosts(true); }, [filter]); // eslint-disable-line
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -133,7 +128,7 @@ const PostsPage = () => {
     );
     if (observerTarget.current) observer.observe(observerTarget.current);
     return () => observer.disconnect();
-  }, [hasMore, loading, page]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hasMore, loading, page]); // eslint-disable-line
 
   const loadPosts = async (reset = false) => {
     if (loading && !reset) return;
@@ -148,55 +143,121 @@ const PostsPage = () => {
       newPosts.forEach(post => {
         if (post.authorId !== user?._id) postsAPI.trackView(post._id).catch(() => {});
       });
-    } catch {
-      toast.error('Failed to load posts');
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error('Failed to load posts'); }
+    finally { setLoading(false); }
   };
 
   const loadMorePosts = () => { if (!loading && hasMore) loadPosts(false); };
 
+  // Accept literally any image or video format
   const handleMediaSelect = (e) => {
     const files = Array.from(e.target.files);
-    if (selectedMediaFiles.length + files.length > MAX_FILES) {
-      toast.error(`Maximum ${MAX_FILES} files allowed`); return;
+    const remaining = MAX_FILES - selectedFiles.length;
+    if (files.length > remaining) {
+      toast.error(`Maximum ${MAX_FILES} files allowed. Adding first ${remaining}.`);
     }
-    const valid = [];
-    for (const f of files) {
-      if (f.size > MAX_FILE_SIZE) { toast.error(`${f.name} too large (max 100MB)`); continue; }
+    const toAdd = files.slice(0, remaining).filter(f => {
       if (!f.type.startsWith('image/') && !f.type.startsWith('video/')) {
-        toast.error(`${f.name} is not a valid image or video`); continue;
+        toast.error(`${f.name}: unsupported format — images and videos only`);
+        return false;
       }
-      valid.push(f);
-    }
-    setSelectedMediaFiles(prev => [...prev, ...valid]);
-    valid.forEach(f => {
-      const reader = new FileReader();
-      reader.onloadend = () => setMediaPreview(prev => [...prev, { url: reader.result, type: f.type, name: f.name }]);
-      reader.readAsDataURL(f);
+      return true;
     });
+
+    const newEntries = toAdd.map(file => ({
+      file,
+      name: file.name,
+      type: file.type,
+      progress: 0,
+      done: false,
+      error: null,
+      result: null,
+      preview: null,
+    }));
+
+    // Generate previews
+    newEntries.forEach((entry, i) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedFiles(prev => prev.map((f, idx) =>
+          // find the matching entry by reference (stable after slice)
+          f.file === entry.file ? { ...f, preview: reader.result } : f
+        ));
+      };
+      reader.readAsDataURL(entry.file);
+    });
+
+    setSelectedFiles(prev => [...prev, ...newEntries]);
     e.target.value = '';
   };
 
-  const removeMedia = (i) => {
-    setSelectedMediaFiles(prev => prev.filter((_, idx) => idx !== i));
-    setMediaPreview(prev => prev.filter((_, idx) => idx !== i));
+  const removeFile = (i) => {
+    setSelectedFiles(prev => prev.filter((_, idx) => idx !== i));
   };
 
   const createPost = async (e) => {
     e.preventDefault();
-    if (!postContent.trim() && selectedMediaFiles.length === 0) {
+    if (!postContent.trim() && selectedFiles.length === 0) {
       toast.error('Post must have content or media'); return;
     }
     setUploading(true);
+    setOverallProgress(0);
+
     try {
+      let uploadedMedia = [];
+
+      if (selectedFiles.length > 0) {
+        // 1. Get upload signature from backend (one round trip, no binary data)
+        const sigRes = await fetch(
+          `${import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '')}/api/posts/upload-signature`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token') || ''}`,
+            },
+          }
+        );
+        if (!sigRes.ok) throw new Error('Could not get upload credentials');
+        const sigData = await sigRes.json();
+
+        // 2. Upload all files directly to Cloudinary in parallel
+        const total = selectedFiles.length;
+        const perFileProgress = new Array(total).fill(0);
+
+        const results = await Promise.all(
+          selectedFiles.map((entry, idx) =>
+            uploadToCloudinary(entry.file, sigData, (pct) => {
+              perFileProgress[idx] = pct;
+              const avg = Math.round(perFileProgress.reduce((a, b) => a + b, 0) / total);
+              setOverallProgress(avg);
+              setSelectedFiles(prev => prev.map((f, i) => i === idx ? { ...f, progress: pct } : f));
+            }).then(result => {
+              setSelectedFiles(prev => prev.map((f, i) => i === idx ? { ...f, done: true, result } : f));
+              return result;
+            }).catch(err => {
+              setSelectedFiles(prev => prev.map((f, i) => i === idx ? { ...f, error: err.message } : f));
+              throw new Error(`${entry.name}: ${err.message}`);
+            })
+          )
+        );
+
+        uploadedMedia = results.map((r, idx) => ({
+          url:       r.secure_url,
+          publicId:  r.public_id,
+          type:      selectedFiles[idx].file.type.startsWith('video/') ? 'video' : 'image',
+          width:     r.width  || null,
+          height:    r.height || null,
+          thumbnail: r.eager?.[0]?.secure_url || null,
+        }));
+      }
+
+      // 3. Create the post with URLs (fast — just a DB write)
       const tags = postTags.split(',').map(t => t.trim()).filter(Boolean);
-      await postsAPI.createPost(postContent.trim(), postType, tags, selectedMediaFiles);
+      await postsAPI.createPost(postContent.trim(), postType, tags, uploadedMedia);
+
       toast.success('Post created!');
       setCreateModalOpen(false);
       setPostContent(''); setPostTags(''); setPostType('general');
-      setSelectedMediaFiles([]); setMediaPreview([]);
+      setSelectedFiles([]); setOverallProgress(0);
       setFilter('mine'); setPage(1); setHasMore(true);
       loadPosts(true);
     } catch (err) {
@@ -213,9 +274,8 @@ const PostsPage = () => {
       ? { ...p, isLikedByMe: !p.isLikedByMe, likeCount: p.isLikedByMe ? (p.likeCount || 1) - 1 : (p.likeCount || 0) + 1 }
       : p
     ));
-    try {
-      await postsAPI.toggleLike(postId);
-    } catch {
+    try { await postsAPI.toggleLike(postId); }
+    catch {
       setPosts(prev => prev.map(p => p._id === postId
         ? { ...p, isLikedByMe: !p.isLikedByMe, likeCount: p.isLikedByMe ? (p.likeCount || 1) - 1 : (p.likeCount || 0) + 1 }
         : p
@@ -228,11 +288,8 @@ const PostsPage = () => {
 
   const deletePost = async (postId) => {
     if (!window.confirm('Delete this post?')) return;
-    try {
-      await postsAPI.deletePost(postId);
-      toast.success('Post deleted');
-      setPosts(prev => prev.filter(p => p._id !== postId));
-    } catch (err) { toast.error(err.message || 'Failed to delete'); }
+    try { await postsAPI.deletePost(postId); toast.success('Post deleted'); setPosts(prev => prev.filter(p => p._id !== postId)); }
+    catch (err) { toast.error(err.message || 'Failed to delete'); }
   };
 
   const sendConnectionRequest = async (userId, postId, e) => {
@@ -243,21 +300,15 @@ const PostsPage = () => {
       const result = await connectionsAPI.sendConnectionRequest(userId);
       toast.success('Connection request sent!');
       setPosts(prev => prev.map(p =>
-        p.authorId?.toString() === userId?.toString()
-          ? { ...p, connectionStatus: result.status || 'pending' }
-          : p
+        p.authorId?.toString() === userId?.toString() ? { ...p, connectionStatus: result.status || 'pending' } : p
       ));
     } catch (err) {
       if (err.status === 400 && err.data?.status) {
         setPosts(prev => prev.map(p =>
-          p.authorId?.toString() === userId?.toString()
-            ? { ...p, connectionStatus: err.data.status }
-            : p
+          p.authorId?.toString() === userId?.toString() ? { ...p, connectionStatus: err.data.status } : p
         ));
-        toast.error(err.data.message || 'Connection already exists');
-      } else {
-        toast.error(err.message || 'Failed to send request');
       }
+      toast.error(err.message || 'Failed to send request');
     } finally {
       setStateLocks(prev => { const n = { ...prev }; delete n[userId]; return n; });
     }
@@ -299,6 +350,13 @@ const PostsPage = () => {
     );
   };
 
+  const closeModal = () => {
+    if (uploading) return;
+    setCreateModalOpen(false);
+    setPostContent(''); setPostTags(''); setPostType('general');
+    setSelectedFiles([]); setOverallProgress(0);
+  };
+
   return (
     <div>
       {reelsOpen && (
@@ -309,14 +367,12 @@ const PostsPage = () => {
 
       <PageHeader title="Community Posts" subtitle="Share updates and connect with the community" />
 
-      {/* Top bar: Create + Filters */}
+      {/* Top bar */}
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <button className="btn btn-primary" onClick={() => setCreateModalOpen(true)}
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
           <Edit3 size={16} /> Create Post
         </button>
-
-        {/* Feed filter tabs */}
         <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginLeft: 'auto' }}>
           {feedFilters.map(f => (
             <button key={f.value}
@@ -329,7 +385,7 @@ const PostsPage = () => {
         </div>
       </div>
 
-      {/* Posts Feed */}
+      {/* Feed */}
       {loading && posts.length === 0 ? (
         <LoadingSpinner message="Loading posts..." />
       ) : posts.length === 0 ? (
@@ -341,8 +397,7 @@ const PostsPage = () => {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {posts.map(post => {
-            const imgSrc = post.authorImage ||
-              `https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'User')}&background=e2e8f0&color=64748b&size=100`;
+            const imgSrc = post.authorImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'User')}&background=e2e8f0&color=64748b&size=100`;
             const optImg = imgSrc.includes('cloudinary') ? imgSrc.replace('/upload/', '/upload/f_auto,q_auto,w_100/') : imgSrc;
             const isOwn = user?._id && post.authorId?.toString() === user._id?.toString();
             const status = post.connectionStatus;
@@ -352,9 +407,7 @@ const PostsPage = () => {
               actionButtons = (
                 <button onClick={() => deletePost(post._id)}
                   style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--error)', cursor: 'pointer', padding: '8px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '500' }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  </svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                   Delete
                 </button>
               );
@@ -368,9 +421,7 @@ const PostsPage = () => {
                 );
               } else if (status === 'pending') {
                 actionButtons = (
-                  <button disabled style={{ padding: '8px 16px', background: '#e5e7eb', color: '#6b7280', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '500', cursor: 'not-allowed' }}>
-                    Pending
-                  </button>
+                  <button disabled style={{ padding: '8px 16px', background: '#e5e7eb', color: '#6b7280', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '500', cursor: 'not-allowed' }}>Pending</button>
                 );
               } else {
                 actionButtons = (
@@ -385,52 +436,31 @@ const PostsPage = () => {
 
             return (
               <Card key={post._id} style={{ padding: '1.5rem' }}>
-                {/* Header */}
                 <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', alignItems: 'flex-start' }}>
                   <img src={optImg} alt={post.authorName} loading="lazy"
-                    style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }}
+                    style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
                     onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'User')}&background=e2e8f0&color=64748b&size=100`; }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px', flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{post.authorName}</span>
                       {post.isAuthorVerified && <VerifiedBadge size={14} />}
-                      <span style={{ fontSize: '0.7rem', background: '#f3f4f6', color: '#6b7280', padding: '2px 8px', borderRadius: '12px' }}>
-                        {post.authorRole}
-                      </span>
+                      <span style={{ fontSize: '0.7rem', background: '#f3f4f6', color: '#6b7280', padding: '2px 8px', borderRadius: '12px' }}>{post.authorRole}</span>
                     </div>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>{getTimeAgo(post.createdAt)}</div>
                   </div>
-                  {/* Only show badge if not general */}
                   {post.postType && post.postType !== 'general' && getPostTypeBadge(post.postType)}
                 </div>
-
-                {/* Content */}
-                {post.content && (
-                  <p style={{ color: 'var(--text-primary)', lineHeight: 1.6, marginBottom: post.media?.length > 0 ? '1rem' : '0.75rem', whiteSpace: 'pre-wrap' }}>
-                    {post.content}
-                  </p>
-                )}
-
+                {post.content && <p style={{ color: 'var(--text-primary)', lineHeight: 1.6, marginBottom: post.media?.length > 0 ? '1rem' : '0.75rem', whiteSpace: 'pre-wrap' }}>{post.content}</p>}
                 {renderMediaGallery(post.media, post._id)}
-
-                {/* Tags */}
                 {post.tags?.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                    {post.tags.map((tag, idx) => (
-                      <span key={idx} style={{ background: '#eff6ff', color: '#2563eb', padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem' }}>
-                        #{tag}
-                      </span>
-                    ))}
+                    {post.tags.map((tag, idx) => <span key={idx} style={{ background: '#eff6ff', color: '#2563eb', padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem' }}>#{tag}</span>)}
                   </div>
                 )}
-
-                {/* Actions */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
                   <button onClick={() => toggleLike(post._id)} disabled={stateLocks[post._id]}
                     style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: stateLocks[post._id] ? 'not-allowed' : 'pointer', fontSize: '1rem', color: '#6b7280', padding: '8px', borderRadius: '8px' }}>
-                    {post.isLikedByMe
-                      ? <Heart size={20} fill="#EF4444" color="#EF4444" />
-                      : <Heart size={20} color="#9CA3AF" />}
+                    {post.isLikedByMe ? <Heart size={20} fill="#EF4444" color="#EF4444" /> : <Heart size={20} color="#9CA3AF" />}
                     <span style={{ fontWeight: '600' }}>{post.likeCount || 0}</span>
                   </button>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -443,7 +473,6 @@ const PostsPage = () => {
               </Card>
             );
           })}
-
           <div ref={observerTarget} style={{ height: '20px' }}>
             {loading && <LoadingSpinner message="Loading more posts..." />}
           </div>
@@ -451,18 +480,16 @@ const PostsPage = () => {
       )}
 
       {/* Create Post Modal */}
-      <Modal isOpen={createModalOpen} onClose={() => !uploading && setCreateModalOpen(false)} title="Create Post" maxWidth="600px">
+      <Modal isOpen={createModalOpen} onClose={closeModal} title="Create Post" maxWidth="600px">
         <form onSubmit={createPost}>
-          {/* Post type selector */}
+          {/* Post type */}
           <div style={{ marginBottom: '1rem' }}>
             <label className="form-label">Category</label>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               {postTypes.map(pt => (
-                <button key={pt.value} type="button"
-                  onClick={() => setPostType(pt.value)}
+                <button key={pt.value} type="button" onClick={() => setPostType(pt.value)}
                   style={{
-                    padding: '6px 14px', borderRadius: '20px', fontSize: '0.82rem', fontWeight: 600,
-                    cursor: 'pointer', transition: 'all 0.15s',
+                    padding: '6px 14px', borderRadius: '20px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
                     background: postType === pt.value ? (POST_TYPE_BADGE[pt.value]?.bg || '#F0FDF4') : 'white',
                     color: postType === pt.value ? (POST_TYPE_BADGE[pt.value]?.color || '#166534') : '#6B7280',
                     border: `1.5px solid ${postType === pt.value ? (POST_TYPE_BADGE[pt.value]?.border || '#84CC16') : '#E5E7EB'}`,
@@ -477,46 +504,100 @@ const PostsPage = () => {
             value={postContent} onChange={e => setPostContent(e.target.value)}
             rows="4" style={{ marginBottom: '1rem' }} disabled={uploading} />
 
-          {/* Media Preview */}
-          {mediaPreview.length > 0 && (
+          {/* File previews with per-file progress */}
+          {selectedFiles.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
-              {mediaPreview.map((preview, index) => (
+              {selectedFiles.map((entry, index) => (
                 <div key={index} style={{ position: 'relative' }}>
-                  {preview.type.startsWith('video') ? (
-                    <video src={preview.url} style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
+                  {entry.type.startsWith('video') ? (
+                    <video src={entry.preview || ''} style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', background: '#111' }} />
+                  ) : entry.preview ? (
+                    <img src={entry.preview} alt={`Preview ${index + 1}`} style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
                   ) : (
-                    <img src={preview.url} alt={`Preview ${index + 1}`} style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
+                    <div style={{ width: '100%', height: '100px', background: '#f3f4f6', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', color: '#6b7280' }}>
+                      {entry.name}
+                    </div>
                   )}
-                  <button type="button" onClick={() => removeMedia(index)}
-                    style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.7)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    ✕
-                  </button>
+
+                  {/* Upload progress overlay */}
+                  {uploading && !entry.done && !entry.error && (
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                      <div style={{ width: '70%', height: 4, background: 'rgba(255,255,255,0.3)', borderRadius: 9999 }}>
+                        <div style={{ width: `${entry.progress}%`, height: '100%', background: '#84CC16', borderRadius: 9999, transition: 'width 0.2s' }} />
+                      </div>
+                      <span style={{ color: 'white', fontSize: '0.65rem', fontWeight: 700 }}>{entry.progress}%</span>
+                    </div>
+                  )}
+                  {entry.done && (
+                    <div style={{ position: 'absolute', top: 4, left: 4, background: '#16A34A', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+                    </div>
+                  )}
+                  {entry.error && (
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(239,68,68,0.7)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.25rem' }}>
+                      <span style={{ color: 'white', fontSize: '0.6rem', textAlign: 'center' }}>{entry.error}</span>
+                    </div>
+                  )}
+
+                  {!uploading && (
+                    <button type="button" onClick={() => removeFile(index)}
+                      style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.7)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
+                      ✕
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
           )}
 
-          {/* Media Upload */}
+          {/* Overall upload progress bar */}
+          {uploading && selectedFiles.length > 0 && (
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#6b7280', marginBottom: 4 }}>
+                <span>Uploading {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''}…</span>
+                <span>{overallProgress}%</span>
+              </div>
+              <div style={{ width: '100%', height: 6, background: '#f3f4f6', borderRadius: 9999 }}>
+                <div style={{ width: `${overallProgress}%`, height: '100%', background: 'linear-gradient(90deg, #84CC16, #16A34A)', borderRadius: 9999, transition: 'width 0.3s' }} />
+              </div>
+            </div>
+          )}
+
+          {/* Add media button — accepts any image or video */}
           <div style={{ marginBottom: '1rem' }}>
-            <input type="file" id="post-media-input" accept="image/jpeg,image/png,image/gif,video/mp4" multiple
-              style={{ display: 'none' }} onChange={handleMediaSelect}
-              disabled={uploading || selectedMediaFiles.length >= MAX_FILES} />
+            <input
+              type="file"
+              id="post-media-input"
+              accept="image/*,video/*"
+              multiple
+              style={{ display: 'none' }}
+              onChange={handleMediaSelect}
+              disabled={uploading || selectedFiles.length >= MAX_FILES}
+            />
             <button type="button" className="btn btn-secondary"
               onClick={() => document.getElementById('post-media-input').click()}
-              disabled={uploading || selectedMediaFiles.length >= MAX_FILES}
+              disabled={uploading || selectedFiles.length >= MAX_FILES}
               style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-              <Image size={16} /> Add Media ({selectedMediaFiles.length}/{MAX_FILES})
+              <Image size={16} />
+              {selectedFiles.length === 0 ? 'Add Photos / Videos' : `Add More (${selectedFiles.length}/${MAX_FILES})`}
             </button>
+            <p style={{ fontSize: '0.75rem', color: '#9ca3af', textAlign: 'center', marginTop: '0.375rem' }}>
+              Any image or video format • No size limit
+            </p>
           </div>
 
           <div style={{ display: 'flex', gap: '1rem' }}>
             <button type="submit" className="btn btn-primary"
-              disabled={uploading || (!postContent.trim() && selectedMediaFiles.length === 0)}
+              disabled={uploading || (!postContent.trim() && selectedFiles.length === 0)}
               style={{ flex: 1 }}>
-              {uploading ? 'Posting...' : 'Post'}
+              {uploading
+                ? selectedFiles.length > 0 && overallProgress < 100
+                  ? `Uploading… ${overallProgress}%`
+                  : 'Posting…'
+                : 'Post'}
             </button>
             <button type="button" className="btn btn-secondary"
-              onClick={() => setCreateModalOpen(false)} disabled={uploading} style={{ flex: 1 }}>
+              onClick={closeModal} disabled={uploading} style={{ flex: 1 }}>
               Cancel
             </button>
           </div>

@@ -5,7 +5,7 @@ const User = require('../models/User');
 const IntroRequest = require('../models/IntroRequest');
 const Connection = require('../models/Connection');
 const { protect } = require('../middleware/authMiddleware');
-const { uploadPostMedia, cloudinary } = require('../config/cloudinary');
+const { cloudinary } = require('../config/cloudinary');
 const rateLimit = require('express-rate-limit');
 const { recordActivity } = require('../services/gamificationService');
 
@@ -14,14 +14,58 @@ const createLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 30 });
 const likeLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 200 });
 const uploadLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 30 });
 
-// POST /api/posts - Create post with optional media
-router.post('/', protect, createLimiter, uploadPostMedia.array('media', 10), async (req, res) => {
+// ─── GET /api/posts/upload-signature — Cloudinary direct upload signature ────
+// Frontend calls this to get a signed upload preset, then uploads directly to
+// Cloudinary (browser → CDN). No binary data passes through our server.
+router.get('/upload-signature', protect, async (req, res) => {
     try {
-        const { content, postType, tags } = req.body;
+        const timestamp = Math.round(Date.now() / 1000);
+        const folder = 'dolphin-posts';
+        const paramsToSign = {
+            folder,
+            timestamp,
+            context: `user_id=${req.user._id}`,
+        };
+
+        // Build the string to sign (sorted key=value pairs)
+        const str = Object.keys(paramsToSign)
+            .sort()
+            .map(k => `${k}=${paramsToSign[k]}`)
+            .join('&') + process.env.CLOUDINARY_API_SECRET;
+
+        const crypto = require('crypto');
+        const signature = crypto.createHash('sha256').update(str).digest('hex');
+
+        res.json({
+            signature,
+            timestamp,
+            folder,
+            cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+            apiKey: process.env.CLOUDINARY_API_KEY,
+        });
+    } catch (err) {
+        console.error('Upload signature error:', err);
+        res.status(500).json({ message: 'Could not generate upload signature' });
+    }
+});
+
+// POST /api/posts - Create post (media URLs already uploaded to Cloudinary directly)
+router.post('/', protect, createLimiter, async (req, res) => {
+    try {
+        const { content, postType, tags, media: mediaJson } = req.body;
         const user = req.user;
 
+        // Parse media array (sent as JSON string or array of {url, publicId, type})
+        let media = [];
+        if (mediaJson) {
+            try {
+                media = typeof mediaJson === 'string' ? JSON.parse(mediaJson) : mediaJson;
+                if (!Array.isArray(media)) media = [];
+            } catch { media = []; }
+        }
+
         // Validate: Either content or media must be present
-        if (!content && (!req.files || req.files.length === 0)) {
+        if (!content?.trim() && media.length === 0) {
             return res.status(400).json({ message: 'Post must have content or media' });
         }
 
@@ -32,65 +76,40 @@ router.post('/', protect, createLimiter, uploadPostMedia.array('media', 10), asy
 
         // Validate postType
         const VALID_POST_TYPES = ['general', 'service_needed', 'funding_needed', 'offering_service', 'offering_funding'];
-        if (postType && !VALID_POST_TYPES.includes(postType)) {
-            return res.status(400).json({ message: 'Invalid post type' });
-        }
+        const safePostType = VALID_POST_TYPES.includes(postType) ? postType : 'general';
 
-        // Process uploaded media
-        const media = [];
-        if (req.files && req.files.length > 0) {
-            for (const file of req.files) {
-                const mediaItem = {
-                    url: file.path,
-                    publicId: file.filename,
-                    type: file.mimetype.startsWith('video/') ? 'video' : 'image',
-                    width: file.width,
-                    height: file.height
-                };
+        // Sanitise and limit media items
+        const safeMedia = media.slice(0, 10).map(item => ({
+            url:       String(item.url || '').slice(0, 500),
+            publicId:  String(item.publicId || '').slice(0, 200),
+            type:      item.type === 'video' ? 'video' : 'image',
+            width:     Number(item.width)  || null,
+            height:    Number(item.height) || null,
+            thumbnail: item.thumbnail ? String(item.thumbnail).slice(0, 500) : undefined,
+        }));
 
-                // Add video-specific data
-                if (mediaItem.type === 'video') {
-                    mediaItem.duration = file.duration;
-                    // Cloudinary generates thumbnail automatically
-                    mediaItem.thumbnail = file.path.replace(/\.(mp4|mov|avi|mkv|webm)$/, '.jpg');
-                }
-
-                media.push(mediaItem);
-            }
-        }
+        const parsedTags = tags
+            ? (Array.isArray(tags) ? tags : String(tags).split(',').map(t => t.trim()).filter(Boolean))
+            : [];
 
         const newPost = await Post.create({
-            authorId: user._id,
-            authorName: user.name,
-            authorRole: user.role,
+            authorId:    user._id,
+            authorName:  user.name,
+            authorRole:  user.role,
             authorImage: user.profilePicture || '',
-            content: content || '',
-            postType: postType || 'general',
-            tags: tags ? (Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim())) : [],
-            media,
-            mediaCount: media.length
+            content:     (content || '').trim(),
+            postType:    safePostType,
+            tags:        parsedTags.slice(0, 10),
+            media:       safeMedia,
+            mediaCount:  safeMedia.length,
         });
 
-        // Award gamification points for posting
+        // Fire-and-forget gamification points
         recordActivity(user._id, 'post').catch(e => console.error('Gamification post error:', e));
 
         res.status(201).json(newPost);
     } catch (error) {
         console.error('Create post error:', error);
-        
-        // Clean up uploaded files if post creation fails
-        if (req.files && req.files.length > 0) {
-            for (const file of req.files) {
-                try {
-                    await cloudinary.uploader.destroy(file.filename, {
-                        resource_type: file.mimetype.startsWith('video/') ? 'video' : 'image'
-                    });
-                } catch (cleanupError) {
-                    console.error('Cleanup error:', cleanupError);
-                }
-            }
-        }
-        
         res.status(500).json({ message: error.message || 'Server error creating post' });
     }
 });

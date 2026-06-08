@@ -84,15 +84,14 @@ export const postsAPI = {
   getFeed: async (filter = 'all', page = 1, limit = 20) =>
     dedupGet('/posts/feed', { params: { filter, page, limit } }),
 
-  createPost: async (content, postType, tags, mediaFiles = []) => {
-    const fd = new FormData();
-    fd.append('content', content || '');
-    fd.append('postType', postType || 'general');
-    (tags || []).forEach(t => fd.append('tags', t));
-    (mediaFiles || []).forEach(f => fd.append('media', f));
-    return api.post('/posts', fd, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 120000,
+  createPost: async (content, postType, tags, uploadedMedia = []) => {
+    // Media files are already uploaded to Cloudinary directly from the browser.
+    // We only send the resulting URLs/metadata as JSON — no binary data through our server.
+    return api.post('/posts', {
+      content: content || '',
+      postType: postType || 'general',
+      tags: tags || [],
+      media: uploadedMedia,   // array of { url, publicId, type, width, height }
     });
   },
 
