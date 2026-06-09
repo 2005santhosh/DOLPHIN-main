@@ -96,8 +96,21 @@ function withDateSeparators(groups) {
   return result;
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+// ─── Emoji picker config ──────────────────────────────────────────────────────
+const REACTION_EMOJIS = ['❤️', '👍', '😂', '😮', '😢', '🙏', '🔥', '👏'];
 
+/** Sum reactions by emoji → [{ emoji, count, isMine }] */
+function summariseReactions(reactions, myId) {
+  const map = {};
+  (reactions || []).forEach(r => {
+    if (!map[r.emoji]) map[r.emoji] = { emoji: r.emoji, count: 0, isMine: false };
+    map[r.emoji].count++;
+    if (r.userId?.toString() === myId) map[r.emoji].isMine = true;
+  });
+  return Object.values(map);
+}
+
+// ─── Main Component ────────────────────────────────────────────────────────────
 export default function ChatPage({ setChatCount, openUserId }) {
   const { user } = useAuth();
   const [convs, setConvs] = useState([]);
@@ -111,6 +124,7 @@ export default function ChatPage({ setChatCount, openUserId }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showWindow, setShowWindow] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true); // track if user is at bottom
+  const [activeReactionMsgId, setActiveReactionMsgId] = useState(null); // which msg shows emoji picker
 
   const endRef = useRef(null);
   const pollRef = useRef(null);
@@ -167,6 +181,32 @@ export default function ChatPage({ setChatCount, openUserId }) {
     }
     return () => clearInterval(pollRef.current);
   }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Socket: live reaction + delete updates ──────────────────────────────────
+  useEffect(() => {
+    const io = window._socket;
+    if (!io) return;
+
+    const onReaction = ({ messageId, reactions }) => {
+      setMessages(prev => prev.map(m =>
+        m._id?.toString() === messageId?.toString() ? { ...m, reactions } : m
+      ));
+    };
+    const onDeleted = ({ messageId }) => {
+      setMessages(prev => prev.map(m =>
+        m._id?.toString() === messageId?.toString()
+          ? { ...m, deletedForEveryone: true, content: '' }
+          : m
+      ));
+    };
+
+    io.on('messageReaction', onReaction);
+    io.on('messageDeleted', onDeleted);
+    return () => {
+      io.off('messageReaction', onReaction);
+      io.off('messageDeleted', onDeleted);
+    };
+  }, []);
 
   // ── Auto-resize textarea ────────────────────────────────────────────────────
   useEffect(() => {
@@ -299,6 +339,52 @@ export default function ChatPage({ setChatCount, openUserId }) {
     if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
       e.preventDefault();
       send();
+    }
+  };
+
+  // ── React to a message ──────────────────────────────────────────────────────
+  const reactToMessage = async (msgId, emoji) => {
+    setActiveReactionMsgId(null);
+    // Optimistic update
+    setMessages(prev => prev.map(m => {
+      if (m._id?.toString() !== msgId?.toString()) return m;
+      const reactions = [...(m.reactions || [])];
+      const myId = user?._id?.toString();
+      const idx = reactions.findIndex(r => r.userId?.toString() === myId);
+      if (idx >= 0) {
+        if (reactions[idx].emoji === emoji) reactions.splice(idx, 1); // toggle off
+        else reactions[idx] = { ...reactions[idx], emoji };           // replace
+      } else {
+        reactions.push({ userId: myId, emoji });
+      }
+      return { ...m, reactions };
+    }));
+    try {
+      await chatAPI.reactToMessage(msgId, emoji);
+    } catch (err) {
+      toast.error('Failed to react');
+      loadMsgs(selected._id, true); // revert
+    }
+  };
+
+  // ── Delete for everyone (within 30 min) ────────────────────────────────────
+  const deleteForEveryone = async (msg) => {
+    const ageMs = Date.now() - new Date(msg.createdAt).getTime();
+    if (ageMs > 30 * 60 * 1000) {
+      toast.error('Can only delete within 30 minutes of sending');
+      return;
+    }
+    // Optimistic update
+    setMessages(prev => prev.map(m =>
+      m._id?.toString() === msg._id?.toString()
+        ? { ...m, deletedForEveryone: true, content: '' }
+        : m
+    ));
+    try {
+      await chatAPI.deleteForEveryone(msg._id);
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete');
+      loadMsgs(selected._id, true); // revert
     }
   };
 
@@ -555,58 +641,144 @@ export default function ChatPage({ setChatCount, openUserId }) {
                         {item.messages.map((msg, mIdx) => {
                           const isFirst = mIdx === 0;
                           const isLastInGroup = mIdx === item.messages.length - 1;
+                          const isDeleted = msg.deletedForEveryone;
+                          const reactionSummary = summariseReactions(msg.reactions, user?._id?.toString());
+                          const ageMs = Date.now() - new Date(msg.createdAt).getTime();
+                          const canDelete = isOwn && !isDeleted && ageMs < 30 * 60 * 1000;
+                          const showPicker = activeReactionMsgId === msg._id?.toString();
+
                           return (
                             <div key={msg._id} style={{
                               display: 'flex', alignItems: 'flex-end', gap: '4px',
                               flexDirection: isOwn ? 'row-reverse' : 'row',
-                            }}>
-                              <div style={{
-                                maxWidth: isMobile ? '82%' : '62%',
-                                padding: '0.55rem 0.875rem 0.4rem',
-                                borderRadius: isOwn
-                                  ? `16px 16px ${isLastInGroup ? '4px' : '16px'} 16px`
-                                  : `16px 16px 16px ${isLastInGroup ? '4px' : '16px'}`,
-                                background: isOwn ? '#84CC16' : 'white',
-                                color: isOwn ? '#0F172A' : '#111827',
-                                fontSize: '0.925rem',
-                                lineHeight: 1.55,
-                                boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                                wordBreak: 'break-word',
-                                overflowWrap: 'break-word',
-                                position: 'relative',
-                                opacity: msg.optimistic ? 0.75 : 1,
-                                transition: 'opacity 0.2s',
-                              }}>
-                                {/* Message text */}
-                                <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                              position: 'relative',
+                            }}
+                              onMouseLeave={() => {
+                                // close picker if mouse leaves the whole message area
+                                if (showPicker) setActiveReactionMsgId(null);
+                              }}
+                            >
+                              {/* Action row — shown on hover via CSS class */}
+                              {!isDeleted && (
+                                <div className="msg-actions" style={{
+                                  display: 'flex', gap: 3, alignItems: 'center',
+                                  flexDirection: isOwn ? 'row-reverse' : 'row',
+                                  flexShrink: 0,
+                                }}>
+                                  {/* React button */}
+                                  <button
+                                    onClick={() => setActiveReactionMsgId(showPicker ? null : msg._id?.toString())}
+                                    title="React"
+                                    style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid #E5E7EB', borderRadius: '50%', width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', boxShadow: '0 1px 3px rgba(0,0,0,0.12)', flexShrink: 0 }}>
+                                    😊
+                                  </button>
+                                  {/* Delete button — own messages within 30 min */}
+                                  {canDelete && (
+                                    <button
+                                      onClick={() => deleteForEveryone(msg)}
+                                      title="Delete for everyone"
+                                      style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid #FECACA', borderRadius: '50%', width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.12)', flexShrink: 0 }}>
+                                      🗑️
+                                    </button>
+                                  )}
+                                </div>
+                              )}
 
-                                {/* Timestamp row — only on last message in group */}
-                                {isLastInGroup && (
+                              <div style={{ position: 'relative', maxWidth: isMobile ? '82%' : '62%' }}>
+                                {/* Emoji picker popup */}
+                                {showPicker && (
                                   <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'flex-end',
-                                    gap: '4px',
-                                    marginTop: '4px',
-                                    lineHeight: 1,
+                                    position: 'absolute',
+                                    bottom: 'calc(100% + 6px)',
+                                    [isOwn ? 'right' : 'left']: 0,
+                                    background: 'white',
+                                    borderRadius: 24,
+                                    border: '1px solid #E5E7EB',
+                                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                                    display: 'flex', gap: 2, padding: '6px 8px',
+                                    zIndex: 100,
+                                    whiteSpace: 'nowrap',
                                   }}>
-                                    <span style={{
-                                      fontSize: '0.75rem',
-                                      color: isOwn ? 'rgba(15,23,42,0.55)' : '#9CA3AF',
-                                      whiteSpace: 'nowrap',
-                                    }}>
-                                      {msgTime(msg.createdAt)}
-                                    </span>
-                                    {isOwn && (
-                                      <span style={{
-                                        fontSize: '0.72rem',
-                                        fontWeight: 600,
-                                        color: msg.optimistic ? 'rgba(15,23,42,0.3)' : 'rgba(15,23,42,0.55)',
-                                        whiteSpace: 'nowrap',
-                                      }}>
-                                        {msg.optimistic ? 'Sending…' : 'Sent'}
+                                    {REACTION_EMOJIS.map(emoji => (
+                                      <button key={emoji}
+                                        onClick={() => reactToMessage(msg._id, emoji)}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', padding: '2px 4px', borderRadius: 8, transition: 'transform 0.1s', lineHeight: 1 }}
+                                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.3)'}
+                                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                                      >
+                                        {emoji}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Bubble */}
+                                <div style={{
+                                  padding: isDeleted ? '0.45rem 0.875rem' : '0.55rem 0.875rem 0.4rem',
+                                  borderRadius: isOwn
+                                    ? `16px 16px ${isLastInGroup ? '4px' : '16px'} 16px`
+                                    : `16px 16px 16px ${isLastInGroup ? '4px' : '16px'}`,
+                                  background: isDeleted
+                                    ? (isOwn ? 'rgba(132,204,22,0.25)' : 'rgba(0,0,0,0.06)')
+                                    : (isOwn ? '#84CC16' : 'white'),
+                                  color: isDeleted ? '#9CA3AF' : (isOwn ? '#0F172A' : '#111827'),
+                                  fontSize: '0.925rem',
+                                  lineHeight: 1.55,
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                                  wordBreak: 'break-word',
+                                  overflowWrap: 'break-word',
+                                  opacity: msg.optimistic ? 0.75 : 1,
+                                  transition: 'opacity 0.2s',
+                                  fontStyle: isDeleted ? 'italic' : 'normal',
+                                }}>
+                                  {/* Message text */}
+                                  {isDeleted ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                      <span style={{ fontSize: '0.85rem' }}>🚫</span>
+                                      <span>This message was deleted</span>
+                                    </div>
+                                  ) : (
+                                    <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                                  )}
+
+                                  {/* Timestamp row */}
+                                  {isLastInGroup && (
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '4px', lineHeight: 1 }}>
+                                      <span style={{ fontSize: '0.75rem', color: isOwn ? 'rgba(15,23,42,0.55)' : '#9CA3AF', whiteSpace: 'nowrap' }}>
+                                        {msgTime(msg.createdAt)}
                                       </span>
-                                    )}
+                                      {isOwn && (
+                                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: msg.optimistic ? 'rgba(15,23,42,0.3)' : 'rgba(15,23,42,0.55)', whiteSpace: 'nowrap' }}>
+                                          {msg.optimistic ? 'Sending…' : 'Sent'}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Reaction pills — below the bubble */}
+                                {reactionSummary.length > 0 && (
+                                  <div style={{
+                                    display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 3,
+                                    justifyContent: isOwn ? 'flex-end' : 'flex-start',
+                                  }}>
+                                    {reactionSummary.map(r => (
+                                      <button key={r.emoji}
+                                        onClick={() => reactToMessage(msg._id, r.emoji)}
+                                        title={r.isMine ? 'Click to remove' : 'Click to react'}
+                                        style={{
+                                          background: r.isMine ? '#F0FDF4' : 'white',
+                                          border: `1.5px solid ${r.isMine ? '#84CC16' : '#E5E7EB'}`,
+                                          borderRadius: 12, padding: '2px 7px',
+                                          cursor: 'pointer', fontSize: '0.78rem',
+                                          display: 'flex', alignItems: 'center', gap: 3,
+                                          boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                                          fontWeight: r.isMine ? 700 : 400,
+                                        }}>
+                                        <span style={{ fontSize: '0.9rem' }}>{r.emoji}</span>
+                                        {r.count > 1 && <span style={{ color: '#374151' }}>{r.count}</span>}
+                                      </button>
+                                    ))}
                                   </div>
                                 )}
                               </div>
@@ -765,6 +937,23 @@ export default function ChatPage({ setChatCount, openUserId }) {
           .chat-window-mobile {
             height: calc(100dvh - 60px - 56px - 60px - env(safe-area-inset-bottom, 0px));
           }
+        }
+
+        /* Reaction action buttons — hidden by default, shown on hover */
+        .msg-actions {
+          opacity: 0;
+          transition: opacity 0.15s;
+          pointer-events: none;
+        }
+        /* Show on parent hover (desktop) */
+        div:hover > .msg-actions,
+        div:focus-within > .msg-actions {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        /* Always visible on touch devices */
+        @media (hover: none) {
+          .msg-actions { opacity: 1; pointer-events: auto; }
         }
       `}</style>
     </div>

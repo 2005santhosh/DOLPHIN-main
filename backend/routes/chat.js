@@ -226,4 +226,95 @@ router.get('/:userId', protect, async (req, res) => {
   }
 });
 
+// @route   POST /api/chat/:messageId/react
+// @desc    Add or remove an emoji reaction to a message (WhatsApp-style toggle)
+// @access  Private
+router.post('/:messageId/react', protect, async (req, res) => {
+  try {
+    const { emoji } = req.body;
+    const ALLOWED = ['❤️','👍','😂','😮','😢','🙏','🔥','👏'];
+    if (!emoji || !ALLOWED.includes(emoji)) {
+      return res.status(400).json({ message: 'Invalid emoji' });
+    }
+
+    const message = await Message.findById(req.params.messageId);
+    if (!message) return res.status(404).json({ message: 'Message not found' });
+
+    // Only sender or receiver can react
+    const userId = req.user._id.toString();
+    const isParticipant =
+      message.senderId.toString() === userId ||
+      message.receiverId.toString() === userId;
+    if (!isParticipant) return res.status(403).json({ message: 'Not allowed' });
+
+    // Toggle: if user already reacted with this emoji → remove, else add/replace
+    const existingIdx = message.reactions.findIndex(r => r.userId.toString() === userId);
+    if (existingIdx >= 0) {
+      if (message.reactions[existingIdx].emoji === emoji) {
+        // Same emoji — remove (toggle off)
+        message.reactions.splice(existingIdx, 1);
+      } else {
+        // Different emoji — replace
+        message.reactions[existingIdx].emoji = emoji;
+      }
+    } else {
+      message.reactions.push({ userId: req.user._id, emoji });
+    }
+
+    await message.save();
+
+    // Emit via socket to both participants
+    const io = req.app.get('socketio');
+    if (io) {
+      const payload = { messageId: message._id, reactions: message.reactions };
+      io.to(`user:${message.senderId.toString()}`).emit('messageReaction', payload);
+      io.to(`user:${message.receiverId.toString()}`).emit('messageReaction', payload);
+    }
+
+    res.json({ reactions: message.reactions });
+  } catch (err) {
+    console.error('[Chat] React error:', err.message);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+// @route   DELETE /api/chat/:messageId
+// @desc    Delete message for everyone (only sender, within 30 minutes of sending)
+// @access  Private
+router.delete('/:messageId', protect, async (req, res) => {
+  try {
+    const message = await Message.findById(req.params.messageId);
+    if (!message) return res.status(404).json({ message: 'Message not found' });
+
+    // Only the sender can delete
+    if (message.senderId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the sender can delete this message' });
+    }
+
+    // Within 30 minutes only
+    const ageMs = Date.now() - new Date(message.createdAt).getTime();
+    if (ageMs > 30 * 60 * 1000) {
+      return res.status(400).json({ message: 'Message can only be deleted within 30 minutes of sending' });
+    }
+
+    message.deletedForEveryone = true;
+    message.content = '';
+    message.deletedAt = new Date();
+    await message.save();
+
+    // Notify both participants via socket
+    const io = req.app.get('socketio');
+    if (io) {
+      const payload = { messageId: message._id };
+      io.to(`user:${message.senderId.toString()}`).emit('messageDeleted', payload);
+      io.to(`user:${message.receiverId.toString()}`).emit('messageDeleted', payload);
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Chat] Delete error:', err.message);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
 module.exports = router;

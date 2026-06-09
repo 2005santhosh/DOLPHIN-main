@@ -253,6 +253,8 @@ export const chatAPI = {
   },
   sendMessage: async (receiverId, content) => api.post('/chat/send', { receiverId, content }),
   getUserProfile: async (userId) => api.get(`/chat/user/${userId}`),
+  reactToMessage: async (messageId, emoji) => api.post(`/chat/${messageId}/react`, { emoji }),
+  deleteForEveryone: async (messageId) => api.delete(`/chat/${messageId}`),
 };
 
 // ─── VERIFICATION ──────────────────────────────────────────────────────────────

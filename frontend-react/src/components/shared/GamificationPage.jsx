@@ -10,7 +10,7 @@ import LoadingSpinner from './LoadingSpinner';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PRIZE_EVENT_END   = new Date('2026-06-30T23:59:59+05:30'); // June 30 2026 IST
-const BADGE_DEADLINE    = new Date('2026-06-10T23:59:59+05:30'); // 20 days before June 30
+const BADGE_DEADLINE    = new Date('2026-06-15T23:59:59+05:30'); // Extended to June 15 2026
 
 function isPaidVerified(u) {
   return u?.isVerified === true && u?.verifiedSource === 'payment' && !!u?.verifiedUntil && new Date(u.verifiedUntil) > new Date();
@@ -36,7 +36,7 @@ function LeaderboardAnnouncement({ user }) {
     '🥈  2nd Place  ·  ₹2,000 cash prize',
     '🥉  3rd Place  ·  ₹1,000 cash prize',
     '✅  Eligibility: Verified badge required (payment-verified only)',
-    `⏰  Badge deadline: June 10, 2026  —  ${pastDeadline ? 'Deadline passed' : `${deadlineDaysLeft} day${deadlineDaysLeft !== 1 ? 's' : ''} left to get verified`}`,
+    `⏰  Badge deadline: June 15, 2026  —  ${pastDeadline ? 'Deadline passed' : `${deadlineDaysLeft} day${deadlineDaysLeft !== 1 ? 's' : ''} left to get verified`}`,
     `📅  ${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining until scores are finalised`,
     '🚫  High scores without a verified badge will NOT be considered',
   ];
@@ -120,7 +120,7 @@ function LeaderboardAnnouncement({ user }) {
           <>
             <span style={{ fontSize: '0.9rem' }}>⚠️</span>
             <span style={{ color: '#FED7AA', fontSize: '0.8rem', fontWeight: 600 }}>
-              You are not yet verified. Get verified before June 10, 2026 to be eligible.
+              You are not yet verified. Get verified before June 15, 2026 to be eligible.
             </span>
             <button
               onClick={() => { window.location.hash = 'settings'; }}
