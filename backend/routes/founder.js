@@ -170,7 +170,7 @@ router.post('/send-request', protect, async (req, res) => {
       initiator: 'founder'
     });
 
-    // ✅ NOTIFY PROVIDER
+    // ✅ NOTIFY PROVIDER via socket
     const notification = await Notification.create({
       userId: providerId,
       type: 'INTRODUCTION_REQUEST',
@@ -182,24 +182,28 @@ router.post('/send-request', protect, async (req, res) => {
     const io = req.app.get('socketio');
     if (io) {
       io.to(providerId.toString()).emit('newNotification', notification);
-      io.to(providerId.toString()).emit('newRequest', { 
+      io.to(providerId.toString()).emit('newRequest', {
         message: 'You have a new request!',
-        request: newRequest 
+        request: newRequest
       });
     }
 
-    // ✅ SEND EMAIL TO PROVIDER
-    const providerUser = await User.findById(providerId);
-    if (providerUser && providerUser.email) {
-        const emailTemplate = getNewRequestEmail(req.user.name, 'Connection');
-        sendEmail({
-            email: providerUser.email,
-            subject: emailTemplate.subject,
-            message: emailTemplate.html
-        }).catch(err => console.error("Founder Request Email Error:", err));
-    }
-
+    // Respond immediately — don't block on email
     res.json({ success: true, request: newRequest });
+
+    // Fire-and-forget email to provider
+    setImmediate(async () => {
+      try {
+        const providerUser = await User.findById(providerId).select('email name emailNotifications').lean();
+        if (providerUser?.email && providerUser.emailNotifications !== false) {
+          const tpl = getNewRequestEmail(req.user.name, 'Connection', message || '');
+          sendEmail({ email: providerUser.email, subject: tpl.subject, message: tpl.html })
+            .catch(e => console.error('[Founder /send-request] Email failed:', e.message));
+        }
+      } catch (e) {
+        console.error('[Founder /send-request] Email error:', e.message);
+      }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -1226,6 +1230,20 @@ router.post('/request-intro', protect, async (req, res) => {
       message: 'Request sent to provider',
       request
     });
+
+    // Fire-and-forget email to provider
+    setImmediate(async () => {
+      try {
+        const providerUser = await User.findById(providerId).select('email name emailNotifications').lean();
+        if (providerUser?.email && providerUser.emailNotifications !== false) {
+          const tpl = getNewRequestEmail(req.user.name, 'Introduction', message || '');
+          sendEmail({ email: providerUser.email, subject: tpl.subject, message: tpl.html })
+            .catch(e => console.error('[Founder intro-request] Email failed:', e.message));
+        }
+      } catch (e) {
+        console.error('[Founder intro-request] Email error:', e.message);
+      }
+    });
   } catch (error) {
     console.error('Founder request error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -1351,10 +1369,24 @@ router.post('/send-request', protect, async (req, res) => {
       message,
       servicesOffered,
       status: 'pending',
-      initiator: 'founder' // ✅ FIX: Set initiator
+      initiator: 'founder'
     });
 
     res.json({ success: true, request: newRequest });
+
+    // Fire-and-forget email to provider
+    setImmediate(async () => {
+      try {
+        const providerUser = await User.findById(providerId).select('email name emailNotifications').lean();
+        if (providerUser?.email && providerUser.emailNotifications !== false) {
+          const tpl = getNewRequestEmail(req.user.name, 'Connection', message || '');
+          sendEmail({ email: providerUser.email, subject: tpl.subject, message: tpl.html })
+            .catch(e => console.error('[Founder send-request] Email failed:', e.message));
+        }
+      } catch (e) {
+        console.error('[Founder send-request] Email error:', e.message);
+      }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

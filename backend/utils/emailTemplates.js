@@ -54,14 +54,44 @@ module.exports = {
     `
   }),
 
-  getNewRequestEmail: (senderName, requestType) => ({
-    subject: `New ${requestType} Request`,
+  getNewRequestEmail: (senderName, requestType, message = '') => ({
+    subject: `🤝 New ${requestType} Request on Dolphin`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
-        <h3>New Connection Request</h3>
-        <p>You have received a new <strong>${requestType}</strong> request from <strong>${senderName}</strong>.</p>
-        <p>Please log in to your dashboard to review and accept or reject the request.</p>
-        <a href="https://dolphinorg.in/" style="display: inline-block; padding: 10px 20px; background-color: #f59e0b; color: white; text-decoration: none; border-radius: 5px;">View Requests</a>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #E5E7EB; border-radius: 12px; background: #FAFAFA;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h2 style="color: #0F172A; margin: 0; font-size: 1.4rem;">🐬 Dolphin</h2>
+        </div>
+
+        <div style="background: white; border-radius: 10px; padding: 28px; border: 1px solid #E5E7EB;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="display: inline-block; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 50%; width: 56px; height: 56px; line-height: 56px; font-size: 1.8rem; text-align: center;">🤝</div>
+          </div>
+
+          <h2 style="color: #111827; text-align: center; margin: 0 0 8px; font-size: 1.2rem;">New ${requestType} Request</h2>
+          <p style="color: #6B7280; text-align: center; margin: 0 0 20px; font-size: 0.95rem;">
+            <strong style="color: #111827;">${senderName}</strong> has sent you a request on Dolphin.
+          </p>
+
+          ${message ? `
+          <div style="background: #F9FAFB; border-left: 3px solid #84CC16; border-radius: 0 8px 8px 0; padding: 14px 16px; margin-bottom: 20px;">
+            <p style="margin: 0; color: #374151; font-size: 0.9rem; line-height: 1.6; font-style: italic;">"${message}"</p>
+          </div>
+          ` : ''}
+
+          <div style="text-align: center; margin: 24px 0;">
+            <a href="https://www.dolphinorg.in" style="display: inline-block; padding: 12px 32px; background: linear-gradient(135deg, #84CC16, #16A34A); color: white; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 0.95rem;">
+              View Request →
+            </a>
+          </div>
+
+          <p style="color: #9CA3AF; font-size: 0.8rem; text-align: center; margin: 0;">
+            Go to your <strong>Requests</strong> tab to accept or decline.
+          </p>
+        </div>
+
+        <p style="text-align: center; color: #9CA3AF; font-size: 0.75rem; margin-top: 20px;">
+          &copy; 2026 Dolphin &middot; <a href="mailto:support@pacificdev.in" style="color: #9CA3AF;">support@pacificdev.in</a>
+        </p>
       </div>
     `
   }),

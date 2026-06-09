@@ -234,7 +234,7 @@ router.post('/request-intro', protect, checkStageAccess, async (req, res) => {
       founderId: req.user.id,
       startupId: startup._id,
       status: 'pending',
-      initiator: 'founder' // ✅ Add this for consistency
+      initiator: 'founder'
     });
 
     res.status(201).json({
@@ -242,6 +242,22 @@ router.post('/request-intro', protect, checkStageAccess, async (req, res) => {
       requestId: request._id,
       status: 'pending',
       nextSteps: 'Wait for provider to respond to your request'
+    });
+
+    // Fire-and-forget email to provider
+    setImmediate(async () => {
+      try {
+        const sendEmailFn = require('../utils/sendEmail');
+        const { getNewRequestEmail } = require('../utils/emailTemplates');
+        const providerUser = await require('../models/User').findById(provider.userId)
+          .select('email name emailNotifications').lean();
+        if (providerUser?.email && providerUser.emailNotifications !== false) {
+          const tpl = getNewRequestEmail(req.user.name, 'Introduction');
+          await sendEmailFn({ email: providerUser.email, subject: tpl.subject, message: tpl.html });
+        }
+      } catch (e) {
+        console.error('[Provider intro-request] Email failed:', e.message);
+      }
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -443,22 +459,23 @@ router.post('/send-request', protect, async (req, res) => {
     // 4. Email (Fire and forget)
     (async () => {
       try {
-        // Dynamically import to prevent crash if file doesn't exist
-        const sendEmail = require('../utils/emailService');
-        const templates = require('../utils/emailTemplates');
-        const getNewRequestEmail = templates.getNewRequestEmail;
-
-        if (founder.email && typeof sendEmail === 'function' && typeof getNewRequestEmail === 'function') {
-          const emailTemplate = getNewRequestEmail(provider.name || 'A Provider', 'Service Provider');
-          await sendEmail({
+        const sendEmailFn = require('../utils/sendEmail');
+        const { getNewRequestEmail } = require('../utils/emailTemplates');
+        if (founder.email) {
+          const emailTemplate = getNewRequestEmail(
+            provider.name || req.user.name || 'A Provider',
+            'Service Provider',
+            message
+          );
+          await sendEmailFn({
             email: founder.email,
             subject: emailTemplate.subject,
-            message: emailTemplate.html
+            message: emailTemplate.html,
           });
-          console.log(`✅ Email sent to ${founder.email}`);
+          console.log(`[Provider] Email sent to founder ${founder.email}`);
         }
       } catch (e) {
-        console.error('BG: Email failed:', e.message);
+        console.error('[Provider] BG Email failed:', e.message);
       }
     })();
 

@@ -3,6 +3,9 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const rateLimit = require('express-rate-limit');
 const Connection = require('../models/Connection');
+const User = require('../models/User');
+const sendEmail = require('../utils/sendEmail');
+const { getNewRequestEmail } = require('../utils/emailTemplates');
 const { recordActivity } = require('../services/gamificationService');
 
 const connectLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 20 });
@@ -25,7 +28,6 @@ router.post('/request', protect, connectLimiter, async (req, res) => {
         });
 
         if (existing) {
-            // Return the existing status so the frontend can update correctly
             return res.status(400).json({
                 message: 'Connection already exists or pending',
                 status: existing.status,
@@ -39,6 +41,24 @@ router.post('/request', protect, connectLimiter, async (req, res) => {
         });
 
         res.json({ message: 'Connection request sent', status: 'pending', connectionId: conn._id });
+
+        // Fire-and-forget email to recipient
+        setImmediate(async () => {
+            try {
+                const recipient = await User.findById(toUserId).select('email name emailNotifications').lean();
+                if (recipient?.email && recipient.emailNotifications !== false) {
+                    const tpl = getNewRequestEmail(req.user.name, 'Connection');
+                    await sendEmail({
+                        email: recipient.email,
+                        subject: tpl.subject,
+                        message: tpl.html,
+                    });
+                }
+            } catch (e) {
+                console.error('[Connections] Email notification failed:', e.message);
+            }
+        });
+
     } catch (error) {
         if (error.code === 11000) {
             return res.status(400).json({ message: 'Connection already exists', status: 'pending' });

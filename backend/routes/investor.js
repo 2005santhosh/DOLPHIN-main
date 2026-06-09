@@ -231,19 +231,24 @@ router.post('/express-interest', protect, authorize('investor'), async (req, res
       io.to(startup.founderId._id.toString()).emit('newRequest', newRequest);
     }
 
-    // ✅ SEND EMAIL TO FOUNDER
-    const investor = await User.findById(req.user.id);
-    if (investor && startup.founderId.email) {
-        const emailTemplate = getNewRequestEmail(investor.name, 'Investor Interest');
-        sendEmail({
-            email: startup.founderId.email,
-            subject: emailTemplate.subject,
-            message: emailTemplate.html
-        }).catch(err => console.error("Investor Interest Email Error:", err));
-    }
-
+    // ✅ SEND EMAIL TO FOUNDER — fire-and-forget, respond first
     res.json({ message: 'Request sent successfully!', request: newRequest });
 
+    setImmediate(async () => {
+      try {
+        const investor = await User.findById(req.user.id).select('name').lean();
+        if (investor && startup.founderId.email) {
+          const emailTemplate = getNewRequestEmail(investor.name, 'Investor Interest');
+          sendEmail({
+            email: startup.founderId.email,
+            subject: emailTemplate.subject,
+            message: emailTemplate.html,
+          }).catch(err => console.error('[Investor] Interest email error:', err.message));
+        }
+      } catch (e) {
+        console.error('[Investor] Email error:', e.message);
+      }
+    });
   } catch (err) {
     console.error('Express Interest Error:', err.message);
     res.status(500).send('Server Error');
