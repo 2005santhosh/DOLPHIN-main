@@ -867,10 +867,47 @@ router.get('/investors', protect, requireFounderValidationScore, async (req, res
       ];
     }
 
-    // Include verification fields for badge rendering and verified-first sort
     let investors = await User.find(query)
       .select('name email interestAreas stagePreference createdAt profilePicture rewardPoints state ratings isVerified verifiedSource verifiedUntil')
       .lean();
+
+    const investorIds = investors.map(u => u._id);
+
+    // Bulk-check connection status between the current founder and all investors
+    // Checks both Connection model (direct) and IntroRequest model (intro flow)
+    const [connections, introRequests] = await Promise.all([
+      require('../models/Connection').find({
+        $or: [
+          { from: req.user._id, to: { $in: investorIds } },
+          { from: { $in: investorIds }, to: req.user._id },
+        ],
+      }).select('from to status').lean(),
+      IntroRequest.find({
+        $or: [
+          { founderId: req.user._id, providerId: { $in: investorIds } },
+          { providerId: req.user._id, founderId: { $in: investorIds } },
+        ],
+      }).select('founderId providerId status').lean(),
+    ]);
+
+    // Build status map: investorUserId -> highest-priority status
+    const statusMap = {};
+    const priority = { accepted: 3, pending: 2, rejected: 1 };
+    const upsert = (uid, status) => {
+      if (!statusMap[uid] || (priority[status] || 0) > (priority[statusMap[uid]] || 0)) {
+        statusMap[uid] = status;
+      }
+    };
+    connections.forEach(c => {
+      const otherId = c.from.toString() === req.user._id.toString()
+        ? c.to.toString() : c.from.toString();
+      upsert(otherId, c.status);
+    });
+    introRequests.forEach(r => {
+      const otherId = r.founderId?.toString() === req.user._id.toString()
+        ? r.providerId?.toString() : r.founderId?.toString();
+      if (otherId) upsert(otherId, r.status);
+    });
 
     let results = investors.map(u => {
       const ratings = u.ratings || [];
@@ -888,23 +925,20 @@ router.get('/investors', protect, requireFounderValidationScore, async (req, res
         rewardPoints: u.rewardPoints || 0,
         state: u.state,
         rating: avgRating.toFixed(1),
-        // Verification fields for Featured badge
+        requestStatus: statusMap[u._id.toString()] || null,
         isVerified: u.isVerified || false,
         verifiedSource: u.verifiedSource || null,
         verifiedUntil: u.verifiedUntil || null,
       };
     });
 
-    // Apply secondary sort (rating/name) within each group first, then verified-first
     if (sort === 'rating') {
       results.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
     } else if (sort === 'name') {
       results.sort((a, b) => a.name.localeCompare(b.name));
     }
 
-    // Verified investors always float to top, preserving the sorted order within each group
     results = verifiedFirst(results, r => r);
-
     res.json(results);
   } catch (err) {
     console.error('Error fetching investors:', err);
@@ -1027,14 +1061,34 @@ router.get('/providers', protect, async (req, res) => {
 
     const providerUserIds = providers.map(p => p.userId?._id).filter(id => id);
     
-    const myRequests = await IntroRequest.find({
-      founderId: req.user.id,
-      providerId: { $in: providerUserIds }
-    }).select('providerId status').lean();
+    // Check BOTH IntroRequest (intro flow) AND Connection (direct connect) models
+    const [myRequests, myConnections] = await Promise.all([
+      IntroRequest.find({
+        founderId: req.user.id,
+        providerId: { $in: providerUserIds },
+      }).select('providerId status').lean(),
+      require('../models/Connection').find({
+        $or: [
+          { from: req.user._id, to: { $in: providerUserIds } },
+          { from: { $in: providerUserIds }, to: req.user._id },
+        ],
+      }).select('from to status').lean(),
+    ]);
 
     const requestMap = {};
-    myRequests.forEach(r => {
-      requestMap[r.providerId.toString()] = r.status;
+    const priority = { accepted: 3, pending: 2, rejected: 1 };
+    const upsert = (uid, status) => {
+      const s = uid?.toString();
+      if (!s) return;
+      if (!requestMap[s] || (priority[status] || 0) > (priority[requestMap[s]] || 0)) {
+        requestMap[s] = status;
+      }
+    };
+    myRequests.forEach(r => upsert(r.providerId?.toString(), r.status));
+    myConnections.forEach(c => {
+      const otherId = c.from.toString() === req.user._id.toString()
+        ? c.to.toString() : c.from.toString();
+      upsert(otherId, c.status);
     });
 
     let results = providers.map(p => {
