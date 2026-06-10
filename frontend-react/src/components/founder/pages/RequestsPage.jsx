@@ -73,11 +73,20 @@ export default function RequestsPage({ setRequestsCount }) {
 
       const introIncomingNorm = (Array.isArray(introIncoming) ? introIncoming : []).map(r => ({
         _id: r._id, type: 'intro', status: r.status, createdAt: r.createdAt,
-        message: r.message || '', otherUser: r.providerId || {}, startupName: r.startupId?.name || '',
+        message: r.message || '',
+        // providerId can be a populated object or a raw ObjectId
+        otherUser: (r.providerId && typeof r.providerId === 'object' && r.providerId._id)
+          ? r.providerId
+          : { _id: r.providerId, name: 'Provider', role: 'provider' },
+        startupName: r.startupId?.name || '',
       }));
       const introSentNorm = (Array.isArray(introSent) ? introSent : []).map(r => ({
         _id: r._id, type: 'intro', status: r.status, createdAt: r.createdAt,
-        message: r.message || '', otherUser: r.providerId || {}, startupName: r.startupId?.name || '',
+        message: r.message || '',
+        otherUser: (r.providerId && typeof r.providerId === 'object' && r.providerId._id)
+          ? r.providerId
+          : { _id: r.providerId, name: 'Provider', role: 'provider' },
+        startupName: r.startupId?.name || '',
       }));
 
       const allIncoming = [...connIncoming, ...introIncomingNorm]
@@ -91,14 +100,14 @@ export default function RequestsPage({ setRequestsCount }) {
       const acceptedIntroIncoming = introIncomingNorm.filter(r => r.status === 'accepted');
       const acceptedIntroSent = introSentNorm.filter(r => r.status === 'accepted');
 
-      // Deduplicate by user ID
+      // Deduplicate by user ID — handle both populated objects and raw ObjectIds
       const seen = new Set();
       const allAccepted = [
         ...acceptedFromIncoming, ...acceptedFromSent,
         ...acceptedIntroIncoming, ...acceptedIntroSent,
       ].filter(r => {
-        const uid = r.otherUser?._id?.toString();
-        if (!uid || seen.has(uid)) return false;
+        const uid = (r.otherUser?._id || r.otherUser)?.toString();
+        if (!uid || uid === 'undefined' || uid === '[object Object]' || seen.has(uid)) return false;
         seen.add(uid);
         return true;
       }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));

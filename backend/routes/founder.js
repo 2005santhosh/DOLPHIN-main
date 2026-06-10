@@ -1258,13 +1258,12 @@ router.post('/request-intro', protect, async (req, res) => {
 // @route   GET /api/founder/requests
 router.get('/requests', protect, async (req, res) => {
   try {
-    // ✅ FIX: Only show requests SENT TO ME (initiator != 'founder')
     const requests = await IntroRequest.find({ 
       founderId: req.user.id,
       initiator: { $ne: 'founder' } 
     })
-      .populate('providerId', 'name email profilePicture isVerified verifiedSource verifiedUntil')
-      .populate('startupId', 'name')
+      .populate('providerId', '_id name email profilePicture role isVerified verifiedSource verifiedUntil')
+      .populate('startupId', '_id name')
       .sort({ createdAt: -1 });
     res.json(requests);
   } catch (err) {
@@ -1414,8 +1413,8 @@ router.get('/requests/sent', protect, async (req, res) => {
       founderId: req.user.id, 
       initiator: 'founder' 
     })
-      .populate('providerId', 'name email profilePicture isVerified verifiedSource verifiedUntil')
-      .populate('startupId', 'name')
+      .populate('providerId', '_id name email profilePicture role isVerified verifiedSource verifiedUntil')
+      .populate('startupId', '_id name')
       .sort({ createdAt: -1 });
     res.json(requests);
   } catch (err) {

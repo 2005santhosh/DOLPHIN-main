@@ -4,7 +4,7 @@ import Card, { CardHeader, CardTitle } from '../../shared/Card';
 import Modal from '../../shared/Modal';
 import { useAuth } from '../../../context/AuthContext';
 import toast from 'react-hot-toast';
-import { authAPI, verificationAPI, connectionsAPI } from '../../../services/api';
+import { authAPI, verificationAPI, connectionsAPI, gamificationAPI } from '../../../services/api';
 import LegalSections from '../../shared/LegalSections';
 import VerificationModal from '../../shared/VerificationModal';
 import VerifiedBadge from '../../shared/VerifiedBadge';
@@ -42,15 +42,11 @@ const SettingsPage = () => {
     loadSettings();
     loadVerifyStatus();
 
-    // Fetch total accepted connections count (both incoming and sent)
-    connectionsAPI.getConnections()
+    // Fetch accurate connection count from gamification endpoint
+    // (same source as leaderboard — counts both Connection + IntroRequest models)
+    gamificationAPI.getMyStats()
       .then(data => {
-        const acceptedIncoming = (data.incoming || []).filter(c => c.status === 'accepted').length;
-        const acceptedSent = (data.sent || []).filter(c => c.status === 'accepted').length;
-        // Deduplicate: each connection appears in both directions — count unique pairs
-        // incoming = accepted connections where they sent to me
-        // sent = accepted connections where I sent to them
-        setConnectionCount(acceptedIncoming + acceptedSent);
+        if (data?.totalConnections !== undefined) setConnectionCount(data.totalConnections);
       })
       .catch(() => {});
 
