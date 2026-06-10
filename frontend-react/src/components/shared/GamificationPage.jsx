@@ -31,14 +31,16 @@ function LeaderboardAnnouncement({ user }) {
   const deadlineDaysLeft = Math.max(0, Math.ceil((BADGE_DEADLINE - now) / 86400000));
 
   const scrollItems = [
-    '🏆  Leaderboard Cash Prizes — Final scores counted on June 30, 2026',
+    '🏆  Leaderboard Cash Prizes — Top 3 across ALL users (Founders + Investors + Providers combined)',
     '🥇  1st Place  ·  ₹3,000 cash prize',
     '🥈  2nd Place  ·  ₹2,000 cash prize',
     '🥉  3rd Place  ·  ₹1,000 cash prize',
+    '👥  Open to everyone — Founders, Investors & Providers compete together on one leaderboard',
     '✅  Eligibility: Verified badge required (payment-verified only)',
     `⏰  Badge deadline: June 15, 2026  —  ${pastDeadline ? 'Deadline passed' : `${deadlineDaysLeft} day${deadlineDaysLeft !== 1 ? 's' : ''} left to get verified`}`,
-    `📅  ${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining until scores are finalised`,
+    `📅  ${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining until scores are finalised on June 30, 2026`,
     '🚫  High scores without a verified badge will NOT be considered',
+    '⚡  Score = Connections ×15 + Posts ×10 + Active Days ×5 + Streak Days ×3',
   ];
 
   // duplicate for seamless loop
@@ -54,7 +56,7 @@ function LeaderboardAnnouncement({ user }) {
       }}>
         <span style={{ fontSize: '1rem' }}>🏆</span>
         <span style={{ color: '#FCD34D', fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          Leaderboard Prize Announcement
+          Leaderboard Prize — All Roles Compete Together
         </span>
         <span style={{
           marginLeft: 'auto',
@@ -136,6 +138,63 @@ function LeaderboardAnnouncement({ user }) {
             </button>
           </>
         )}
+      </div>
+
+      {/* Prize details card */}
+      <div style={{ background: '#1C1917', padding: '0.875rem 1rem', borderTop: '1px solid #292524' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1.5rem', alignItems: 'flex-start' }}>
+          {/* Prize pool */}
+          <div>
+            <div style={{ color: '#FCD34D', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>
+              Prize Pool
+            </div>
+            <div style={{ display: 'flex', gap: '0.6rem' }}>
+              {[
+                { place: '🥇', prize: '₹3,000', label: '1st' },
+                { place: '🥈', prize: '₹2,000', label: '2nd' },
+                { place: '🥉', prize: '₹1,000', label: '3rd' },
+              ].map(({ place, prize, label }) => (
+                <div key={label} style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '1rem' }}>{place}</div>
+                  <div style={{ color: '#FEF3C7', fontWeight: 800, fontSize: '0.82rem' }}>{prize}</div>
+                  <div style={{ color: '#A8A29E', fontSize: '0.65rem' }}>{label} place</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div style={{ width: 1, background: '#292524', alignSelf: 'stretch' }} />
+
+          {/* Who competes */}
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ color: '#FCD34D', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>
+              Who Competes
+            </div>
+            <div style={{ color: '#FEF3C7', fontSize: '0.82rem', fontWeight: 600, lineHeight: 1.5 }}>
+              👥 Founders, Investors &amp; Providers — all on <em>one single leaderboard</em>
+            </div>
+            <div style={{ color: '#A8A29E', fontSize: '0.72rem', marginTop: '0.2rem', lineHeight: 1.4 }}>
+              The top 3 highest scores across <strong style={{ color: '#FEF3C7' }}>all user types combined</strong> win. No separate categories — everyone competes together.
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div style={{ width: 1, background: '#292524', alignSelf: 'stretch' }} />
+
+          {/* Requirement */}
+          <div>
+            <div style={{ color: '#FCD34D', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>
+              Requirement
+            </div>
+            <div style={{ color: '#FEF3C7', fontSize: '0.78rem', fontWeight: 600, lineHeight: 1.5 }}>
+              ✅ Verified badge (₹99/mo)
+            </div>
+            <div style={{ color: '#A8A29E', fontSize: '0.72rem', marginTop: '0.2rem' }}>
+              Deadline: June 15, 2026
+            </div>
+          </div>
+        </div>
       </div>
 
       <style>{`
