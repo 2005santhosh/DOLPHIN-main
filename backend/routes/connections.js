@@ -15,6 +15,13 @@ router.post('/request', protect, connectLimiter, async (req, res) => {
     try {
         const { toUserId } = req.body;
         if (!toUserId) return res.status(400).json({ message: 'Invalid user' });
+
+        // Validate ObjectId format to prevent CastError 500s
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(toUserId)) {
+            return res.status(400).json({ message: 'Invalid user ID format' });
+        }
+
         if (toUserId === req.user._id.toString()) {
             return res.status(400).json({ message: 'Cannot connect to yourself' });
         }
@@ -29,7 +36,7 @@ router.post('/request', protect, connectLimiter, async (req, res) => {
 
         if (existing) {
             return res.status(400).json({
-                message: 'Connection already exists or pending',
+                message: existing.status === 'accepted' ? 'Already connected' : 'Connection request already sent',
                 status: existing.status,
             });
         }
@@ -48,11 +55,7 @@ router.post('/request', protect, connectLimiter, async (req, res) => {
                 const recipient = await User.findById(toUserId).select('email name emailNotifications').lean();
                 if (recipient?.email && recipient.emailNotifications !== false) {
                     const tpl = getNewRequestEmail(req.user.name, 'Connection');
-                    await sendEmail({
-                        email: recipient.email,
-                        subject: tpl.subject,
-                        message: tpl.html,
-                    });
+                    await sendEmail({ email: recipient.email, subject: tpl.subject, message: tpl.html });
                 }
             } catch (e) {
                 console.error('[Connections] Email notification failed:', e.message);
@@ -61,7 +64,17 @@ router.post('/request', protect, connectLimiter, async (req, res) => {
 
     } catch (error) {
         if (error.code === 11000) {
-            return res.status(400).json({ message: 'Connection already exists', status: 'pending' });
+            // Duplicate key — connection already exists, return gracefully
+            const existing = await Connection.findOne({
+                $or: [
+                    { from: req.user._id, to: req.body.toUserId },
+                    { from: req.body.toUserId, to: req.user._id }
+                ]
+            }).lean();
+            return res.status(400).json({
+                message: 'Connection already exists',
+                status: existing?.status || 'pending',
+            });
         }
         console.error('Connection request error:', error);
         res.status(500).json({ message: 'Error sending request' });
@@ -71,25 +84,25 @@ router.post('/request', protect, connectLimiter, async (req, res) => {
 // GET /api/connections - Get all connection requests for the current user
 router.get('/', protect, async (req, res) => {
     try {
-        // Incoming: sent TO me
-        const incoming = await Connection.find({ to: req.user._id, status: 'pending' })
+        const myId = req.user._id;
+
+        // Incoming: sent TO me (ALL statuses — not just pending)
+        const incoming = await Connection.find({ to: myId })
             .populate('from', 'name email profilePicture role isVerified verifiedSource verifiedUntil')
             .sort({ createdAt: -1 })
             .lean();
 
         // Sent: sent BY me (all statuses)
-        const sent = await Connection.find({ from: req.user._id })
+        const sent = await Connection.find({ from: myId })
             .populate('to', 'name email profilePicture role isVerified verifiedSource verifiedUntil')
             .sort({ createdAt: -1 })
             .lean();
 
-        // Normalise field names so the frontend can use them uniformly
         const normaliseIncoming = incoming.map(c => ({
             _id: c._id,
             status: c.status,
             createdAt: c.createdAt,
             initiator: 'other',
-            // The "other" person is the sender (from)
             otherUser: c.from,
             message: c.message || '',
         }));
@@ -99,7 +112,6 @@ router.get('/', protect, async (req, res) => {
             status: c.status,
             createdAt: c.createdAt,
             initiator: 'me',
-            // The "other" person is the recipient (to)
             otherUser: c.to,
             message: c.message || '',
         }));
@@ -128,9 +140,43 @@ router.get('/status/:userId', protect, async (req, res) => {
     }
 });
 
+// POST /api/connections/status-bulk - Check connection status for multiple users at once
+router.post('/status-bulk', protect, async (req, res) => {
+    try {
+        const { userIds } = req.body;
+        if (!Array.isArray(userIds) || userIds.length === 0) {
+            return res.json({});
+        }
+        const myId = req.user._id;
+        const connections = await Connection.find({
+            $or: [
+                { from: myId, to: { $in: userIds } },
+                { from: { $in: userIds }, to: myId },
+            ]
+        }).select('from to status').lean();
+
+        const statusMap = {};
+        connections.forEach(conn => {
+            const otherId = conn.from.toString() === myId.toString()
+                ? conn.to.toString()
+                : conn.from.toString();
+            // Keep the highest-priority status if multiple exist
+            const priority = { accepted: 3, pending: 2, rejected: 1 };
+            if (!statusMap[otherId] || (priority[conn.status] || 0) > (priority[statusMap[otherId]] || 0)) {
+                statusMap[otherId] = conn.status;
+            }
+        });
+        res.json(statusMap);
+    } catch (error) {
+        console.error('Bulk status error:', error);
+        res.status(500).json({ message: 'Error checking statuses' });
+    }
+});
+
 // GET /api/connections/pending-count - Fast pending count for badge (no full load needed)
 router.get('/pending-count', protect, async (req, res) => {
     try {
+        // Only count requests sent TO me that are still pending
         const count = await Connection.countDocuments({ to: req.user._id, status: 'pending' });
         res.json({ count });
     } catch (error) {

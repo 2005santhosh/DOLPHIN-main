@@ -4,7 +4,7 @@ import Card from '../../shared/Card';
 import Modal from '../../shared/Modal';
 import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
-import { founderAPI } from '../../../services/api';
+import { founderAPI, connectionsAPI } from '../../../services/api';
 import { Lock, TrendingUp, Puzzle, Star } from '../../shared/Icons';
 import VerifiedBadge from '../../shared/VerifiedBadge';
 import FeaturedBadge from '../../shared/FeaturedBadge';
@@ -67,13 +67,38 @@ export default function InvestorsProvidersPage({ startup }) {
     if (isLocked) { setLoading(false); return; }
     setLoading(true);
     try {
+      let profiles = [];
       if (tab === 'investors') {
         const data = await founderAPI.getInvestors(search);
-        setInvestors(Array.isArray(data) ? data : []);
+        profiles = Array.isArray(data) ? data : [];
       } else {
         const data = await founderAPI.getProviders(search, category !== 'all' ? category : '');
-        setProviders(Array.isArray(data) ? data : []);
+        profiles = Array.isArray(data) ? data : [];
       }
+
+      // Merge Connection model status (direct connect) with IntroRequest status
+      // so profiles show "Connected/Pending" regardless of which flow was used
+      if (profiles.length > 0) {
+        const userIds = profiles.map(p => (p.userId || p._id)?.toString()).filter(Boolean);
+        try {
+          const connStatusMap = await connectionsAPI.statusBulk(userIds);
+          profiles = profiles.map(p => {
+            const uid = (p.userId || p._id)?.toString();
+            const connStatus = connStatusMap[uid];
+            const introStatus = p.requestStatus;
+            // Prefer 'accepted' > 'pending' > introRequest status
+            const priority = { accepted: 3, pending: 2 };
+            let finalStatus = introStatus;
+            if (connStatus && (!finalStatus || (priority[connStatus] || 0) > (priority[finalStatus] || 0))) {
+              finalStatus = connStatus;
+            }
+            return { ...p, requestStatus: finalStatus };
+          });
+        } catch { /* ignore — fall back to IntroRequest status only */ }
+      }
+
+      if (tab === 'investors') setInvestors(profiles);
+      else setProviders(profiles);
     } catch (err) {
       console.error('Load error:', err);
       toast.error(`Failed to load ${tab}`);

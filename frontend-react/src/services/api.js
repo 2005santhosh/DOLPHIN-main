@@ -231,6 +231,7 @@ export const connectionsAPI = {
   sendConnectionRequest: async (toUserId) => api.post('/connections/request', { toUserId }),
   getConnections: async () => api.get('/connections'),
   getStatus: async (userId) => api.get(`/connections/status/${userId}`),
+  statusBulk: async (userIds) => api.post('/connections/status-bulk', { userIds }),
   updateConnection: async (id, status) => api.put(`/connections/${id}`, { status }),
   getPendingCount: async () => api.get('/connections/pending-count'),
 };

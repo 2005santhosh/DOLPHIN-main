@@ -42,14 +42,15 @@ const SettingsPage = () => {
     loadSettings();
     loadVerifyStatus();
 
-    // Fetch total accepted connections count
+    // Fetch total accepted connections count (both incoming and sent)
     connectionsAPI.getConnections()
       .then(data => {
-        const accepted = [
-          ...(data.incoming || []).filter(c => c.status === 'accepted'),
-          ...(data.sent || []).filter(c => c.status === 'accepted'),
-        ];
-        setConnectionCount(accepted.length);
+        const acceptedIncoming = (data.incoming || []).filter(c => c.status === 'accepted').length;
+        const acceptedSent = (data.sent || []).filter(c => c.status === 'accepted').length;
+        // Deduplicate: each connection appears in both directions — count unique pairs
+        // incoming = accepted connections where they sent to me
+        // sent = accepted connections where I sent to them
+        setConnectionCount(acceptedIncoming + acceptedSent);
       })
       .catch(() => {});
 
