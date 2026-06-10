@@ -5,7 +5,23 @@ const Message = require('../models/Message');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
 const { getNewMessageEmail } = require('../utils/emailTemplates');
-// @route   POST /api/chat/send
+// @route   GET /api/chat/online/:userId
+// @desc    Check if a specific user is currently online
+router.get('/online/:userId', protect, (req, res) => {
+  const { isUserOnline } = require('../services/socketService');
+  res.json({ online: isUserOnline(req.params.userId) });
+});
+
+// @route   POST /api/chat/online-status
+// @desc    Bulk check online status for a list of userIds
+router.post('/online-status', protect, async (req, res) => {
+  const { userIds } = req.body;
+  if (!Array.isArray(userIds)) return res.status(400).json({ message: 'userIds must be an array' });
+  const { isUserOnline } = require('../services/socketService');
+  const result = {};
+  userIds.forEach(id => { result[id] = isUserOnline(String(id)); });
+  res.json(result);
+});
 router.post('/send', protect, async (req, res) => {
   const { receiverId, content } = req.body;
 

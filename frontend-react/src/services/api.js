@@ -229,6 +229,7 @@ export const connectionsAPI = {
   getConnections: async () => api.get('/connections'),
   getStatus: async (userId) => api.get(`/connections/status/${userId}`),
   updateConnection: async (id, status) => api.put(`/connections/${id}`, { status }),
+  getPendingCount: async () => api.get('/connections/pending-count'),
 };
 
 // ─── GAMIFICATION ──────────────────────────────────────────────────────────────
@@ -255,6 +256,8 @@ export const chatAPI = {
   getUserProfile: async (userId) => api.get(`/chat/user/${userId}`),
   reactToMessage: async (messageId, emoji) => api.post(`/chat/${messageId}/react`, { emoji }),
   deleteForEveryone: async (messageId) => api.delete(`/chat/${messageId}`),
+  // Bulk check online status for a list of user IDs
+  getOnlineStatus: async (userIds) => api.post('/chat/online-status', { userIds }),
 };
 
 // ─── VERIFICATION ──────────────────────────────────────────────────────────────

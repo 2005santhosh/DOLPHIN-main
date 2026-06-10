@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { gamificationAPI } from '../../services/api';
+import { gamificationAPI, connectionsAPI } from '../../services/api';
 import Header from '../shared/Header';
 import Sidebar from '../shared/Sidebar';
 import DashboardBottomNav from '../shared/DashboardBottomNav';
@@ -113,6 +113,13 @@ export default function ProviderDashboard() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [requestsCount, setRequestsCount] = useState(0);
   const [chatCount, setChatCount] = useState(0);
+
+  // Fetch pending requests count on mount
+  useEffect(() => {
+    connectionsAPI.getPendingCount()
+      .then(data => { if (data?.count > 0) setRequestsCount(data.count); })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Record daily login + update streak badge on mount.
   // Always fetch fresh stats after recordLogin to guarantee the Header

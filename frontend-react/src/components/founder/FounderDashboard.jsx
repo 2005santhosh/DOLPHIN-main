@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { founderAPI, gamificationAPI } from '../../services/api';
+import { founderAPI, gamificationAPI, connectionsAPI } from '../../services/api';
 import Header from '../shared/Header';
 import Sidebar from '../shared/Sidebar';
 import ErrorBoundary from '../shared/ErrorBoundary';
@@ -36,6 +36,13 @@ export default function FounderDashboard() {
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
   });
+
+  // Fetch pending requests count on mount so badge shows immediately
+  useEffect(() => {
+    connectionsAPI.getPendingCount()
+      .then(data => { if (data?.count > 0) setRequestsCount(data.count); })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Record daily login + update streak badge on mount.
   // Strategy: call recordLogin() first (writes new streak to DB), then

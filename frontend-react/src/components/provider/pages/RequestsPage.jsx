@@ -62,6 +62,7 @@ const RequestsPage = ({ setRequestsCount }) => {
   const [activeTab, setActiveTab]         = useState('incoming');
   const [incoming, setIncoming]           = useState([]);
   const [sent, setSent]                   = useState([]);
+  const [connections, setConnections]     = useState([]);
   const [loading, setLoading]             = useState(true);
   const [processing, setProcessing]       = useState({});
 
@@ -106,6 +107,16 @@ const RequestsPage = ({ setRequestsCount }) => {
       setIncoming(allIncoming);
       setSent(allSent);
 
+      // Accepted connections for My Connections tab
+      const seen = new Set();
+      const allAccepted = [...allIncoming.filter(r => r.status === 'accepted'), ...allSent.filter(r => r.status === 'accepted')]
+        .filter(r => {
+          const uid = (r.founderId?._id || r.founderId)?.toString();
+          if (!uid || seen.has(uid)) return false;
+          seen.add(uid); return true;
+        });
+      setConnections(allAccepted);
+
       if (setRequestsCount) {
         setRequestsCount(allIncoming.filter(r => r.status === 'pending').length);
       }
@@ -141,7 +152,7 @@ const RequestsPage = ({ setRequestsCount }) => {
   if (loading) return <LoadingSpinner message="Loading requests…" />;
 
   const pendingIncomingCount = incoming.filter(r => r.status === 'pending').length;
-  const currentList = activeTab === 'incoming' ? incoming : sent;
+  const currentList = activeTab === 'incoming' ? incoming : activeTab === 'sent' ? sent : connections;
 
   const tabStyle = (tab) => ({
     padding: '0.75rem 1.5rem',
@@ -187,6 +198,16 @@ const RequestsPage = ({ setRequestsCount }) => {
         <button style={tabStyle('sent')} onClick={() => setActiveTab('sent')}>
           <CornerUpRight size={15} style={{ marginRight: 4 }} /> Sent
         </button>
+        <button style={tabStyle('connections')} onClick={() => setActiveTab('connections')}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          My Connections
+          {connections.length > 0 && (
+            <span style={{ position: 'absolute', top: 8, right: 4, background: '#84CC16', color: 'white', borderRadius: 9999, padding: '1px 5px', fontSize: '0.65rem', fontWeight: 700, minWidth: 16, textAlign: 'center' }}>{connections.length}</span>
+          )}
+        </button>
       </div>
 
       {/* Stats row */}
@@ -214,7 +235,37 @@ const RequestsPage = ({ setRequestsCount }) => {
       )}
 
       {/* List */}
-      {currentList.length === 0 ? (
+      {activeTab === 'connections' ? (
+        connections.length === 0 ? (
+          <Card><p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No connections yet. Accept requests to build your network!</p></Card>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
+            {connections.map(conn => {
+              const person = conn.founderId || {};
+              const name = person.name || 'User';
+              const fb = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=84CC16&color=fff&size=128`;
+              const imgSrc = person.profilePicture || fb;
+              const personId = person._id || person;
+              return (
+                <Card key={conn._id} style={{ padding: '1.25rem', textAlign: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                    <img src={imgSrc} alt={name} onError={e => { e.target.src = fb; }}
+                      style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border-color)' }} />
+                    <div>
+                      <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', display: 'block' }}>{name}</span>
+                      {person.role && <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textTransform: 'capitalize', background: 'var(--bg-hover)', padding: '2px 10px', borderRadius: 9999 }}>{person.role}</span>}
+                    </div>
+                    <button className="btn btn-primary btn-sm" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                      onClick={() => { window.location.hash = `chat?userId=${personId}`; }}>
+                      <MessageCircle size={14} /> Chat
+                    </button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )
+      ) : currentList.length === 0 ? (
         <Card>
           <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
             No {activeTab} requests yet.

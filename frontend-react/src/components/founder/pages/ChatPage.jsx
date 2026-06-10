@@ -125,6 +125,7 @@ export default function ChatPage({ setChatCount, openUserId }) {
   const [showWindow, setShowWindow] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true); // track if user is at bottom
   const [activeReactionMsgId, setActiveReactionMsgId] = useState(null); // which msg shows emoji picker
+  const [onlineUsers, setOnlineUsers] = useState({}); // userId -> boolean
 
   const endRef = useRef(null);
   const pollRef = useRef(null);
@@ -146,6 +147,17 @@ export default function ChatPage({ setChatCount, openUserId }) {
     loadConvs();
     return () => clearInterval(pollRef.current);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Fetch online status for conversations ──────────────────────────────────
+  const refreshOnlineStatus = useCallback(async (convList) => {
+    const ids = (convList || convs).map(c => c._id?.toString()).filter(Boolean);
+    if (ids.length === 0) return;
+    try {
+      const { chatAPI: cAPI } = await import('../../../services/api');
+      const status = await cAPI.getOnlineStatus(ids);
+      setOnlineUsers(status || {});
+    } catch { /* ignore */ }
+  }, [convs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Auto-scroll to bottom — only when user is already near bottom ──────────
   useEffect(() => {
@@ -181,6 +193,13 @@ export default function ChatPage({ setChatCount, openUserId }) {
     }
     return () => clearInterval(pollRef.current);
   }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Refresh online status every 30s ────────────────────────────────────────
+  useEffect(() => {
+    if (convs.length === 0) return;
+    const interval = setInterval(() => refreshOnlineStatus(convs), 30000);
+    return () => clearInterval(interval);
+  }, [convs, refreshOnlineStatus]);
 
   // ── Socket: live reaction + delete updates ──────────────────────────────────
   useEffect(() => {
@@ -250,6 +269,8 @@ export default function ChatPage({ setChatCount, openUserId }) {
       const arr = Array.isArray(data) ? data : [];
       setConvs(arr);
       if (setChatCount) setChatCount(0);
+      // Fetch online status immediately after loading conversations
+      setTimeout(() => refreshOnlineStatus(arr), 100);
     } catch (err) {
       console.error('Convs error:', err);
     } finally {
@@ -464,7 +485,7 @@ export default function ChatPage({ setChatCount, openUserId }) {
                 onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#F9FAFB'; }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
               >
-                <Avatar src={conv.profilePicture} name={conv.name} size={46} />
+                <Avatar src={conv.profilePicture} name={conv.name} size={46} online={!!onlineUsers[conv._id?.toString()]} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 3 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', overflow: 'hidden', maxWidth: '65%' }}>
@@ -545,7 +566,7 @@ export default function ChatPage({ setChatCount, openUserId }) {
                   </svg>
                 </button>
               )}
-              <Avatar src={selected.profilePicture} name={selected.name} size={40} />
+              <Avatar src={selected.profilePicture} name={selected.name} size={40} online={!!onlineUsers[selected._id?.toString()]} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', overflow: 'hidden' }}>
                   <div style={{ fontWeight: 700, color: '#111827', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -558,6 +579,18 @@ export default function ChatPage({ setChatCount, openUserId }) {
                     {selected.role}
                   </div>
                 )}
+                {/* Online / Offline status */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: 1 }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                    background: onlineUsers[selected._id?.toString()] ? '#22C55E' : '#9CA3AF',
+                    boxShadow: onlineUsers[selected._id?.toString()] ? '0 0 0 2px rgba(34,197,94,0.25)' : 'none',
+                    display: 'inline-block',
+                  }} />
+                  <span style={{ fontSize: '0.75rem', color: onlineUsers[selected._id?.toString()] ? '#16A34A' : '#9CA3AF', fontWeight: 500 }}>
+                    {onlineUsers[selected._id?.toString()] ? 'Online' : 'Offline'}
+                  </span>
+                </div>
               </div>
             </div>
 

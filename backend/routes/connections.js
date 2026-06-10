@@ -128,6 +128,16 @@ router.get('/status/:userId', protect, async (req, res) => {
     }
 });
 
+// GET /api/connections/pending-count - Fast pending count for badge (no full load needed)
+router.get('/pending-count', protect, async (req, res) => {
+    try {
+        const count = await Connection.countDocuments({ to: req.user._id, status: 'pending' });
+        res.json({ count });
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching count' });
+    }
+});
+
 // PUT /api/connections/:id - Accept or Reject a connection request
 router.put('/:id', protect, async (req, res) => {
     try {
