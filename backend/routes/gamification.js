@@ -29,6 +29,7 @@ router.get('/me', protect, async (req, res) => {
     // Compute live connection count — unique accepted partners across both models
     const Connection   = require('../models/Connection');
     const IntroRequest = require('../models/IntroRequest');
+    const userId = user._id; // define before use
 
     const [acceptedConns, acceptedIntros] = await Promise.all([
       Connection.find({ status: 'accepted', $or: [{ from: userId }, { to: userId }] })
