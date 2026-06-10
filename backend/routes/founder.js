@@ -1275,76 +1275,90 @@ router.get('/requests', protect, async (req, res) => {
 
 router.put('/requests/:id/accept', protect, async (req, res) => {
   try {
-    const request = await IntroRequest.findById(req.params.id).populate('providerId startupId');
-    if (!request) return res.status(404).json({ message: 'Not found' });
+    const request = await IntroRequest.findById(req.params.id)
+      .populate('providerId', '_id name email')
+      .populate('startupId', 'name');
 
+    if (!request) return res.status(404).json({ message: 'Not found' });
     if (request.founderId.toString() !== req.user.id) return res.status(403).json({ message: 'Forbidden' });
 
     request.status = 'accepted';
     await request.save();
 
-    // Award gamification points to both parties — same as Connection model accept
-    const { recordActivity } = require('../services/gamificationService');
-    recordActivity(request.founderId.toString(),    'connection').catch(e => console.error('Gamification (founder accept):', e));
-    recordActivity(request.providerId._id.toString(), 'connection').catch(e => console.error('Gamification (provider accept):', e));
-
-    // ✅ NOTIFY PROVIDER
-    const notification = await Notification.create({
-      userId: request.providerId._id,
-      type: 'request_accepted',
-      title: 'Request Accepted!',
-      message: `Your request for ${request.startupId.name} was accepted.`,
-      relatedId: request._id
-    });
-
-    const io = req.app.get('socketio');
-    if (io) {
-      io.to(`user:${request.providerId._id}`).emit('newNotification', notification);
-      io.to(request.providerId._id.toString()).emit('requestStatusUpdate', { 
-        requestId: request._id, 
-        status: 'accepted' 
-      });
-    }
-
+    // Respond immediately — don't block on notifications
     res.json({ success: true });
+
+    // Fire-and-forget: gamification + notification
+    setImmediate(async () => {
+      try {
+        const { recordActivity } = require('../services/gamificationService');
+        recordActivity(request.founderId.toString(), 'connection').catch(() => {});
+        if (request.providerId?._id) {
+          recordActivity(request.providerId._id.toString(), 'connection').catch(() => {});
+        }
+      } catch (e) { console.error('Gamification (accept):', e.message); }
+
+      try {
+        const startupName = request.startupId?.name || 'your request';
+        const notification = await Notification.create({
+          userId: request.providerId?._id,
+          type: 'request_accepted',
+          title: 'Request Accepted!',
+          message: `Your request for ${startupName} was accepted.`,
+          relatedId: request._id,
+        });
+        const io = req.app.get('socketio');
+        if (io && request.providerId?._id) {
+          io.to(`user:${request.providerId._id}`).emit('newNotification', notification);
+          io.to(request.providerId._id.toString()).emit('requestStatusUpdate', {
+            requestId: request._id, status: 'accepted',
+          });
+        }
+      } catch (e) { console.error('Notification (accept):', e.message); }
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server Error' });
+    console.error('[Accept request]', err.message);
+    if (!res.headersSent) res.status(500).json({ message: 'Server Error' });
   }
 });
 router.put('/requests/:id/reject', protect, async (req, res) => {
   try {
-    const request = await IntroRequest.findById(req.params.id).populate('providerId startupId');
+    const request = await IntroRequest.findById(req.params.id)
+      .populate('providerId', '_id name email')
+      .populate('startupId', 'name');
+
     if (!request) return res.status(404).json({ message: 'Not found' });
-    
-    if (request.founderId.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Forbidden' });
-    }
+    if (request.founderId.toString() !== req.user.id) return res.status(403).json({ message: 'Forbidden' });
 
     request.status = 'rejected';
     await request.save();
 
-    // ✅ NOTIFY PROVIDER
-    const notification = await Notification.create({
-      userId: request.providerId._id,
-      type: 'request_rejected',
-      title: 'Request Update',
-      message: `Your request for ${request.startupId.name} was declined.`,
-      relatedId: request._id
-    });
-
-    const io = req.app.get('socketio');
-    if (io) {
-      io.to(request.providerId._id.toString()).emit('newNotification', notification);
-      io.to(request.providerId._id.toString()).emit('requestStatusUpdate', { 
-        requestId: request._id, 
-        status: 'rejected' 
-      });
-    }
-
+    // Respond immediately
     res.json({ success: true, message: 'Request rejected' });
+
+    // Fire-and-forget notification
+    setImmediate(async () => {
+      try {
+        const startupName = request.startupId?.name || 'your request';
+        const notification = await Notification.create({
+          userId: request.providerId?._id,
+          type: 'request_rejected',
+          title: 'Request Update',
+          message: `Your request for ${startupName} was declined.`,
+          relatedId: request._id,
+        });
+        const io = req.app.get('socketio');
+        if (io && request.providerId?._id) {
+          io.to(request.providerId._id.toString()).emit('newNotification', notification);
+          io.to(request.providerId._id.toString()).emit('requestStatusUpdate', {
+            requestId: request._id, status: 'rejected',
+          });
+        }
+      } catch (e) { console.error('Notification (reject):', e.message); }
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Server Error' });
+    console.error('[Reject request]', err.message);
+    if (!res.headersSent) res.status(500).json({ message: 'Server Error' });
   }
 });
 router.post('/send-request', protect, async (req, res) => {
