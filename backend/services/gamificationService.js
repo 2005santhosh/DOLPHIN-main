@@ -220,72 +220,79 @@ async function getLeaderboard(role, limit = 50, currentUserId = null) {
   const postMap = {};
   postCounts.forEach(p => { postMap[p._id.toString()] = p.count; });
 
-  // Count actual accepted connections per user (all-time)
-  // Counts BOTH Connection model (direct connect) AND IntroRequest model (founder/provider flow)
+  // Count accepted connections per user.
+  // Each Connection document represents ONE accepted connection between two people.
+  // We count documents where user is sender OR receiver — not both sides separately.
+  // Same logic for IntroRequest.
   const Connection   = require('../models/Connection');
   const IntroRequest = require('../models/IntroRequest');
 
-  const connCounts = await Connection.aggregate([
-    {
-      $match: {
-        status: 'accepted',
-        $or: [
-          { from: { $in: userIds } },
-          { to:   { $in: userIds } },
-        ],
-      },
-    },
-    {
-      $facet: {
-        asSender:   [{ $group: { _id: '$from', count: { $sum: 1 } } }],
-        asReceiver: [{ $group: { _id: '$to',   count: { $sum: 1 } } }],
-      },
-    },
-  ]);
+  // Get all accepted Connection docs involving any of these users
+  const acceptedConns = await Connection.find({
+    status: 'accepted',
+    $or: [{ from: { $in: userIds } }, { to: { $in: userIds } }],
+  }).select('from to').lean();
 
   const connMap = {};
-  (connCounts[0]?.asSender   || []).forEach(c => {
-    const id = c._id.toString();
-    connMap[id] = (connMap[id] || 0) + c.count;
-  });
-  (connCounts[0]?.asReceiver || []).forEach(c => {
-    const id = c._id.toString();
-    connMap[id] = (connMap[id] || 0) + c.count;
+  acceptedConns.forEach(c => {
+    const fromId = c.from.toString();
+    const toId   = c.to.toString();
+    if (userIds.some(uid => uid.toString() === fromId)) {
+      connMap[fromId] = (connMap[fromId] || 0) + 1;
+    }
+    if (userIds.some(uid => uid.toString() === toId)) {
+      connMap[toId] = (connMap[toId] || 0) + 1;
+    }
   });
 
-  // Also count IntroRequest accepted connections (founder↔provider, investor↔founder)
-  const introCounts = await IntroRequest.aggregate([
-    {
-      $match: {
-        status: 'accepted',
-        $or: [
-          { founderId:  { $in: userIds } },
-          { providerId: { $in: userIds } },
-        ],
-      },
-    },
-    {
-      $facet: {
-        asFounder:  [{ $group: { _id: '$founderId',  count: { $sum: 1 } } }],
-        asProvider: [{ $group: { _id: '$providerId', count: { $sum: 1 } } }],
-      },
-    },
-  ]);
+  // Get all accepted IntroRequest docs involving any of these users
+  const acceptedIntros = await IntroRequest.find({
+    status: 'accepted',
+    $or: [{ founderId: { $in: userIds } }, { providerId: { $in: userIds } }],
+  }).select('founderId providerId').lean();
 
-  (introCounts[0]?.asFounder  || []).forEach(c => {
-    const id = c._id.toString();
-    connMap[id] = (connMap[id] || 0) + c.count;
+  // Track unique pairs per user to avoid double-counting
+  // (if same two users have both a Connection AND an IntroRequest, count once)
+  const pairsSeen = {}; // uid -> Set of other-uid strings
+  acceptedConns.forEach(c => {
+    const a = c.from.toString();
+    const b = c.to.toString();
+    if (!pairsSeen[a]) pairsSeen[a] = new Set();
+    if (!pairsSeen[b]) pairsSeen[b] = new Set();
+    pairsSeen[a].add(b);
+    pairsSeen[b].add(a);
   });
-  (introCounts[0]?.asProvider || []).forEach(c => {
-    const id = c._id.toString();
-    connMap[id] = (connMap[id] || 0) + c.count;
+
+  const introMap = {};
+  acceptedIntros.forEach(r => {
+    const fId = r.founderId?.toString();
+    const pId = r.providerId?.toString();
+    if (!fId || !pId) return;
+    // Only count this pair if not already counted via Connection model
+    const fAlreadySeen = pairsSeen[fId]?.has(pId);
+    const pAlreadySeen = pairsSeen[pId]?.has(fId);
+    if (!fAlreadySeen) {
+      introMap[fId] = (introMap[fId] || 0) + 1;
+      if (!pairsSeen[fId]) pairsSeen[fId] = new Set();
+      pairsSeen[fId].add(pId);
+    }
+    if (!pAlreadySeen) {
+      introMap[pId] = (introMap[pId] || 0) + 1;
+      if (!pairsSeen[pId]) pairsSeen[pId] = new Set();
+      pairsSeen[pId].add(fId);
+    }
   });
+
+  // Final connection count = Connection + IntroRequest (deduped)
+  const finalConnMap = {};
+  Object.keys(connMap).forEach(uid => { finalConnMap[uid] = connMap[uid]; });
+  Object.keys(introMap).forEach(uid => { finalConnMap[uid] = (finalConnMap[uid] || 0) + introMap[uid]; });
 
   // Build scored list using real counts
   const scored = allUsers.map(u => {
     const id            = u._id.toString();
-    const realPosts     = postMap[id]  ?? (u.totalPosts       || 0);
-    const realConns     = connMap[id]  ?? (u.totalConnections || 0);
+    const realPosts     = postMap[id]       ?? (u.totalPosts       || 0);
+    const realConns     = finalConnMap[id]  ?? (u.totalConnections || 0);
     const daysActive    = u.totalDaysActive  || 0;
     const streak        = u.currentStreak    || 0;
 

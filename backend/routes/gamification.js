@@ -26,24 +26,32 @@ router.get('/me', protect, async (req, res) => {
 
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Compute live connection count from both Connection and IntroRequest models
-    // This is the source of truth — stale counters on User doc may lag behind
+    // Compute live connection count — unique accepted partners across both models
     const Connection   = require('../models/Connection');
     const IntroRequest = require('../models/IntroRequest');
-    const userId = user._id;
 
-    const [connResult, introResult] = await Promise.all([
-      Connection.aggregate([
-        { $match: { status: 'accepted', $or: [{ from: userId }, { to: userId }] } },
-        { $count: 'total' },
-      ]),
-      IntroRequest.aggregate([
-        { $match: { status: 'accepted', $or: [{ founderId: userId }, { providerId: userId }] } },
-        { $count: 'total' },
-      ]),
+    const [acceptedConns, acceptedIntros] = await Promise.all([
+      Connection.find({ status: 'accepted', $or: [{ from: userId }, { to: userId }] })
+        .select('from to').lean(),
+      IntroRequest.find({ status: 'accepted', $or: [{ founderId: userId }, { providerId: userId }] })
+        .select('founderId providerId').lean(),
     ]);
 
-    const liveConnections = (connResult[0]?.total || 0) + (introResult[0]?.total || 0);
+    // Build set of unique partner IDs
+    const partnerSet = new Set();
+    acceptedConns.forEach(c => {
+      const other = c.from.toString() === userId.toString() ? c.to.toString() : c.from.toString();
+      partnerSet.add(other);
+    });
+    acceptedIntros.forEach(r => {
+      const fId = r.founderId?.toString();
+      const pId = r.providerId?.toString();
+      const uid = userId.toString();
+      const other = fId === uid ? pId : fId;
+      if (other) partnerSet.add(other);
+    });
+
+    const liveConnections = partnerSet.size;
 
     // Compute live post count
     const Post = require('../models/Post');
@@ -86,25 +94,35 @@ router.get('/profile/:userId', protect, async (req, res) => {
       return res.status(404).json({ message: 'Profile not found' });
     }
 
-    // ── Live counts — same logic as /me and getLeaderboard ───────────────────
+    // ── Live counts — unique accepted partners ───────────────────────────────
     const Connection   = require('../models/Connection');
     const IntroRequest = require('../models/IntroRequest');
     const Post         = require('../models/Post');
     const uid          = user._id;
 
-    const [connResult, introResult, postCount] = await Promise.all([
-      Connection.aggregate([
-        { $match: { status: 'accepted', $or: [{ from: uid }, { to: uid }] } },
-        { $count: 'total' },
-      ]),
-      IntroRequest.aggregate([
-        { $match: { status: 'accepted', $or: [{ founderId: uid }, { providerId: uid }] } },
-        { $count: 'total' },
-      ]),
+    const [acceptedConns, acceptedIntros, postCount] = await Promise.all([
+      Connection.find({ status: 'accepted', $or: [{ from: uid }, { to: uid }] })
+        .select('from to').lean(),
+      IntroRequest.find({ status: 'accepted', $or: [{ founderId: uid }, { providerId: uid }] })
+        .select('founderId providerId').lean(),
       Post.countDocuments({ authorId: uid }),
     ]);
 
-    const liveConnections = (connResult[0]?.total || 0) + (introResult[0]?.total || 0);
+    // Unique partner set — deduplicates pairs that appear in both models
+    const partnerSet = new Set();
+    acceptedConns.forEach(c => {
+      const other = c.from.toString() === uid.toString() ? c.to.toString() : c.from.toString();
+      partnerSet.add(other);
+    });
+    acceptedIntros.forEach(r => {
+      const fId = r.founderId?.toString();
+      const pId = r.providerId?.toString();
+      const uidStr = uid.toString();
+      const other = fId === uidStr ? pId : fId;
+      if (other) partnerSet.add(other);
+    });
+
+    const liveConnections = partnerSet.size;
     const livePosts       = postCount;
 
     // Recompute leaderboard score from live data (identical formula to getLeaderboard)
