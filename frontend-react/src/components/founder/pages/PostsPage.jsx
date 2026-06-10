@@ -231,6 +231,7 @@ const PostsPage = () => {
   const [hasMore, setHasMore]   = useState(true);
   const [page, setPage]         = useState(1);
   const [filter, setFilter]     = useState('all');
+  const [dailyLimit, setDailyLimit] = useState({ remaining: 5, usedToday: 0, dailyLimit: 5 });
 
   // Create modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -249,6 +250,15 @@ const PostsPage = () => {
   const MAX_FILES = 10;
 
   useEffect(() => { loadPosts(true); }, [filter]); // eslint-disable-line
+
+  // Fetch daily post limit on mount and keep it fresh
+  useEffect(() => {
+    const fetchLimit = () =>
+      postsAPI.getDailyLimit()
+        .then(data => { if (data) setDailyLimit(data); })
+        .catch(() => {});
+    fetchLimit();
+  }, []); // eslint-disable-line
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -369,7 +379,8 @@ const PostsPage = () => {
       // Text-only post: just create it, no upload needed
       try {
         const newPost = await postsAPI.createPost(postContent.trim(), postType, tags, []);
-        setPosts(prev => prev.map(p => p._id === tempId ? { ...newPost, connectionStatus: 'own', isAuthorVerified: optimisticPost.isAuthorVerified } : p));
+        setPosts(prev => [{ ...newPost, connectionStatus: 'own', isAuthorVerified: optimisticPost.isAuthorVerified }, ...prev.filter(p => p._id !== tempId)]);
+        postsAPI.getDailyLimit().then(data => { if (data) setDailyLimit(data); }).catch(() => {});
       } catch (err) {
         setPosts(prev => prev.filter(p => p._id !== tempId));
         toast.error(err.message || 'Failed to create post');
@@ -500,6 +511,8 @@ const PostsPage = () => {
       ));
 
       toast.success('Post published!', { id: uploadToastId, duration: 3000 });
+      // Refresh daily limit counter
+      postsAPI.getDailyLimit().then(data => { if (data) setDailyLimit(data); }).catch(() => {});
     } catch (err) {
       // Remove optimistic post on failure
       setPosts(prev => prev.filter(p => p._id !== tempId));
@@ -610,10 +623,40 @@ const PostsPage = () => {
 
       {/* Top bar */}
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <button className="btn btn-primary" onClick={() => setCreateModalOpen(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-          <Edit3 size={16} /> Create Post
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => dailyLimit.remaining > 0 && setCreateModalOpen(true)}
+            disabled={dailyLimit.remaining === 0}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              opacity: dailyLimit.remaining === 0 ? 0.6 : 1,
+              cursor: dailyLimit.remaining === 0 ? 'not-allowed' : 'pointer',
+            }}
+            title={dailyLimit.remaining === 0 ? 'Daily limit reached. Resets at midnight.' : 'Create a new post'}
+          >
+            <Edit3 size={16} />
+            {dailyLimit.remaining === 0 ? 'Limit Reached' : 'Create Post'}
+          </button>
+
+          {/* Daily limit pill */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '4px',
+            padding: '4px 10px',
+            borderRadius: 9999,
+            background: dailyLimit.remaining === 0 ? '#FEE2E2' : dailyLimit.remaining <= 1 ? '#FEF3C7' : '#F0FDF4',
+            border: `1px solid ${dailyLimit.remaining === 0 ? '#FECACA' : dailyLimit.remaining <= 1 ? '#FDE68A' : '#BBF7D0'}`,
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            color: dailyLimit.remaining === 0 ? '#DC2626' : dailyLimit.remaining <= 1 ? '#D97706' : '#16A34A',
+            whiteSpace: 'nowrap',
+          }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            {dailyLimit.remaining}/{dailyLimit.dailyLimit} posts today
+          </div>
+        </div>
         <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginLeft: 'auto' }}>
           {feedFilters.map(f => (
             <button key={f.value}

@@ -12,7 +12,40 @@ const { recordActivity } = require('../services/gamificationService');
 const feedLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 300 });
 const createLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 30 });
 const likeLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 200 });
-const uploadLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 30 });
+
+const DAILY_POST_LIMIT = 5;
+
+/** Returns start of current calendar day in UTC (midnight 00:00:00.000) */
+function startOfTodayUTC() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+/** Count how many posts this user has created since midnight UTC today */
+async function countTodayPosts(userId) {
+  return Post.countDocuments({
+    authorId: userId,
+    createdAt: { $gte: startOfTodayUTC() },
+  });
+}
+
+// ─── GET /api/posts/daily-limit — how many posts remain today ────────────────
+router.get('/daily-limit', protect, async (req, res) => {
+    try {
+        const usedToday = await countTodayPosts(req.user._id);
+        const remaining = Math.max(0, DAILY_POST_LIMIT - usedToday);
+        const tomorrow  = startOfTodayUTC();
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+        res.json({
+            dailyLimit:  DAILY_POST_LIMIT,
+            usedToday,
+            remaining,
+            resetsAt: tomorrow.toISOString(),
+        });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 
 // ─── GET /api/posts/upload-signature — Cloudinary direct upload signature ────
 // Frontend calls this to get a signed upload preset, then uploads directly to
@@ -47,6 +80,19 @@ router.post('/', protect, createLimiter, async (req, res) => {
     try {
         const { content, postType, tags, media: mediaJson } = req.body;
         const user = req.user;
+
+        // ── Daily post limit ──────────────────────────────────────────────────
+        const todayCount = await countTodayPosts(user._id);
+        if (todayCount >= DAILY_POST_LIMIT) {
+            const tomorrow = startOfTodayUTC();
+            tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+            return res.status(429).json({
+                message: `You've reached your daily limit of ${DAILY_POST_LIMIT} posts. You can post again after midnight (12:00 AM).`,
+                dailyLimit: DAILY_POST_LIMIT,
+                usedToday: todayCount,
+                resetsAt: tomorrow.toISOString(),
+            });
+        }
 
         // Parse media array (sent as JSON string or array of {url, publicId, type})
         let media = [];

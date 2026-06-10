@@ -84,6 +84,9 @@ export const postsAPI = {
   getFeed: async (filter = 'all', page = 1, limit = 20) =>
     dedupGet('/posts/feed', { params: { filter, page, limit } }),
 
+  // Get today's post usage (how many posts remain)
+  getDailyLimit: async () => api.get('/posts/daily-limit'),
+
   // Get a Cloudinary-signed upload credential (no binary data sent to our server)
   getUploadSignature: async () => api.get('/posts/upload-signature'),
 
