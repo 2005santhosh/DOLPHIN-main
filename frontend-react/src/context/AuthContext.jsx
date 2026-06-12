@@ -130,14 +130,17 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // ── refreshProfile ─────────────────────────────────────────────────────────
-  const refreshProfile = useCallback(async (isInitialLoad = false) => {
+  // forceUpdate: bypass the loginInProgressRef guard — used by the post-login
+  // background refresh to guarantee the full profile overwrites the minimal
+  // login response stored in localStorage.
+  const refreshProfile = useCallback(async (isInitialLoad = false, forceUpdate = false) => {
     try {
       const data = await apiFetch('/auth/profile');
       const profile = data.profile || data;
 
-      // Don't override auth state if a login is in progress — the login
-      // already set the correct state; we don't want the bootstrap to race.
-      if (!loginInProgressRef.current) {
+      // Always update when forceUpdate=true (post-login full profile fetch).
+      // Otherwise skip if a login is actively in progress (bootstrap race guard).
+      if (forceUpdate || !loginInProgressRef.current) {
         _setAuth(profile);
       }
 
@@ -228,7 +231,9 @@ export const AuthProvider = ({ children }) => {
 
       // Fetch full profile in background AFTER navigation completes.
       // Use requestIdleCallback so it runs after paint — doesn't block navigation.
-      const doProfileRefresh = () => refreshProfile(false).finally(() => {
+      // NOTE: loginInProgressRef stays true until this completes, then is cleared.
+      // We pass a flag to refreshProfile to allow it to update even while loginInProgress.
+      const doProfileRefresh = () => refreshProfile(false, true).finally(() => {
         loginInProgressRef.current = false;
       });
       if (typeof requestIdleCallback !== 'undefined') {
@@ -270,7 +275,7 @@ export const AuthProvider = ({ children }) => {
 
       toast.success(`Welcome, ${data.user?.name || 'User'}!`);
 
-      const doProfileRefresh = () => refreshProfile(false).finally(() => {
+      const doProfileRefresh = () => refreshProfile(false, true).finally(() => {
         loginInProgressRef.current = false;
       });
       if (typeof requestIdleCallback !== 'undefined') {
