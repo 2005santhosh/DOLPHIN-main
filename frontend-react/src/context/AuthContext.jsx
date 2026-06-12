@@ -239,16 +239,17 @@ export const AuthProvider = ({ children }) => {
   // ── login ─────────────────────────────────────────────────────────────────
   const login = async (email, password) => {
     loginActiveRef.current = true;
+
+    // Wipe ALL stale data BEFORE the request — handles Chrome account switch corruption
+    storage.clearAll();
+
     try {
       const data = await apiFetch('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
 
-      // Clear any stale/corrupt data from previous sessions or Chrome account switches
-      // BEFORE writing new data — ensures clean state
-      storage.clearAll();
-
+      // Write fresh session data
       if (data.token) storage.set('token', data.token);
       if (data.user) _setAuth(data.user);
 
