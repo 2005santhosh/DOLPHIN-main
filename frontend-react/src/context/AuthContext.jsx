@@ -30,6 +30,25 @@ const storage = {
     try { localStorage.removeItem(key); } catch { /* ignored */ }
     try { sessionStorage.removeItem(key); } catch { /* ignored */ }
   },
+  // Parse JSON from storage safely — returns null on corrupt/missing data
+  getParsed(key) {
+    try {
+      const raw = storage.get(key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      // Sanity check: user object must have at minimum _id and role
+      if (key === 'user' && (!parsed?._id || !parsed?.role)) return null;
+      return parsed;
+    } catch {
+      // Corrupt JSON — remove it to prevent future parse errors
+      storage.remove(key);
+      return null;
+    }
+  },
+  // Wipe all Dolphin auth keys — used before writing fresh login data
+  clearAll() {
+    ['token', 'user', 'startupData'].forEach(k => storage.remove(k));
+  },
 };
 
 // ─── apiFetch with timeout ────────────────────────────────────────────────────
@@ -78,16 +97,17 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    try { const s = storage.get('user'); return s ? JSON.parse(s) : null; }
-    catch { return null; }
+    // Use getParsed which validates the user object structure
+    // If the stored user is corrupt/incomplete, returns null cleanly
+    return storage.getParsed('user');
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(
-    () => !!(storage.get('token') && storage.get('user'))
+    () => !!(storage.get('token') && storage.getParsed('user'))
   );
 
   const [loading, setLoading] = useState(
-    () => !(storage.get('token') && storage.get('user'))
+    () => !(storage.get('token') && storage.getParsed('user'))
   );
 
   const timerRef        = useRef(null);
@@ -172,7 +192,17 @@ export const AuthProvider = ({ children }) => {
     let cancelled = false;
 
     const bootstrap = async () => {
-      const hasStored = !!(storage.get('token') && storage.get('user'));
+      // Storage integrity check: if token exists but user is missing/corrupt,
+      // clear both and start fresh (handles Chrome account switch corruption)
+      const token = storage.get('token');
+      const userParsed = storage.getParsed('user');
+      if (token && !userParsed) {
+        // Token present but user object is missing or corrupt
+        // Don't wipe the token — the server will validate it during profile fetch
+        storage.remove('user');
+      }
+
+      const hasStored = !!(token && userParsed);
       if (hasStored) {
         setLoading(false);
         initDoneRef.current = true;
@@ -214,6 +244,10 @@ export const AuthProvider = ({ children }) => {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
+
+      // Clear any stale/corrupt data from previous sessions or Chrome account switches
+      // BEFORE writing new data — ensures clean state
+      storage.clearAll();
 
       if (data.token) storage.set('token', data.token);
       if (data.user) _setAuth(data.user);
@@ -257,6 +291,9 @@ export const AuthProvider = ({ children }) => {
         method: 'POST',
         body: JSON.stringify({ email, otp }),
       });
+
+      // Clear any stale storage before writing new session data
+      storage.clearAll();
 
       if (data.token) storage.set('token', data.token);
       if (data.user) _setAuth(data.user);
