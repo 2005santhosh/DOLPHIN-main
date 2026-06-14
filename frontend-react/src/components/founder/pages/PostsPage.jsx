@@ -219,8 +219,28 @@ async function uploadChunked(file, sigData, onProgress, isVideo) {
   return lastResult;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-const PostsPage = () => {
+// ─── Read More / Show Less for long post text ────────────────────────────────
+const CAPTION_LIMIT = 150;
+
+function PostCaption({ text }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!text) return null;
+  if (text.length <= CAPTION_LIMIT) {
+    return <p style={{ color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0 }}>{text}</p>;
+  }
+  return (
+    <p style={{ color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0 }}>
+      {expanded ? text : `${text.slice(0, CAPTION_LIMIT)}…`}
+      {' '}
+      <button
+        onClick={() => setExpanded(v => !v)}
+        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--text-tertiary)', fontWeight: 700, fontSize: 'inherit', display: 'inline' }}
+      >
+        {expanded ? 'Show less' : 'more'}
+      </button>
+    </p>
+  );
+}
   const { user } = useAuth();
   const role = user?.role || 'founder';
   const postTypes   = POST_TYPES_BY_ROLE[role]  || POST_TYPES_BY_ROLE.founder;
@@ -245,9 +265,11 @@ const PostsPage = () => {
   const [stateLocks, setStateLocks] = useState({});
   const [reelsOpen, setReelsOpen]   = useState(false);
   const [reelsStartIndex, setReelsStartIndex] = useState(0);
+  const [reelsPosts, setReelsPosts]   = useState([]); // pre-filtered video posts for ReelsViewer
   const observerTarget = useRef(null);
 
   const MAX_FILES = 10;
+  const MAX_FILE_SIZE_MB = 500; // 500MB per file
 
   useEffect(() => { loadPosts(true); }, [filter]); // eslint-disable-line
 
@@ -298,6 +320,10 @@ const PostsPage = () => {
     const toAdd = files.slice(0, remaining).filter(f => {
       if (!f.type.startsWith('image/') && !f.type.startsWith('video/')) {
         toast.error(`${f.name}: unsupported format — images and videos only`);
+        return false;
+      }
+      if (f.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        toast.error(`${f.name} exceeds ${MAX_FILE_SIZE_MB}MB limit`);
         return false;
       }
       return true;
@@ -583,6 +609,7 @@ const PostsPage = () => {
                 onClick={() => {
                   const vp = posts.filter(p => p.media?.some(m => (typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video')));
                   const idx = vp.findIndex(p => p._id === postId);
+                  setReelsPosts(vp);
                   setReelsStartIndex(idx >= 0 ? idx : 0);
                   setReelsOpen(true);
                 }}>
@@ -614,7 +641,7 @@ const PostsPage = () => {
   return (
     <div>
       {reelsOpen && (
-        <ReelsViewer posts={posts} startIndex={reelsStartIndex} onClose={() => setReelsOpen(false)}
+        <ReelsViewer posts={reelsPosts.length > 0 ? reelsPosts : posts} startIndex={reelsStartIndex} onClose={() => setReelsOpen(false)}
           onToggleLike={toggleLike} onConnect={sendConnectionRequest}
           currentUserId={user?._id} stateLocks={stateLocks} />
       )}
@@ -744,8 +771,7 @@ const PostsPage = () => {
                   </div>
                   {post.postType && post.postType !== 'general' && getPostTypeBadge(post.postType)}
                 </div>
-                {post.content && <p style={{ color: 'var(--text-primary)', lineHeight: 1.6, marginBottom: post.media?.length > 0 ? '1rem' : '0.75rem', whiteSpace: 'pre-wrap' }}>{post.content}</p>}
-                {renderMediaGallery(post.media, post._id)}
+                {post.content && <div style={{ marginBottom: post.media?.length > 0 ? '1rem' : '0.75rem' }}><PostCaption text={post.content} /></div>}                {renderMediaGallery(post.media, post._id)}
                 {post.tags?.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
                     {post.tags.map((tag, idx) => <span key={idx} style={{ background: '#eff6ff', color: '#2563eb', padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem' }}>#{tag}</span>)}

@@ -8,12 +8,28 @@ function getVideoUrl(post) {
   );
   const url = typeof vid === 'string' ? vid : vid?.url;
   if (!url) return null;
-  // Apply Cloudinary optimisation but preserve the URL structure
+  // Apply Cloudinary optimisation — q_auto:best preserves video quality
   if (url.includes('cloudinary') && url.includes('/upload/')) {
-    return url.replace('/upload/', '/upload/f_auto,q_auto/');
+    return url.replace('/upload/', '/upload/q_auto:best,f_auto/');
   }
   return url;
 }
+
+export default function ReelsViewer({
+  posts,        // Already filtered to video-only posts by the caller
+  startIndex,
+  onClose,
+  onToggleLike,
+  onConnect,
+  currentUserId,
+  stateLocks,
+}) {
+  // Use posts directly — caller is responsible for filtering to video-only
+  // This prevents double-filtering which caused index mismatches
+  const videoPosts = posts.filter(p =>
+    p.media?.some(m => typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video')
+  );
+  const total = videoPosts.length;
 
 export default function ReelsViewer({
   posts,
