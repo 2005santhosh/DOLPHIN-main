@@ -410,8 +410,58 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
                 return 0;
             });
 
+        // ── Author diversity interleave (Instagram-style) ──────────────────────
+        // Prevents consecutive posts from the same author by round-robin
+        // distributing posts across unique authors.
+        //
+        // Algorithm:
+        //   1. Group posts by authorId into buckets (preserving score order within each bucket)
+        //   2. Round-robin pick one post from each bucket in turn
+        //   3. Result: A → B → C → A → B → C pattern, never A → A → A
+        //
+        // Verified authors' buckets are placed first so their posts get higher
+        // slots in the round-robin, giving them natural priority without clustering.
+        function interleaveByAuthor(posts) {
+            if (posts.length === 0) return posts;
+
+            // Build ordered bucket list — verified authors first
+            const authorOrder = [];
+            const buckets = {};
+            for (const p of posts) {
+                const aid = p.authorId?.toString() || 'unknown';
+                if (!buckets[aid]) {
+                    buckets[aid] = [];
+                    authorOrder.push(aid);
+                }
+                buckets[aid].push(p);
+            }
+
+            // Sort author order: verified first, then by their best post score
+            authorOrder.sort((a, b) => {
+                const aVerified = buckets[a][0]?.isAuthorVerified ? 1 : 0;
+                const bVerified = buckets[b][0]?.isAuthorVerified ? 1 : 0;
+                return bVerified - aVerified;
+            });
+
+            // Round-robin interleave
+            const result = [];
+            let hasMore = true;
+            while (hasMore) {
+                hasMore = false;
+                for (const aid of authorOrder) {
+                    if (buckets[aid].length > 0) {
+                        result.push(buckets[aid].shift());
+                        if (buckets[aid].length > 0) hasMore = true;
+                    }
+                }
+            }
+            return result;
+        }
+
+        const diverseFeed = interleaveByAuthor(boostedPosts);
+
         res.json({
-            posts: boostedPosts,
+            posts: diverseFeed,
             pagination: {
                 currentPage: page,
                 totalPages: Math.ceil(totalPosts / limit),
