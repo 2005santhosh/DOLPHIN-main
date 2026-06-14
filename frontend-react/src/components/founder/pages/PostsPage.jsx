@@ -268,7 +268,10 @@ const PostsPage = () => {
   const [stateLocks, setStateLocks] = useState({});
   const [reelsOpen, setReelsOpen]   = useState(false);
   const [reelsStartIndex, setReelsStartIndex] = useState(0);
-  const [reelsPosts, setReelsPosts]   = useState([]); // pre-filtered video posts for ReelsViewer
+  const [reelsPosts, setReelsPosts]   = useState([]);
+  // Persistent accumulator of ALL video posts across all loaded pages
+  // Updated on every loadPosts — never reset on filter change
+  const allVideoPostsRef = useRef([]);
   const observerTarget = useRef(null);
 
   const MAX_FILES = 10;
@@ -301,8 +304,26 @@ const PostsPage = () => {
     try {
       const response = await postsAPI.getFeed(filter, currentPage, 20);
       const newPosts = response.posts || [];
-      if (reset) { setPosts(newPosts); setPage(2); }
-      else { setPosts(prev => [...prev, ...newPosts]); setPage(prev => prev + 1); }
+
+      if (reset) {
+        setPosts(newPosts);
+        setPage(2);
+        // On reset (filter change), rebuild the video accumulator from this page
+        allVideoPostsRef.current = newPosts.filter(p =>
+          p.media?.some(m => typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video')
+        );
+      } else {
+        setPosts(prev => [...prev, ...newPosts]);
+        setPage(prev => prev + 1);
+        // Append new videos to the accumulator, deduplicating by _id
+        const existingIds = new Set(allVideoPostsRef.current.map(p => p._id?.toString()));
+        const newVideos = newPosts.filter(p =>
+          !existingIds.has(p._id?.toString()) &&
+          p.media?.some(m => typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video')
+        );
+        allVideoPostsRef.current = [...allVideoPostsRef.current, ...newVideos];
+      }
+
       setHasMore(response.pagination?.hasMore || newPosts.length === 20);
       newPosts.forEach(post => {
         if (post.authorId !== user?._id) postsAPI.trackView(post._id).catch(() => {});
@@ -610,7 +631,9 @@ const PostsPage = () => {
             return (
               <div key={index} style={{ position: 'relative', cursor: 'pointer', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: '#000' }}
                 onClick={() => {
-                  const vp = posts.filter(p => p.media?.some(m => (typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video')));
+                  const vp = allVideoPostsRef.current.length > 0
+                    ? allVideoPostsRef.current
+                    : posts.filter(p => p.media?.some(m => (typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video')));
                   const idx = vp.findIndex(p => p._id === postId);
                   setReelsPosts(vp);
                   setReelsStartIndex(idx >= 0 ? idx : 0);

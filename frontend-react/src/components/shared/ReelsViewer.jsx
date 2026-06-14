@@ -8,10 +8,10 @@ function getVideoUrl(post) {
   );
   const url = typeof vid === 'string' ? vid : vid?.url;
   if (!url) return null;
-  // Apply Cloudinary optimisation — q_auto:best preserves video quality
-  if (url.includes('cloudinary') && url.includes('/upload/')) {
-    return url.replace('/upload/', '/upload/q_auto:best,f_auto/');
-  }
+  // For Cloudinary videos: serve original URL without transformation.
+  // Video transformations (f_auto, q_auto:best) can cause playback failures
+  // because the browser may not support the auto-selected format/codec.
+  // The original uploaded video quality is preserved as-is.
   return url;
 }
 
