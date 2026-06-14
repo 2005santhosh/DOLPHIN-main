@@ -281,7 +281,7 @@ app.use((err, req, res, next) => {
   }
   // Multer file size error
   if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ message: 'File too large' });
+    return res.status(413).json({ message: 'File too large. Profile pictures must be under 10MB. For post videos up to 500MB, use the post create button which uploads directly.' });
   }
   // Payload too large
   if (err.type === 'entity.too.large') {

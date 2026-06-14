@@ -67,13 +67,18 @@ const fileFilter = (req, file, cb) => {
 };
 
 // Initialize Multer instances
-const upload = multer({ storage: storage });
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB for profile pictures (images only)
+  },
+});
 
 const uploadPostMedia = multer({ 
   storage: postMediaStorage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB max file size
+    fileSize: 500 * 1024 * 1024, // 500MB max file size
     files: 10 // Max 10 files per post
   }
 });
