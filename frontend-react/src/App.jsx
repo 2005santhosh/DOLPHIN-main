@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { lazy, Suspense } from 'react';
 import AppUpdateBanner from './components/shared/AppUpdateBanner';
+import FloatingSupportButton from './components/shared/FloatingSupportButton';
 import './styles/GlobalStyles.css';
 import './styles/components.css';
 import './styles/mobile.css';
@@ -269,6 +270,7 @@ function App() {
       <AuthProvider>
         <Router>
           <AppRoutes />
+          <FloatingSupportButton />
           <AppUpdateBanner />
           <Toaster
             position="top-right"
