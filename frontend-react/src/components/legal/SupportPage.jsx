@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LifeBuoy, Mail, MessageCircle, BookOpen, Lock, FileText, CreditCard, CheckCircle2 } from '../shared/Icons';
 import DolphinLogo from '../shared/DolphinLogo';
 
@@ -52,6 +53,7 @@ const FAQS = [
 ];
 
 export default function SupportPage() {
+  const navigate = useNavigate();
   const [openFaq, setOpenFaq] = useState(null);
   const [contactForm, setContactForm] = useState({ name: '', email: '', subject: '', message: '', category: 'general' });
   const [submitted, setSubmitted] = useState(false);
@@ -89,9 +91,19 @@ export default function SupportPage() {
           <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#111827', fontWeight: 700, fontSize: '1.25rem' }}>
             <DolphinLogo size={28} textColor="#111827" />
           </a>
-          <button onClick={() => window.close()} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#6B7280', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500 }}
-            onMouseEnter={e => e.target.style.color = '#0D9488'} onMouseLeave={e => e.target.style.color = '#6B7280'}>
-            ← Close
+          <button
+            onClick={() => {
+              // Go back to previous page if there is one, otherwise go to home
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate('/');
+              }
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#6B7280', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500 }}
+            onMouseEnter={e => e.currentTarget.style.color = '#0D9488'}
+            onMouseLeave={e => e.currentTarget.style.color = '#6B7280'}>
+            ← Back
           </button>
         </div>
       </nav>
