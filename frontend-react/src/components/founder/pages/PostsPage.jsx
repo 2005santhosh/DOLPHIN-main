@@ -241,6 +241,9 @@ function PostCaption({ text }) {
     </p>
   );
 }
+
+// ─── Component ────────────────────────────────────────────────────────────────
+const PostsPage = () => {
   const { user } = useAuth();
   const role = user?.role || 'founder';
   const postTypes   = POST_TYPES_BY_ROLE[role]  || POST_TYPES_BY_ROLE.founder;
