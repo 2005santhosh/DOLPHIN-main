@@ -29,9 +29,65 @@ async function countTodayPosts(userId) {
   });
 }
 
-// ─── GET /api/posts/daily-limit — how many posts remain today ────────────────
-router.get('/daily-limit', protect, async (req, res) => {
+// ─── GET /api/posts/videos — all video posts for the Reels Viewer ─────────────
+// Returns ALL video posts (not paginated) so the viewer can scroll through all of them.
+// Capped at 200 to prevent excessive payload.
+router.get('/videos', protect, async (req, res) => {
     try {
+        const userRole = req.user.role;
+        const buildRoleFilter = (userId, role) => {
+            if (role === 'founder')   return { $or: [{ authorId: userId }, { authorRole: 'investor' }, { authorRole: 'provider' }] };
+            if (role === 'provider')  return { $or: [{ authorId: userId }, { authorRole: 'founder' }] };
+            if (role === 'investor')  return { $or: [{ authorId: userId }, { authorRole: 'founder' }] };
+            return {};
+        };
+        const roleFilter = buildRoleFilter(req.user._id, userRole);
+        const filter = { ...roleFilter, 'media.type': 'video', mediaCount: { $gt: 0 } };
+
+        const posts = await Post.find(filter)
+            .select('authorId authorName authorRole authorImage content postType media mediaCount createdAt likes viewCount')
+            .sort({ createdAt: -1 })
+            .limit(200)
+            .lean();
+
+        // Build verified author set for badge display
+        const authorIds = [...new Set(posts.map(p => p.authorId?.toString()).filter(Boolean))];
+        const verifiedSet = new Set();
+        if (authorIds.length > 0) {
+            const verifiedAuthors = await User.find(
+                { _id: { $in: authorIds }, isVerified: true, verifiedSource: 'payment', verifiedUntil: { $gt: new Date() } },
+                { _id: 1 }
+            ).lean();
+            verifiedAuthors.forEach(u => verifiedSet.add(u._id.toString()));
+        }
+
+        const result = posts.map(post => ({
+            _id: post._id,
+            authorId: post.authorId,
+            authorName: post.authorName,
+            authorRole: post.authorRole,
+            authorImage: post.authorImage || '',
+            content: post.content,
+            postType: post.postType,
+            media: post.media || [],
+            mediaCount: post.mediaCount || 0,
+            createdAt: post.createdAt,
+            likeCount: post.likes?.length || 0,
+            isLikedByMe: post.likes?.some(id => id.toString() === req.user._id.toString()) || false,
+            viewCount: post.viewCount || 0,
+            isAuthorVerified: verifiedSet.has(post.authorId?.toString()),
+            connectionStatus: null, // not needed for viewer
+        }));
+
+        res.json({ posts: result, total: result.length });
+    } catch (error) {
+        console.error('Videos feed error:', error);
+        res.status(500).json({ message: 'Error fetching videos' });
+    }
+});
+
+// ─── GET /api/posts/daily-limit — how many posts remain today ────────────────
+router.get('/daily-limit', protect, async (req, res) => {    try {
         const usedToday = await countTodayPosts(req.user._id);
         const remaining = Math.max(0, DAILY_POST_LIMIT - usedToday);
         const tomorrow  = startOfTodayUTC();
@@ -197,13 +253,48 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
         // Get total count for pagination
         const totalPosts = await Post.countDocuments(filter);
 
-        // Fetch posts with Instagram-like sorting (engagement-based)
-        const posts = await Post.find(filter)
-            .select('authorId authorName authorRole authorImage content postType tags media mediaCount createdAt likes viewCount')
-            .sort({ createdAt: -1 }) // Most recent first (can be enhanced with engagement score)
-            .skip(skip)
-            .limit(limit)
-            .lean();
+        // Fetch posts with Instagram-like engagement sorting
+        // Score = verified_boost + likes*3 + views*1 + recency (newer = higher)
+        // Using aggregation pipeline for score-based sort with pagination
+        const posts = await Post.aggregate([
+            { $match: filter },
+            {
+                $addFields: {
+                    // Engagement score: verified gets 200 point boost (handled post-query),
+                    // likes weighted 3x, views 1x, recency: posts in last 24h get +50, last 7d +20
+                    engagementScore: {
+                        $add: [
+                            { $multiply: [{ $size: { $ifNull: ['$likes', []] } }, 3] },
+                            { $ifNull: ['$viewCount', 0] },
+                            // Recency bonus: 50 pts if < 24h, 20 pts if < 7d
+                            {
+                                $cond: {
+                                    if: { $gte: ['$createdAt', new Date(Date.now() - 24 * 60 * 60 * 1000)] },
+                                    then: 50,
+                                    else: {
+                                        $cond: {
+                                            if: { $gte: ['$createdAt', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)] },
+                                            then: 20,
+                                            else: 0,
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            { $sort: { engagementScore: -1, createdAt: -1 } },
+            { $skip: skip },
+            { $limit: limit },
+            {
+                $project: {
+                    authorId: 1, authorName: 1, authorRole: 1, authorImage: 1,
+                    content: 1, postType: 1, tags: 1, media: 1, mediaCount: 1,
+                    createdAt: 1, likes: 1, viewCount: 1
+                }
+            }
+        ]);
 
         const formattedPosts = posts.map(post => ({
             _id: post._id,

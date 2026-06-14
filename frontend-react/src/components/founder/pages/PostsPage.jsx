@@ -631,13 +631,36 @@ const PostsPage = () => {
             return (
               <div key={index} style={{ position: 'relative', cursor: 'pointer', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: '#000' }}
                 onClick={() => {
-                  const vp = allVideoPostsRef.current.length > 0
-                    ? allVideoPostsRef.current
-                    : posts.filter(p => p.media?.some(m => (typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video')));
-                  const idx = vp.findIndex(p => p._id === postId);
-                  setReelsPosts(vp);
-                  setReelsStartIndex(idx >= 0 ? idx : 0);
-                  setReelsOpen(true);
+                  // Fetch ALL video posts from backend for complete reels experience
+                  // Falls back to accumulated local posts if fetch fails
+                  const openReels = async () => {
+                    try {
+                      const allVideos = await postsAPI.getVideoFeed();
+                      if (allVideos.length > 0) {
+                        const idx = allVideos.findIndex(p => p._id?.toString() === postId?.toString());
+                        setReelsPosts(allVideos);
+                        setReelsStartIndex(idx >= 0 ? idx : 0);
+                      } else {
+                        // Fallback to local accumulated videos
+                        const vp = allVideoPostsRef.current.length > 0
+                          ? allVideoPostsRef.current
+                          : posts.filter(p => p.media?.some(m => typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video'));
+                        const idx = vp.findIndex(p => p._id?.toString() === postId?.toString());
+                        setReelsPosts(vp);
+                        setReelsStartIndex(idx >= 0 ? idx : 0);
+                      }
+                    } catch {
+                      // Fallback on error
+                      const vp = allVideoPostsRef.current.length > 0
+                        ? allVideoPostsRef.current
+                        : posts.filter(p => p.media?.some(m => typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video'));
+                      const idx = vp.findIndex(p => p._id?.toString() === postId?.toString());
+                      setReelsPosts(vp);
+                      setReelsStartIndex(idx >= 0 ? idx : 0);
+                    }
+                    setReelsOpen(true);
+                  };
+                  openReels();
                 }}>
                 <video src={opt} preload="metadata" playsInline muted style={{ width: '100%', display: 'block', maxHeight: 320, objectFit: 'cover' }} />
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)' }}>

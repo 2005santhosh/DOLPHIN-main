@@ -84,6 +84,12 @@ export const postsAPI = {
   getFeed: async (filter = 'all', page = 1, limit = 20) =>
     dedupGet('/posts/feed', { params: { filter, page, limit } }),
 
+  // Get all video posts for the Reels Viewer (not paginated)
+  getVideoFeed: async () => {
+    const data = await api.get('/posts/videos');
+    return Array.isArray(data?.posts) ? data.posts : (Array.isArray(data) ? data : []);
+  },
+
   // Get today's post usage (how many posts remain)
   getDailyLimit: async () => api.get('/posts/daily-limit'),
 
