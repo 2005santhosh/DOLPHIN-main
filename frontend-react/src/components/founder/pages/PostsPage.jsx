@@ -422,10 +422,14 @@ const PostsPage = () => {
   // Persistent accumulator of ALL video posts across all loaded pages
   // Updated on every loadPosts — never reset on filter change
   const allVideoPostsRef = useRef([]);
+  const livePostsRef    = useRef([]); // always mirrors the current posts state
   const observerTarget = useRef(null);
 
   const MAX_FILES = 10;
   const MAX_FILE_SIZE_MB = 500; // 500MB per file
+
+  // Keep livePostsRef in sync with posts state for ReelsViewer live updates
+  useEffect(() => { livePostsRef.current = posts; }, [posts]);
 
   useEffect(() => { loadPosts(true); }, [filter]); // eslint-disable-line
 
@@ -848,7 +852,7 @@ const PostsPage = () => {
       {reelsOpen && (
         <ReelsViewer posts={reelsPosts.length > 0 ? reelsPosts : posts} startIndex={reelsStartIndex} onClose={() => setReelsOpen(false)}
           onToggleLike={toggleLike} onConnect={sendConnectionRequest}
-          currentUserId={user?._id} stateLocks={stateLocks} />
+          currentUserId={user?._id} stateLocks={stateLocks} livePostsRef={livePostsRef} />
       )}
 
       <PageHeader title="Community Posts" subtitle="Share updates and connect with the community" />

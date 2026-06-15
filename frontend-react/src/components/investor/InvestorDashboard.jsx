@@ -17,6 +17,7 @@ const ChatPage         = lazy(() => import('../founder/pages/ChatPage'));
 const SettingsPage     = lazy(() => import('../founder/pages/SettingsPage'));
 const GamificationPage = lazy(() => import('../shared/GamificationPage'));
 const BubblesPage      = lazy(() => import('../shared/BubblesPage'));
+const ExplorePage      = lazy(() => import('../founder/pages/InvestorsProvidersPage'));
 
 export default function InvestorDashboard() {
   const { user } = useAuth();
@@ -82,6 +83,7 @@ export default function InvestorDashboard() {
         { path: '#dashboard',     icon: 'home',         label: 'Dashboard' },
         { path: '#startups',      icon: 'users',        label: 'Startups' },
         { path: '#watchlist',     icon: 'check',        label: 'Watchlist' },
+        { path: '#explore',       icon: 'users',        label: 'Explore' },
         { path: '#posts',         icon: 'posts',        label: 'Posts' },
         { path: '#requests',      icon: 'requests',     label: 'Requests', badge: requestsCount },
         { path: '#chat',          icon: 'chat',         label: 'Chat',     badge: chatCount },
@@ -106,6 +108,7 @@ export default function InvestorDashboard() {
       case 'requests':      return <RequestsPage setRequestsCount={setRequestsCount} />;
       case 'chat':          return <ChatPage setChatCount={setChatCount} openUserId={getOpenUserId()} />;
       case 'settings':      return <SettingsPage />;
+      case 'explore':       return <ExplorePage />;
       case 'bubbles':      return <BubblesPage />;
       case 'gamification':  return <GamificationPage />;
       default:              return <DashboardPage />;

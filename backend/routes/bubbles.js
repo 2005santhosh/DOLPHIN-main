@@ -92,16 +92,18 @@ router.get('/:id', protect, async (req, res) => {
 // ── POST /api/bubbles/:id/messages — Send a message ──────────────────────────
 router.post('/:id/messages', protect, async (req, res) => {
   try {
-    const { content } = req.body;
-    if (!content?.trim()) return res.status(400).json({ message: 'Message is empty' });
+    const { content, mediaUrl, mediaType } = req.body;
+    if (!content?.trim() && !mediaUrl) return res.status(400).json({ message: 'Message is empty' });
 
     const bubble = await Bubble.findById(req.params.id);
     if (!bubble) return res.status(404).json({ message: 'Bubble not found' });
     if (!isMember(bubble, req.user._id)) return res.status(403).json({ message: 'Not a member' });
 
     const msg = {
-      senderId: req.user._id,
-      content:  content.trim().slice(0, 2000),
+      senderId:  req.user._id,
+      content:   (content || '').trim().slice(0, 2000),
+      mediaUrl:  mediaUrl || '',
+      mediaType: mediaType || '',
     };
 
     bubble.messages.push(msg);

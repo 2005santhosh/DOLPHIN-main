@@ -7,6 +7,9 @@ const mongoose = require('mongoose');
 const BubbleMessageSchema = new mongoose.Schema({
   senderId:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   content:   { type: String, default: '' },
+  // Media attachment (image, video, audio, file)
+  mediaUrl:  { type: String, default: '' },
+  mediaType: { type: String, enum: ['image', 'video', 'audio', 'file', ''], default: '' },
   deletedForEveryone: { type: Boolean, default: false },
   reactions: [{
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

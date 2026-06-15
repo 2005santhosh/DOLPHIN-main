@@ -169,7 +169,7 @@ export default function InvestorsProvidersPage({ startup }) {
   if (isLocked && (tab === 'investors' || tab === 'providers')) {
     return (
       <div>
-        <PageHeader title="Investors & Providers" subtitle="Connect with investors and service providers" />
+        <PageHeader title="Explore" subtitle="Discover founders, investors and service providers" />
         <Card>
           <div style={{ textAlign: 'center', padding: '3rem 2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
@@ -191,7 +191,7 @@ export default function InvestorsProvidersPage({ startup }) {
   // ── Main render ───────────────────────────────────────────────────────────────
   return (
     <div>
-      <PageHeader title="Investors & Providers" subtitle="Connect with investors and service providers" />
+      <PageHeader title="Explore" subtitle="Discover founders, investors and service providers" />
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>

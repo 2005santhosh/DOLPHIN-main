@@ -22,7 +22,7 @@ export default function Sidebar({ isOpen, onClose, requestsCount = 0, chatCount 
       section: 'Resources',
       items: [
         { path: '#analytics', icon: 'analytics', label: 'Analytics' },
-        { path: '#investors-providers', icon: 'users', label: 'Investors & Providers' },
+        { path: '#investors-providers', icon: 'users', label: 'Explore' },
         { path: '#posts', icon: 'posts', label: 'Posts' },
         { path: '#requests', icon: 'requests', label: 'Requests', badge: requestsCount },
         { path: '#chat', icon: 'chat', label: 'Chat', badge: chatCount },

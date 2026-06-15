@@ -291,16 +291,19 @@ export const resourcesAPI = {
 
 // ─── BUBBLES (Group Chat) ──────────────────────────────────────────────────────
 export const bubblesAPI = {
-  getMyBubbles:    async () => { const d = await api.get('/bubbles'); return Array.isArray(d) ? d : []; },
-  getBubble:       async (id) => api.get(`/bubbles/${id}`),
-  createBubble:    async (name, description) => api.post('/bubbles', { name, description }),
-  updateBubble:    async (id, data) => api.put(`/bubbles/${id}`, data),
-  deleteBubble:    async (id) => api.delete(`/bubbles/${id}`),
-  sendMessage:     async (id, content) => api.post(`/bubbles/${id}/messages`, { content }),
-  inviteMember:    async (id, userId) => api.post(`/bubbles/${id}/invite`, { userId }),
-  removeMember:    async (id, userId) => api.delete(`/bubbles/${id}/members/${userId}`),
-  changeMemberRole:async (id, userId, role) => api.put(`/bubbles/${id}/members/${userId}/role`, { role }),
-  uploadPicture:   async (id, formData) => api.post(`/bubbles/${id}/picture`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  getMyBubbles:     async () => { const d = await api.get('/bubbles'); return Array.isArray(d) ? d : []; },
+  getBubble:        async (id) => api.get(`/bubbles/${id}`),
+  createBubble:     async (name, description) => api.post('/bubbles', { name, description }),
+  updateBubble:     async (id, data) => api.put(`/bubbles/${id}`, data),
+  deleteBubble:     async (id) => api.delete(`/bubbles/${id}`),
+  sendMessage:      async (id, content, mediaUrl, mediaType) =>
+    api.post(`/bubbles/${id}/messages`, { content, mediaUrl, mediaType }),
+  inviteMember:     async (id, userId) => api.post(`/bubbles/${id}/invite`, { userId }),
+  removeMember:     async (id, userId) => api.delete(`/bubbles/${id}/members/${userId}`),
+  changeMemberRole: async (id, userId, role) => api.put(`/bubbles/${id}/members/${userId}/role`, { role }),
+  uploadPicture:    async (id, formData) => api.post(`/bubbles/${id}/picture`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
 };
 
 // ─── RATINGS ───────────────────────────────────────────────────────────────────

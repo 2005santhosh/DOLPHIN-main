@@ -43,6 +43,8 @@ export default function ReelsViewer({
   onConnect,
   currentUserId,
   stateLocks,
+  // Live post state ref — allows like/connect to update without re-mounting
+  livePostsRef,
 }) {
   // Filter to video-only posts
   const videoPosts = posts.filter(p =>
@@ -224,7 +226,11 @@ export default function ReelsViewer({
           const videoUrl = getVideoUrl(post);
           const videoPoster = getVideoPoster(post);
           const isOwn = post.authorId?.toString() === currentUserId?.toString();
-          const connStatus = post.connectionStatus;
+          // Use live post state if available (so like/connect updates reflect immediately)
+          const livePost = livePostsRef?.current?.find(p => p._id?.toString() === post._id?.toString()) || post;
+          const connStatus = livePost.connectionStatus;
+          const isLikedByMe = livePost.isLikedByMe;
+          const likeCount   = livePost.likeCount || 0;
           const avatarSrc = post.authorImage ||
             `https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'U')}&background=84CC16&color=fff&size=80`;
           const hasError = videoErrors[listIdx];
@@ -328,10 +334,10 @@ export default function ReelsViewer({
                 {/* Like */}
                 <button onClick={() => onToggleLike(post._id)} disabled={stateLocks[post._id]}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: 0 }}>
-                  {post.isLikedByMe
+                  {isLikedByMe
                     ? <Heart size={28} fill="#EF4444" color="#EF4444" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.9))' }} />
                     : <Heart size={28} color="white" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.9))' }} />}
-                  <span style={{ color: 'white', fontSize: '0.72rem', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>{post.likeCount || 0}</span>
+                  <span style={{ color: 'white', fontSize: '0.72rem', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>{likeCount}</span>
                 </button>
 
                 {/* Comment */}

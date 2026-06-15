@@ -18,6 +18,7 @@ const SettingsPage     = lazy(() => import('../founder/pages/SettingsPage'));
 const GamificationPage = lazy(() => import('../shared/GamificationPage'));
 const OpportunitiesPage = lazy(() => import('./pages/OpportunitiesPage'));
 const BubblesPage      = lazy(() => import('../shared/BubblesPage'));
+const ExplorePage      = lazy(() => import('../founder/pages/InvestorsProvidersPage'));
 
 /** Returns true only if user has an active payment-based verified badge */
 function isActivelyVerified(user) {
@@ -174,6 +175,7 @@ export default function ProviderDashboard() {
         { path: '#dashboard',      icon: 'home',         label: 'Dashboard' },
         { path: '#profile',        icon: 'profile',      label: 'Profile' },
         { path: '#founders',       icon: 'users',        label: 'Founders' },
+        { path: '#explore',        icon: 'users',        label: 'Explore' },
         { path: '#opportunities',  icon: 'briefcase',    label: 'Opportunities' },
         { path: '#posts',          icon: 'posts',        label: 'Posts' },
         { path: '#requests',       icon: 'requests',     label: 'Requests', badge: requestsCount },
@@ -213,6 +215,8 @@ export default function ProviderDashboard() {
         return isActivelyVerified(user)
           ? <OpportunitiesPage user={user} />
           : <VerifiedOnlyGate onVerify={() => setCurrentPage('settings')} />;
+      case 'explore':
+        return <ExplorePage />;
       case 'bubbles':
         return <BubblesPage />;
       case 'gamification':
