@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { bubblesAPI, connectionsAPI } from '../../services/api';
+import { bubblesAPI, connectionsAPI, founderAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import PageHeader from './PageHeader';
 import Card from './Card';
@@ -185,29 +185,41 @@ export default function BubblesPage() {
 
   const loadConnections = async () => {
     try {
-      // Fetch from both Connection model AND gamification/me for live counts
-      // Use the same gamificationAPI approach that guarantees all connections
-      const { gamificationAPI: gAPI } = await import('../../services/api');
-      const stats = await gAPI.getMyStats().catch(() => null);
+      // Fetch from both Connection model AND IntroRequest model to get ALL connected profiles
+      const [connData, introIncoming, introSent] = await Promise.all([
+        connectionsAPI.getConnections().catch(() => ({ incoming: [], sent: [] })),
+        founderAPI.getIncomingRequests().catch(() => []),
+        founderAPI.getSentRequests().catch(() => []),
+      ]);
 
-      // Get connections from both models via the connections API
-      const data = await connectionsAPI.getConnections();
+      // Connection model — accepted
       const fromConn = [
-        ...(data.incoming || []).filter(c => c.status === 'accepted'),
-        ...(data.sent    || []).filter(c => c.status === 'accepted'),
-      ].map(c => ({ _id: c.otherUser?._id, ...c.otherUser }));
+        ...(connData.incoming || []).filter(c => c.status === 'accepted').map(c => c.otherUser),
+        ...(connData.sent    || []).filter(c => c.status === 'accepted').map(c => c.otherUser),
+      ];
 
-      // Also try to get IntroRequest-based connections via gamification profile
-      // The connections API should now return all accepted — deduplicate by _id
+      // IntroRequest model — accepted (founderId or providerId is the "other" person)
+      const fromIntro = [
+        ...(Array.isArray(introIncoming) ? introIncoming : [])
+          .filter(r => r.status === 'accepted')
+          .map(r => r.providerId || {}),
+        ...(Array.isArray(introSent) ? introSent : [])
+          .filter(r => r.status === 'accepted')
+          .map(r => r.providerId || {}),
+      ];
+
+      // Deduplicate by _id
       const seen = new Set();
-      const all = fromConn.filter(u => {
+      const all = [...fromConn, ...fromIntro].filter(u => {
         const uid = u?._id?.toString();
         if (!uid || seen.has(uid)) return false;
         seen.add(uid); return true;
       });
 
       setConnections(all);
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.error('[BubblesPage] loadConnections error:', e.message);
+    }
   };
 
   // Upload media directly to Cloudinary then send as message
