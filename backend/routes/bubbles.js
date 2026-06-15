@@ -107,7 +107,7 @@ router.post('/:id/messages', protect, async (req, res) => {
     };
 
     bubble.messages.push(msg);
-    bubble.lastMessage = content.trim().slice(0, 80);
+    bubble.lastMessage = mediaUrl ? `📎 ${mediaType || 'Media'}` : (content || '').trim().slice(0, 80);
     bubble.lastMessageAt = new Date();
     await bubble.save();
 
@@ -136,6 +136,24 @@ router.post('/:id/messages', protect, async (req, res) => {
     });
   } catch (err) {
     console.error('[Bubbles] Message error:', err.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── GET /api/bubbles/:id/upload-signature — Cloudinary signature for media ────
+router.get('/:id/upload-signature', protect, async (req, res) => {
+  try {
+    const bubble = await Bubble.findById(req.params.id);
+    if (!bubble) return res.status(404).json({ message: 'Bubble not found' });
+    if (!isMember(bubble, req.user._id)) return res.status(403).json({ message: 'Not a member' });
+
+    const crypto = require('crypto');
+    const timestamp = Math.round(Date.now() / 1000);
+    const folder = 'dolphin-bubbles';
+    const str = `folder=${folder}&timestamp=${timestamp}${process.env.CLOUDINARY_API_SECRET}`;
+    const signature = crypto.createHash('sha256').update(str).digest('hex');
+    res.json({ signature, timestamp, folder, cloudName: process.env.CLOUDINARY_CLOUD_NAME, apiKey: process.env.CLOUDINARY_API_KEY });
+  } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 });

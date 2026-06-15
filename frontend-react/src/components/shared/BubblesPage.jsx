@@ -65,6 +65,12 @@ export default function BubblesPage() {
   const [connections, setConnections] = useState([]);
   const [inviting, setInviting]       = useState({});
 
+  // 3-dot menu state
+  const [menuOpen, setMenuOpen]       = useState(false);
+  // Media upload state
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const mediaInputRef = useRef(null);
+
   const endRef    = useRef(null);
   const pollRef   = useRef(null);
   const inputRef  = useRef(null);
@@ -179,6 +185,7 @@ export default function BubblesPage() {
 
   const loadConnections = async () => {
     try {
+      // Show ALL connected users (accepted connections from both models)
       const data = await connectionsAPI.getConnections();
       const accepted = [
         ...(data.incoming || []).filter(c => c.status === 'accepted'),
@@ -191,6 +198,63 @@ export default function BubblesPage() {
         seen.add(uid); return true;
       }));
     } catch { /* ignore */ }
+  };
+
+  // Upload media directly to Cloudinary then send as message
+  const sendMedia = async (file) => {
+    if (!selected || !file) return;
+    setUploadingMedia(true);
+    const uploadToastId = toast.loading('Uploading media…', { duration: Infinity });
+    try {
+      const sigData = await bubblesAPI.getUploadSignature(selected._id);
+      const isVideo = file.type.startsWith('video/');
+      const isAudio = file.type.startsWith('audio/');
+      const resourceType = isVideo ? 'video' : isAudio ? 'raw' : 'image';
+
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('api_key', sigData.apiKey);
+      fd.append('timestamp', String(sigData.timestamp));
+      fd.append('signature', sigData.signature);
+      fd.append('folder', sigData.folder);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `https://api.cloudinary.com/v1_1/${sigData.cloudName}/${resourceType}/upload`);
+      await new Promise((resolve, reject) => {
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
+          else reject(new Error('Upload failed'));
+        };
+        xhr.onerror = () => reject(new Error('Network error'));
+        xhr.timeout = 10 * 60 * 1000;
+        xhr.send(fd);
+      }).then(async (result) => {
+        const mediaType = isVideo ? 'video' : isAudio ? 'audio' : 'image';
+        const msg = await bubblesAPI.sendMessage(selected._id, '', result.secure_url, mediaType);
+        setMessages(prev => [...prev, { ...msg, senderName: user.name, senderPicture: user.profilePicture || '' }]);
+        setBubbles(prev => prev.map(b => b._id?.toString() === selected._id?.toString() ? { ...b, lastMessage: `📎 ${mediaType}`, lastMessageAt: new Date().toISOString() } : b));
+        toast.success('Media sent!', { id: uploadToastId, duration: 2000 });
+      });
+    } catch (err) {
+      toast.error('Failed to upload media', { id: uploadToastId, duration: 3000 });
+    } finally {
+      setUploadingMedia(false);
+      if (mediaInputRef.current) mediaInputRef.current.value = '';
+    }
+  };
+
+  // Change bubble profile picture
+  const changePicture = async (file) => {
+    if (!file || !selected) return;
+    const uploadToastId = toast.loading('Uploading picture…', { duration: Infinity });
+    try {
+      const fd = new FormData();
+      fd.append('picture', file);
+      const result = await bubblesAPI.uploadPicture(selected._id, fd);
+      setSelected(prev => ({ ...prev, picture: result.picture }));
+      setBubbles(prev => prev.map(b => b._id?.toString() === selected._id?.toString() ? { ...b, picture: result.picture } : b));
+      toast.success('Picture updated!', { id: uploadToastId, duration: 2000 });
+    } catch { toast.error('Failed', { id: uploadToastId, duration: 2000 }); }
   };
 
   const openInvite = () => { loadConnections(); setInviteSearch(''); setInviteOpen(true); };
@@ -300,11 +364,28 @@ export default function BubblesPage() {
               <div style={{ fontWeight: 700, color: '#111827', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected.name}</div>
               <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>{selected.members?.length || 0} members</div>
             </div>
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={openInvite} title="Add member" style={{ background: 'none', border: '1px solid #E5E7EB', borderRadius: 8, padding: '5px 8px', cursor: 'pointer', color: '#374151', fontSize: '0.8rem' }}>+ Invite</button>
-              {isMyAdmin && <button onClick={openSettings} title="Settings" style={{ background: 'none', border: '1px solid #E5E7EB', borderRadius: 8, padding: '5px 8px', cursor: 'pointer', color: '#374151', fontSize: '0.8rem' }}>⚙ Edit</button>}
-              <button onClick={leaveBubble} title="Leave" style={{ background: 'none', border: '1px solid #FECACA', borderRadius: 8, padding: '5px 8px', cursor: 'pointer', color: '#EF4444', fontSize: '0.8rem' }}>Leave</button>
+            {/* Actions — 3-dot menu */}
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => setMenuOpen(v => !v)} style={{ background: 'none', border: '1px solid #E5E7EB', borderRadius: 8, padding: '5px 8px', cursor: 'pointer', color: '#374151', fontSize: '1.1rem', fontWeight: 700 }}>⋮</button>
+              {menuOpen && (
+                <div style={{ position: 'absolute', top: 38, right: 0, background: 'white', border: '1px solid #E5E7EB', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', zIndex: 100, minWidth: 160, overflow: 'hidden' }}>
+                  {[
+                    { label: '👤 Invite', action: () => { setMenuOpen(false); openInvite(); } },
+                    isMyAdmin && { label: '✏️ Edit Bubble', action: () => { setMenuOpen(false); openSettings(); } },
+                    isMyAdmin && { label: '📷 Change Picture', action: () => { setMenuOpen(false); document.getElementById('bubble-pic-input').click(); } },
+                    isMyAdmin && { label: '🛡️ Manage Permissions', action: () => { setMenuOpen(false); openSettings(); } },
+                    { label: '🚪 Leave', action: () => { setMenuOpen(false); leaveBubble(); }, danger: true },
+                  ].filter(Boolean).map((item, i) => (
+                    <button key={i} onClick={item.action} style={{ width: '100%', background: 'none', border: 'none', padding: '0.75rem 1rem', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem', color: item.danger ? '#EF4444' : '#111827', borderBottom: i < 3 ? '1px solid #F3F4F6' : 'none' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#F9FAFB'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}>
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Hidden picture input */}
+              <input type="file" id="bubble-pic-input" accept="image/*" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) changePicture(e.target.files[0]); e.target.value = ''; }} />
             </div>
           </div>
 
@@ -334,7 +415,20 @@ export default function BubblesPage() {
                       </div>
                     )}
                     <div style={{ maxWidth: '72%', padding: '0.5rem 0.875rem', borderRadius: isOwn ? '16px 16px 4px 16px' : '16px 16px 16px 4px', background: isOwn ? '#84CC16' : 'white', color: isOwn ? '#0F172A' : '#111827', fontSize: '0.9rem', lineHeight: 1.5, boxShadow: '0 1px 2px rgba(0,0,0,0.1)', wordBreak: 'break-word', opacity: msg._opt ? 0.7 : 1 }}>
-                      {msg.deletedForEveryone ? <em style={{ color: '#9CA3AF' }}>🚫 Message deleted</em> : msg.content}
+                      {msg.deletedForEveryone
+                        ? <em style={{ color: '#9CA3AF' }}>🚫 Message deleted</em>
+                        : msg.mediaUrl
+                          ? (
+                            <div>
+                              {msg.mediaType === 'image' && <img src={msg.mediaUrl} alt="media" style={{ maxWidth: '100%', borderRadius: 8, display: 'block' }} />}
+                              {msg.mediaType === 'video' && <video src={msg.mediaUrl} controls style={{ maxWidth: '100%', borderRadius: 8, display: 'block' }} />}
+                              {msg.mediaType === 'audio' && <audio src={msg.mediaUrl} controls style={{ width: '100%' }} />}
+                              {(!['image','video','audio'].includes(msg.mediaType)) && <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" style={{ color: isOwn ? '#0F172A' : '#2563EB' }}>📎 Download file</a>}
+                              {msg.content && <p style={{ margin: '4px 0 0', fontSize: '0.875rem' }}>{msg.content}</p>}
+                            </div>
+                          )
+                          : msg.content
+                      }
                       <div style={{ fontSize: '0.7rem', color: isOwn ? 'rgba(15,23,42,0.5)' : '#9CA3AF', textAlign: 'right', marginTop: 2 }}>{ts(msg.createdAt)}</div>
                     </div>
                   </div>
@@ -346,6 +440,15 @@ export default function BubblesPage() {
 
           {/* Input */}
           <div style={{ padding: '0.625rem 0.75rem', background: '#F0F2F5', borderTop: '1px solid #E5E7EB', display: 'flex', gap: '0.5rem', alignItems: 'flex-end', flexShrink: 0 }}>
+            {/* Media attach button */}
+            <button onClick={() => mediaInputRef.current?.click()} disabled={uploadingMedia} title="Attach media"
+              style={{ width: 40, height: 40, borderRadius: '50%', background: '#E5E7EB', border: 'none', cursor: uploadingMedia ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: uploadingMedia ? 0.5 : 1 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+              </svg>
+            </button>
+            <input ref={mediaInputRef} type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx" style={{ display: 'none' }}
+              onChange={e => { if (e.target.files[0]) sendMedia(e.target.files[0]); }} />
             <div style={{ flex: 1, background: 'white', borderRadius: 24, border: '1px solid #E5E7EB', display: 'flex', alignItems: 'flex-end', padding: '0.5rem 0.875rem', minHeight: 42, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
               <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && window.innerWidth >= 768) { e.preventDefault(); send(); } }}
