@@ -246,29 +246,59 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
             { $match: filter },
             {
                 $addFields: {
+                    // Recency-first scoring:
+                    // - Posts in last 1h  → +10000 (always at top)
+                    // - Posts in last 6h  → +5000
+                    // - Posts in last 24h → +2000
+                    // - Posts in last 3d  → +500
+                    // - Posts in last 7d  → +100
+                    // - Older            → +0
+                    // Plus light engagement: likes×3 + views×0.5
+                    // This ensures newest posts dominate, but within same time bucket
+                    // engagement breaks ties.
                     engagementScore: {
                         $add: [
-                            { $multiply: [{ $size: { $ifNull: ['$likes', []] } }, 3] },
-                            { $ifNull: ['$viewCount', 0] },
+                            // Recency bucket (dominant)
                             {
                                 $cond: {
-                                    if: { $gte: ['$createdAt', new Date(Date.now() - 24 * 60 * 60 * 1000)] },
-                                    then: 50,
+                                    if: { $gte: ['$createdAt', new Date(Date.now() - 1 * 60 * 60 * 1000)] },
+                                    then: 10000,
                                     else: {
                                         $cond: {
-                                            if: { $gte: ['$createdAt', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)] },
-                                            then: 20,
-                                            else: 0,
+                                            if: { $gte: ['$createdAt', new Date(Date.now() - 6 * 60 * 60 * 1000)] },
+                                            then: 5000,
+                                            else: {
+                                                $cond: {
+                                                    if: { $gte: ['$createdAt', new Date(Date.now() - 24 * 60 * 60 * 1000)] },
+                                                    then: 2000,
+                                                    else: {
+                                                        $cond: {
+                                                            if: { $gte: ['$createdAt', new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)] },
+                                                            then: 500,
+                                                            else: {
+                                                                $cond: {
+                                                                    if: { $gte: ['$createdAt', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)] },
+                                                                    then: 100,
+                                                                    else: 0,
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
-                            }
+                            },
+                            // Light engagement boost (tiebreaker within time bucket)
+                            { $multiply: [{ $size: { $ifNull: ['$likes', []] } }, 3] },
+                            { $multiply: [{ $ifNull: ['$viewCount', 0] }, 0.5] },
                         ]
                     }
                 }
             },
             { $sort: { engagementScore: -1, createdAt: -1 } },
-            { $limit: poolSize },  // No $skip here — we slice after interleave
+            { $limit: poolSize },
             {
                 $project: {
                     authorId: 1, authorName: 1, authorRole: 1, authorImage: 1,
