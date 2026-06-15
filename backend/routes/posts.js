@@ -35,14 +35,8 @@ async function countTodayPosts(userId) {
 router.get('/videos', protect, async (req, res) => {
     try {
         const userRole = req.user.role;
-        const buildRoleFilter = (userId, role) => {
-            if (role === 'founder')   return { $or: [{ authorId: userId }, { authorRole: 'investor' }, { authorRole: 'provider' }] };
-            if (role === 'provider')  return { $or: [{ authorId: userId }, { authorRole: 'founder' }] };
-            if (role === 'investor')  return { $or: [{ authorId: userId }, { authorRole: 'founder' }] };
-            return {};
-        };
-        const roleFilter = buildRoleFilter(req.user._id, userRole);
-        const filter = { ...roleFilter, 'media.type': 'video', mediaCount: { $gt: 0 } };
+        // All videos visible to all authenticated users
+        const filter = { 'media.type': 'video', mediaCount: { $gt: 0 } };
 
         const posts = await Post.find(filter)
             .select('authorId authorName authorRole authorImage content postType media mediaCount createdAt likes viewCount')
@@ -221,15 +215,9 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
         const VALID_POST_TYPES = ['general', 'service_needed', 'funding_needed', 'offering_service', 'offering_funding'];
 
         // Build the role-based author filter (who can see whose posts)
-        const buildRoleFilter = (userId, role) => {
-            if (role === 'founder') {
-                return { $or: [{ authorId: userId }, { authorRole: 'investor' }, { authorRole: 'provider' }] };
-            } else if (role === 'provider') {
-                return { $or: [{ authorId: userId }, { authorRole: 'founder' }] };
-            } else if (role === 'investor') {
-                return { $or: [{ authorId: userId }, { authorRole: 'founder' }] };
-            }
-            return {}; // admin sees everything
+        // ALL roles now see ALL posts from ALL users — universal feed
+        const buildRoleFilter = () => {
+            return {}; // no filter — all posts visible to all authenticated users
         };
 
         let filter = {};
@@ -237,17 +225,9 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
         if (filterType === 'mine') {
             filter = { authorId: req.user._id };
         } else if (VALID_POST_TYPES.includes(filterType)) {
-            // Filter by specific post type within the role-based feed
-            const roleFilter = buildRoleFilter(req.user._id, userRole);
-            // Merge role filter with postType filter
-            if (roleFilter.$or) {
-                filter = { $and: [roleFilter, { postType: filterType }] };
-            } else {
-                filter = { postType: filterType };
-            }
+            filter = { postType: filterType };
         } else {
-            // 'all' — role-based feed, no postType restriction
-            filter = buildRoleFilter(req.user._id, userRole);
+            filter = buildRoleFilter();
         }
 
         // Get total count for pagination
@@ -499,8 +479,11 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
     }
 });
 
-// POST /api/posts/:id/like
-router.post('/:id/like', protect, likeLimiter, async (req, res) => {
+// Add comments routes to posts
+const Comment = require('./models/Comment');
+
+// GET /api/posts/:id/comments
+router.get = router.get; // placeholder — comments defined below in posts.js
     try {
         const post = await Post.findById(req.params.id);
         if (!post) return res.status(404).json({ message: 'Post not found' });
@@ -534,9 +517,64 @@ router.post('/:id/view', protect, async (req, res) => {
     }
 });
 
-// DELETE /api/posts/:id - Delete own post with media cleanup
-router.delete('/:id', protect, async (req, res) => {
+// ─── COMMENTS ─────────────────────────────────────────────────────────────────
+const Comment = require('../models/Comment');
+const commentLimiter = require('express-rate-limit')({ windowMs: 60 * 60 * 1000, max: 60 });
+
+// GET /api/posts/:id/comments
+router.get('/:id/comments', protect, async (req, res) => {
     try {
+        const comments = await Comment.find({ postId: req.params.id })
+            .sort({ createdAt: -1 })
+            .limit(50)
+            .lean();
+        res.json(comments);
+    } catch (err) {
+        res.status(500).json({ message: 'Error fetching comments' });
+    }
+});
+
+// POST /api/posts/:id/comments
+router.post('/:id/comments', protect, commentLimiter, async (req, res) => {
+    try {
+        const { content } = req.body;
+        if (!content?.trim()) return res.status(400).json({ message: 'Comment is empty' });
+        if (content.length > 500) return res.status(400).json({ message: 'Comment too long (max 500 chars)' });
+
+        const post = await Post.findById(req.params.id).select('_id').lean();
+        if (!post) return res.status(404).json({ message: 'Post not found' });
+
+        const comment = await Comment.create({
+            postId:      req.params.id,
+            authorId:    req.user._id,
+            authorName:  req.user.name,
+            authorImage: req.user.profilePicture || '',
+            content:     content.trim(),
+        });
+
+        res.status(201).json(comment);
+    } catch (err) {
+        res.status(500).json({ message: 'Error creating comment' });
+    }
+});
+
+// DELETE /api/posts/:id/comments/:commentId
+router.delete('/:id/comments/:commentId', protect, async (req, res) => {
+    try {
+        const comment = await Comment.findById(req.params.commentId);
+        if (!comment) return res.status(404).json({ message: 'Comment not found' });
+        if (comment.authorId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+        await Comment.findByIdAndDelete(req.params.commentId);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ message: 'Error deleting comment' });
+    }
+});
+
+// DELETE /api/posts/:id - Delete own post with media cleanup
+router.delete('/:id', protect, async (req, res) => {    try {
         const post = await Post.findById(req.params.id);
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });

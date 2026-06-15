@@ -189,6 +189,7 @@ app.use('/api/connections', connectionRoutes);
 app.use('/api/gamification', require('./routes/gamification'));
 app.use('/api/verification', require('./routes/verification'));
 app.use('/api/opportunities', require('./routes/opportunities'));
+app.use('/api/bubbles', require('./routes/bubbles'));
 // --- PUBLIC HTML ROUTES ---
 // Only serve old HTML frontend if the files actually exist (not on Railway when using React frontend)
 const frontendDir = path.join(__dirname, '../frontend');

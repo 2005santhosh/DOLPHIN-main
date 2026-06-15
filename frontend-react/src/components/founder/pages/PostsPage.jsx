@@ -219,7 +219,105 @@ async function uploadChunked(file, sigData, onProgress, isVideo) {
   return lastResult;
 }
 
-// ─── Read More / Show Less for long post text ────────────────────────────────
+// ─── Post comments inline component ──────────────────────────────────────────
+function PostComments({ postId, initialCount = 0 }) {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [count, setCount] = useState(initialCount);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await postsAPI.getComments(postId);
+      setComments(data);
+      setCount(data.length);
+    } catch { /* ignore */ }
+    finally { setLoading(false); }
+  };
+
+  const toggle = () => {
+    if (!open) load();
+    setOpen(v => !v);
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!text.trim() || sending) return;
+    setSending(true);
+    try {
+      const c = await postsAPI.addComment(postId, text.trim());
+      setComments(prev => [c, ...prev]);
+      setCount(n => n + 1);
+      setText('');
+    } catch (err) { toast.error(err.message || 'Failed to comment'); }
+    finally { setSending(false); }
+  };
+
+  const del = async (commentId) => {
+    try {
+      await postsAPI.deleteComment(postId, commentId);
+      setComments(prev => prev.filter(c => c._id !== commentId));
+      setCount(n => Math.max(0, n - 1));
+    } catch { /* ignore */ }
+  };
+
+  const fb = (name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'U')}&background=84CC16&color=fff&size=64`;
+
+  return (
+    <div>
+      {/* Trigger */}
+      <button onClick={toggle} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', color: '#6b7280', fontSize: '0.9rem', padding: '4px 0' }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span style={{ fontWeight: 600 }}>{count}</span>
+      </button>
+
+      {/* Expanded comments */}
+      {open && (
+        <div style={{ marginTop: '0.75rem', borderTop: '1px solid #F3F4F6', paddingTop: '0.75rem' }}>
+          {/* Add comment */}
+          <form onSubmit={submit} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <img src={fb(user?.name)} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            <input
+              value={text} onChange={e => setText(e.target.value)}
+              placeholder="Add a comment…"
+              maxLength={500}
+              style={{ flex: 1, border: '1px solid #E5E7EB', borderRadius: 20, padding: '6px 14px', fontSize: '0.875rem', outline: 'none', background: '#F9FAFB' }}
+            />
+            <button type="submit" disabled={!text.trim() || sending}
+              style={{ padding: '6px 14px', background: '#84CC16', color: 'white', border: 'none', borderRadius: 20, fontWeight: 700, fontSize: '0.8rem', cursor: text.trim() && !sending ? 'pointer' : 'not-allowed', opacity: text.trim() && !sending ? 1 : 0.5 }}>
+              Post
+            </button>
+          </form>
+
+          {/* List */}
+          {loading ? <p style={{ color: '#9CA3AF', fontSize: '0.85rem', margin: 0 }}>Loading…</p> : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {comments.map(c => (
+                <div key={c._id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                  <img src={c.authorImage || fb(c.authorName)} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  <div style={{ flex: 1, background: '#F9FAFB', borderRadius: 12, padding: '6px 10px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#111827', marginRight: 6 }}>{c.authorName}</span>
+                    <span style={{ fontSize: '0.85rem', color: '#374151' }}>{c.content}</span>
+                  </div>
+                  {c.authorId === user?._id && (
+                    <button onClick={() => del(c._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: '0.75rem', flexShrink: 0, padding: '4px' }}>✕</button>
+                  )}
+                </div>
+              ))}
+              {comments.length === 0 && <p style={{ color: '#9CA3AF', fontSize: '0.82rem', margin: 0 }}>No comments yet. Be the first!</p>}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 const CAPTION_LIMIT = 150;
 
 function PostCaption({ text }) {
@@ -831,11 +929,36 @@ const PostsPage = () => {
                   </div>
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
-                  <button onClick={() => toggleLike(post._id)} disabled={stateLocks[post._id]}
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: stateLocks[post._id] ? 'not-allowed' : 'pointer', fontSize: '1rem', color: '#6b7280', padding: '8px', borderRadius: '8px' }}>
-                    {post.isLikedByMe ? <Heart size={20} fill="#EF4444" color="#EF4444" /> : <Heart size={20} color="#9CA3AF" />}
-                    <span style={{ fontWeight: '600' }}>{post.likeCount || 0}</span>
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {/* Like */}
+                    <button onClick={() => toggleLike(post._id)} disabled={stateLocks[post._id]}
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: stateLocks[post._id] ? 'not-allowed' : 'pointer', fontSize: '1rem', color: '#6b7280', padding: '4px 0', borderRadius: '8px' }}>
+                      {post.isLikedByMe ? <Heart size={20} fill="#EF4444" color="#EF4444" /> : <Heart size={20} color="#9CA3AF" />}
+                      <span style={{ fontWeight: '600' }}>{post.likeCount || 0}</span>
+                    </button>
+
+                    {/* Comments */}
+                    <PostComments postId={post._id} initialCount={post.commentCount || 0} />
+
+                    {/* Share */}
+                    <button
+                      onClick={() => {
+                        const url = `${window.location.origin}${window.location.pathname}#posts`;
+                        if (navigator.share) {
+                          navigator.share({ title: `${post.authorName}'s post on Dolphin`, text: post.content?.slice(0, 100) || '', url }).catch(() => {});
+                        } else {
+                          navigator.clipboard.writeText(url).then(() => toast.success('Link copied!')).catch(() => {});
+                        }
+                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '0.9rem', padding: '4px 0' }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                      </svg>
+                    </button>
+                  </div>
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
                       <Eye size={16} /> {post.viewCount || 0}

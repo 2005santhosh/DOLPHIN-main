@@ -111,6 +111,10 @@ export const postsAPI = {
   // view tracking is fire-and-forget, no dedup needed
   trackView: async (postId) => api.post(`/posts/${postId}/view`).catch(() => {}),
   deletePost: async (postId) => api.delete(`/posts/${postId}`),
+  // Comments
+  getComments: async (postId) => { const d = await api.get(`/posts/${postId}/comments`); return Array.isArray(d) ? d : []; },
+  addComment: async (postId, content) => api.post(`/posts/${postId}/comments`, { content }),
+  deleteComment: async (postId, commentId) => api.delete(`/posts/${postId}/comments/${commentId}`),
 };
 
 // ─── FOUNDER ───────────────────────────────────────────────────────────────────
@@ -283,6 +287,26 @@ export const verificationAPI = {
 // ─── RESOURCES ─────────────────────────────────────────────────────────────────
 export const resourcesAPI = {
   getResources: async () => api.get('/resources'),
+};
+
+// ─── BUBBLES (Group Chat) ──────────────────────────────────────────────────────
+export const bubblesAPI = {
+  getMyBubbles:    async () => { const d = await api.get('/bubbles'); return Array.isArray(d) ? d : []; },
+  getBubble:       async (id) => api.get(`/bubbles/${id}`),
+  createBubble:    async (name, description) => api.post('/bubbles', { name, description }),
+  updateBubble:    async (id, data) => api.put(`/bubbles/${id}`, data),
+  deleteBubble:    async (id) => api.delete(`/bubbles/${id}`),
+  sendMessage:     async (id, content) => api.post(`/bubbles/${id}/messages`, { content }),
+  inviteMember:    async (id, userId) => api.post(`/bubbles/${id}/invite`, { userId }),
+  removeMember:    async (id, userId) => api.delete(`/bubbles/${id}/members/${userId}`),
+  changeMemberRole:async (id, userId, role) => api.put(`/bubbles/${id}/members/${userId}/role`, { role }),
+  uploadPicture:   async (id, formData) => api.post(`/bubbles/${id}/picture`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+};
+
+// ─── RATINGS ───────────────────────────────────────────────────────────────────
+export const ratingsAPI = {
+  rateUser: async (targetUserId, score, comment) =>
+    api.post('/founder/rate', { targetUserId, score, comment }),
 };
 export default {
   getProfile: authAPI.getProfile,

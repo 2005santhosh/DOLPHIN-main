@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { lazy, Suspense } from 'react';
 import AppUpdateBanner from './components/shared/AppUpdateBanner';
+import OnboardingTutorial from './components/shared/OnboardingTutorial';
 import FloatingSupportButton from './components/shared/FloatingSupportButton';
 import './styles/GlobalStyles.css';
 import './styles/components.css';
@@ -271,6 +272,7 @@ function App() {
         <Router>
           <AppRoutes />
           <FloatingSupportButton />
+          <OnboardingTutorial />
           <AppUpdateBanner />
           <Toaster
             position="top-right"
