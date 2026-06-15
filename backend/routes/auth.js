@@ -423,6 +423,24 @@ router.put('/reset-password/:token', resetPassword);
 // PROFILE MANAGEMENT ROUTES
 // ==========================================
 
+// @route   POST /api/auth/refresh-token
+// @desc    Issue a fresh 30-day token while the current token is still valid.
+//          Called by the frontend keep-alive before the token actually expires.
+// @access  Private (requires valid token)
+router.post('/refresh-token', protect, (req, res) => {
+  try {
+    // req.user is already populated by protect middleware — token is valid.
+    // Simply issue a new token and slide the 30-day window.
+    const token = generateToken(req.user);
+    res
+      .cookie('token', token, cookieOptions())
+      .json({ success: true, token });
+  } catch (error) {
+    console.error('Refresh token error:', error);
+    res.status(500).json({ message: 'Could not refresh token' });
+  }
+});
+
 // @route   GET /api/auth/profile
 router.get('/profile', protect, async (req, res) => {
   try {

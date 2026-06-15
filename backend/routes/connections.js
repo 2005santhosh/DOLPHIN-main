@@ -173,6 +173,61 @@ router.post('/status-bulk', protect, async (req, res) => {
     }
 });
 
+// GET /api/connections/all-accepted - Return every accepted connected user (for bubble invite modal)
+// Queries BOTH Connection model (peer connections) AND IntroRequest model (cross-role connections).
+router.get('/all-accepted', protect, async (req, res) => {
+    try {
+        const myId = req.user._id;
+        const IntroRequest = require('../models/IntroRequest');
+
+        // ── 1. Connection model (peer-to-peer, all role combos) ──────────────
+        const peerConns = await Connection.find({
+            $or: [
+                { from: myId, status: 'accepted' },
+                { to:   myId, status: 'accepted' },
+            ]
+        })
+        .populate('from', 'name profilePicture role isVerified verifiedSource verifiedUntil')
+        .populate('to',   'name profilePicture role isVerified verifiedSource verifiedUntil')
+        .lean();
+
+        const fromPeer = peerConns.map(c =>
+            c.from._id.toString() === myId.toString() ? c.to : c.from
+        );
+
+        // ── 2. IntroRequest model (founder↔provider, founder↔investor) ──────
+        const introConns = await IntroRequest.find({
+            $or: [
+                { founderId:  myId, status: 'accepted' },
+                { providerId: myId, status: 'accepted' },
+            ]
+        })
+        .populate('founderId',  'name profilePicture role isVerified verifiedSource verifiedUntil')
+        .populate('providerId', 'name profilePicture role isVerified verifiedSource verifiedUntil')
+        .lean();
+
+        const fromIntro = introConns.map(r => {
+            // Return whichever side is NOT the current user
+            const isFounder = r.founderId?._id?.toString() === myId.toString();
+            return isFounder ? r.providerId : r.founderId;
+        }).filter(Boolean);
+
+        // ── 3. Merge and deduplicate ─────────────────────────────────────────
+        const seen = new Set();
+        const unique = [...fromPeer, ...fromIntro].filter(u => {
+            const id = u?._id?.toString();
+            if (!id || seen.has(id)) return false;
+            seen.add(id);
+            return true;
+        });
+
+        res.json({ users: unique });
+    } catch (error) {
+        console.error('all-accepted error:', error);
+        res.status(500).json({ message: 'Error fetching connections' });
+    }
+});
+
 // GET /api/connections/pending-count - Fast pending count for badge (no full load needed)
 router.get('/pending-count', protect, async (req, res) => {
     try {

@@ -793,8 +793,15 @@ const PostsPage = () => {
                     try {
                       const allVideos = await postsAPI.getVideoFeed();
                       if (allVideos.length > 0) {
-                        const idx = allVideos.findIndex(p => p._id?.toString() === postId?.toString());
-                        setReelsPosts(allVideos);
+                        // Merge live connectionStatus from current feed posts into video list
+                        const liveMap = {};
+                        (livePostsRef.current || []).forEach(p => { liveMap[p._id?.toString()] = p.connectionStatus; });
+                        const merged = allVideos.map(v => {
+                          const live = liveMap[v._id?.toString()];
+                          return live !== undefined ? { ...v, connectionStatus: live } : v;
+                        });
+                        const idx = merged.findIndex(p => p._id?.toString() === postId?.toString());
+                        setReelsPosts(merged);
                         setReelsStartIndex(idx >= 0 ? idx : 0);
                       } else {
                         // Fallback to local accumulated videos

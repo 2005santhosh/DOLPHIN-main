@@ -228,7 +228,9 @@ export default function ReelsViewer({
           const isOwn = post.authorId?.toString() === currentUserId?.toString();
           // Use live post state if available (so like/connect updates reflect immediately)
           const livePost = livePostsRef?.current?.find(p => p._id?.toString() === post._id?.toString()) || post;
-          const connStatus = livePost.connectionStatus;
+          // connectionStatus: prefer live feed state (has up-to-date status after connect actions)
+          // fall back to what came with the post itself (now enriched by /videos endpoint)
+          const connStatus = livePost.connectionStatus !== undefined ? livePost.connectionStatus : post.connectionStatus;
           const isLikedByMe = livePost.isLikedByMe;
           const likeCount   = livePost.likeCount || 0;
           const avatarSrc = post.authorImage ||
@@ -256,20 +258,24 @@ export default function ReelsViewer({
                   playsInline
                   loop
                   muted={muted}
-                  preload="metadata"
+                  preload={Math.abs(listIdx - currentIdx) <= 1 ? 'auto' : 'metadata'}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', background: '#000' }}
                   onClick={() => {
                     const vid = videoRefs.current[listIdx];
                     if (vid) { vid.paused ? vid.play().catch(() => {}) : vid.pause(); }
                   }}
-                  onError={() => {
-                    setVideoErrors(prev => ({ ...prev, [listIdx]: true }));
+                  onError={(e) => {
+                    // Only mark as error if it's a real network/decode error, not an abort
+                    const mediaError = e.target.error;
+                    if (mediaError && mediaError.code !== MediaError.MEDIA_ERR_ABORTED) {
+                      setVideoErrors(prev => ({ ...prev, [listIdx]: true }));
+                    }
                   }}
                   onCanPlay={(e) => {
-                    // As soon as the video can play, start it if it's the current one
                     const realCurrent = currentIdx % total;
+                    const realKey = listIdx % total;
                     const isCorrectCopy = (currentIdx < total) ? (listIdx < total) : (listIdx >= total);
-                    if ((listIdx % total) === realCurrent && isCorrectCopy) {
+                    if (realKey === realCurrent && isCorrectCopy) {
                       e.target.muted = muted;
                       e.target.play().catch(() => {});
                     }

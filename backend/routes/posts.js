@@ -35,9 +35,15 @@ async function countTodayPosts(userId) {
 // Capped at 200 to prevent excessive payload.
 router.get('/videos', protect, async (req, res) => {
     try {
-        const userRole = req.user.role;
-        // All videos visible to all authenticated users
-        const filter = { 'media.type': 'video', mediaCount: { $gt: 0 } };
+        // Match any post that has at least one video in its media array
+        // (handles both { type: 'video' } objects and old string URLs containing 'video')
+        const filter = {
+            $or: [
+                { 'media.type': 'video' },
+                { 'media': { $elemMatch: { url: /video/i } } },
+            ],
+            mediaCount: { $gt: 0 }
+        };
 
         const posts = await Post.find(filter)
             .select('authorId authorName authorRole authorImage content postType media mediaCount createdAt likes viewCount')
@@ -45,8 +51,63 @@ router.get('/videos', protect, async (req, res) => {
             .limit(200)
             .lean();
 
+        // ── Enrich with connection status (same logic as /feed) ──────────────
+        const myId = req.user._id;
+        const authorIds = [...new Set(
+            posts
+                .filter(p => p.authorId?.toString() !== myId.toString())
+                .map(p => p.authorId?.toString())
+                .filter(Boolean)
+        )];
+
+        let connectionMap = {};
+        if (authorIds.length > 0) {
+            // Connection model (direct peer connect)
+            const peerConns = await Connection.find({
+                $or: [
+                    { from: myId, to: { $in: authorIds } },
+                    { from: { $in: authorIds }, to: myId },
+                ]
+            }).select('from to status').lean();
+
+            peerConns.forEach(conn => {
+                const otherId = conn.from?.toString() === myId.toString()
+                    ? conn.to?.toString()
+                    : conn.from?.toString();
+                if (otherId) {
+                    const priority = { accepted: 3, pending: 2, rejected: 1 };
+                    if (!connectionMap[otherId] || (priority[conn.status] || 0) > (priority[connectionMap[otherId]] || 0)) {
+                        connectionMap[otherId] = conn.status;
+                    }
+                }
+            });
+
+            // IntroRequest model (founder↔provider/investor flow)
+            const missingIds = authorIds.filter(id => !connectionMap[id]);
+            if (missingIds.length > 0) {
+                const intros = await IntroRequest.find({
+                    status: { $in: ['accepted', 'pending'] },
+                    $or: [
+                        { founderId: myId, providerId: { $in: missingIds } },
+                        { providerId: myId, founderId: { $in: missingIds } },
+                    ]
+                }).select('founderId providerId status').lean();
+
+                intros.forEach(r => {
+                    const otherId = r.founderId?.toString() === myId.toString()
+                        ? r.providerId?.toString()
+                        : r.founderId?.toString();
+                    if (otherId) {
+                        const priority = { accepted: 3, pending: 2, rejected: 1 };
+                        if (!connectionMap[otherId] || (priority[r.status] || 0) > (priority[connectionMap[otherId]] || 0)) {
+                            connectionMap[otherId] = r.status;
+                        }
+                    }
+                });
+            }
+        }
+
         // Build verified author set for badge display
-        const authorIds = [...new Set(posts.map(p => p.authorId?.toString()).filter(Boolean))];
         const verifiedSet = new Set();
         if (authorIds.length > 0) {
             const verifiedAuthors = await User.find(
@@ -56,23 +117,28 @@ router.get('/videos', protect, async (req, res) => {
             verifiedAuthors.forEach(u => verifiedSet.add(u._id.toString()));
         }
 
-        const result = posts.map(post => ({
-            _id: post._id,
-            authorId: post.authorId,
-            authorName: post.authorName,
-            authorRole: post.authorRole,
-            authorImage: post.authorImage || '',
-            content: post.content,
-            postType: post.postType,
-            media: post.media || [],
-            mediaCount: post.mediaCount || 0,
-            createdAt: post.createdAt,
-            likeCount: post.likes?.length || 0,
-            isLikedByMe: post.likes?.some(id => id.toString() === req.user._id.toString()) || false,
-            viewCount: post.viewCount || 0,
-            isAuthorVerified: verifiedSet.has(post.authorId?.toString()),
-            connectionStatus: null, // not needed for viewer
-        }));
+        const result = posts.map(post => {
+            const authorIdStr = post.authorId?.toString();
+            return {
+                _id: post._id,
+                authorId: post.authorId,
+                authorName: post.authorName,
+                authorRole: post.authorRole,
+                authorImage: post.authorImage || '',
+                content: post.content,
+                postType: post.postType,
+                media: post.media || [],
+                mediaCount: post.mediaCount || 0,
+                createdAt: post.createdAt,
+                likeCount: post.likes?.length || 0,
+                isLikedByMe: post.likes?.some(id => id.toString() === myId.toString()) || false,
+                viewCount: post.viewCount || 0,
+                isAuthorVerified: verifiedSet.has(authorIdStr),
+                connectionStatus: authorIdStr === myId.toString()
+                    ? 'own'
+                    : (connectionMap[authorIdStr] || null),
+            };
+        });
 
         res.json({ posts: result, total: result.length });
     } catch (error) {

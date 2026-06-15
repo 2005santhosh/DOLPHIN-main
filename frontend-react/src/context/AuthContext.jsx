@@ -9,12 +9,18 @@
  * 4. Auto-logout only happens on a deliberate explicit action (logout button)
  *    or when the user manually navigates while unauthenticated.
  * 5. Token stored in both localStorage and sessionStorage for resilience.
+ * 6. Proactive token refresh: ~24h before the 30-day JWT expires, a new token
+ *    is issued silently so users never hit a hard 401 from expiry.
+ * 7. On a 401 from any API call, one token refresh is attempted before giving up.
  */
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext(null);
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
+// Token is valid for 30 days. Refresh when ≤ 2 days remaining (28 days after issue).
+const TOKEN_REFRESH_THRESHOLD_MS = 2 * 24 * 60 * 60 * 1000; // 2 days
 
 // ─── Safe storage wrapper ─────────────────────────────────────────────────────
 const storage = {
@@ -50,6 +56,17 @@ const storage = {
     ['token', 'user', 'startupData'].forEach(k => storage.remove(k));
   },
 };
+
+// ─── Decode JWT expiry without verifying signature ────────────────────────────
+function getTokenExpiryMs(token) {
+  try {
+    if (!token) return null;
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
 
 // ─── apiFetch with timeout ────────────────────────────────────────────────────
 async function apiFetch(path, options = {}) {
@@ -113,19 +130,14 @@ export const AuthProvider = ({ children }) => {
   const timerRef        = useRef(null);
   const initDoneRef     = useRef(false);
   const loginActiveRef  = useRef(false); // true while explicit login/verifyOtp in flight
-  // Tracks consecutive 401s from background refresh — only clear after 3 in a row
-  // to avoid a single transient failure logging the user out
-  const consecutive401Ref = useRef(0);
+  const refreshingRef   = useRef(false); // prevents concurrent token refresh calls
 
   const _setAuth = useCallback((userData) => {
     if (!userData) return;
     setUser(userData);
     setIsAuthenticated(true);
     storage.set('user', JSON.stringify(userData));
-    consecutiveRef401Reset();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const consecutiveRef401Reset = () => { consecutive401Ref.current = 0; };
+  }, []);
 
   const _clearAuth = useCallback(() => {
     setUser(null);
@@ -135,18 +147,43 @@ export const AuthProvider = ({ children }) => {
     storage.remove('startupData');
   }, []);
 
+  // ── tryRefreshToken ────────────────────────────────────────────────────────
+  // Calls POST /auth/refresh-token to get a new JWT. Returns true on success.
+  // Uses a guard to prevent multiple simultaneous refresh calls.
+  const tryRefreshToken = useCallback(async () => {
+    if (refreshingRef.current) return false;
+    const token = storage.get('token');
+    if (!token) return false;
+    refreshingRef.current = true;
+    try {
+      const data = await apiFetch('/auth/refresh-token', { method: 'POST' });
+      if (data?.token) {
+        storage.set('token', data.token);
+        console.log('[Auth] Token refreshed successfully');
+        return true;
+      }
+      return false;
+    } catch (err) {
+      // If refresh itself gets 401, the token is truly dead
+      if (err.status === 401) return false;
+      // Network error — keep existing token, don't clear
+      console.warn('[Auth] Token refresh network error:', err.message);
+      return false;
+    } finally {
+      refreshingRef.current = false;
+    }
+  }, []);
+
   // ── refreshProfile ─────────────────────────────────────────────────────────
   // mode:
-  //   'bootstrap' — initial page load, can redirect on 401 after retries
-  //   'background' — periodic keep-alive, NEVER redirects (avoids spurious logout)
+  //   'bootstrap' — initial page load
+  //   'background' — periodic keep-alive, attempts token refresh on 401
   //   'force'     — post-login full profile fetch, always updates state
   const refreshProfile = useCallback(async (mode = 'background') => {
     try {
       const data = await apiFetch('/auth/profile');
       const profile = data.profile || data;
 
-      // Always update for 'force' mode (post-login)
-      // For 'bootstrap' and 'background': only update if not in the middle of login
       if (mode === 'force' || !loginActiveRef.current) {
         _setAuth(profile);
       }
@@ -154,30 +191,44 @@ export const AuthProvider = ({ children }) => {
       if (!storage.get('token') && data.token) {
         storage.set('token', data.token);
       }
-      consecutiveRef401Reset();
+
+      // Proactive token refresh: if token expires within 2 days, renew it now
+      const expiry = getTokenExpiryMs(storage.get('token'));
+      if (expiry && (expiry - Date.now()) < TOKEN_REFRESH_THRESHOLD_MS) {
+        tryRefreshToken().catch(() => {});
+      }
+
       return profile;
     } catch (err) {
       if (err.status === 401) {
-        if (mode === 'force' || mode === 'bootstrap') {
-          // On bootstrap: first 401 → just clear auth quietly, ProtectedRoute handles redirect
+        if (mode === 'background') {
+          // Before giving up, try one token refresh
+          const refreshed = await tryRefreshToken();
+          if (refreshed) {
+            // Retry the profile fetch with the new token
+            try {
+              const retryData = await apiFetch('/auth/profile');
+              const retryProfile = retryData.profile || retryData;
+              if (!loginActiveRef.current) _setAuth(retryProfile);
+              return retryProfile;
+            } catch {
+              // Refresh succeeded but profile still fails — very unlikely, keep auth
+              return null;
+            }
+          }
+          // Refresh failed (token truly expired/blacklisted) — clear silently
+          // Don't redirect — let ProtectedRoute handle it on next navigation
+          console.warn('[Auth] Token expired and refresh failed — clearing auth silently');
+          _clearAuth();
+          return null;
+        }
+
+        if (mode === 'bootstrap' || mode === 'force') {
           if (!loginActiveRef.current) {
             _clearAuth();
           }
           return null;
         }
-
-        // background mode: track consecutive 401s
-        consecutive401Ref.current += 1;
-        console.warn(`[Auth] Background refresh 401 (${consecutive401Ref.current}/3)`);
-
-        if (consecutive401Ref.current >= 3) {
-          // 3 consecutive 401s in background — token is genuinely expired
-          // Clear auth but DON'T redirect — let ProtectedRoute handle it on next navigation
-          console.warn('[Auth] 3 consecutive 401s — clearing auth state silently');
-          _clearAuth();
-          consecutive401Ref.current = 0;
-        }
-        return null;
       }
       // Network/timeout/5xx — keep existing auth, don't touch state
       if (!err.isTimeout) {
@@ -185,7 +236,7 @@ export const AuthProvider = ({ children }) => {
       }
       return null;
     }
-  }, [_setAuth, _clearAuth]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [_setAuth, _clearAuth, tryRefreshToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Bootstrap ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -223,7 +274,7 @@ export const AuthProvider = ({ children }) => {
     bootstrap();
 
     // Background keep-alive every 5 minutes
-    // Uses 'background' mode — NEVER logs user out on transient failure
+    // Uses 'background' mode — attempts token refresh on 401 before clearing auth
     timerRef.current = setInterval(() => {
       if (initDoneRef.current && !loginActiveRef.current) {
         refreshProfile('background');
@@ -337,7 +388,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider value={{
       user, loading, isAuthenticated,
-      login, register, verifyOtp, logout, updateUser, refreshProfile,
+      login, register, verifyOtp, logout, updateUser, refreshProfile, tryRefreshToken,
     }}>
       {children}
     </AuthContext.Provider>

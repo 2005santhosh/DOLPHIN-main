@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { bubblesAPI, connectionsAPI, founderAPI } from '../../services/api';
+import { bubblesAPI, connectionsAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import PageHeader from './PageHeader';
 import Card from './Card';
@@ -185,40 +185,15 @@ export default function BubblesPage() {
 
   const loadConnections = async () => {
     try {
-      // Fetch from both Connection model AND IntroRequest model to get ALL connected profiles
-      const [connData, introIncoming, introSent] = await Promise.all([
-        connectionsAPI.getConnections().catch(() => ({ incoming: [], sent: [] })),
-        founderAPI.getIncomingRequests().catch(() => []),
-        founderAPI.getSentRequests().catch(() => []),
-      ]);
-
-      // Connection model — accepted
-      const fromConn = [
-        ...(connData.incoming || []).filter(c => c.status === 'accepted').map(c => c.otherUser),
-        ...(connData.sent    || []).filter(c => c.status === 'accepted').map(c => c.otherUser),
-      ];
-
-      // IntroRequest model — accepted (founderId or providerId is the "other" person)
-      const fromIntro = [
-        ...(Array.isArray(introIncoming) ? introIncoming : [])
-          .filter(r => r.status === 'accepted')
-          .map(r => r.providerId || {}),
-        ...(Array.isArray(introSent) ? introSent : [])
-          .filter(r => r.status === 'accepted')
-          .map(r => r.providerId || {}),
-      ];
-
-      // Deduplicate by _id
-      const seen = new Set();
-      const all = [...fromConn, ...fromIntro].filter(u => {
-        const uid = u?._id?.toString();
-        if (!uid || seen.has(uid)) return false;
-        seen.add(uid); return true;
-      });
-
-      setConnections(all);
+      // Single endpoint that queries BOTH Connection model (peer) AND IntroRequest model (cross-role).
+      // Works correctly for founders, investors, and providers.
+      const users = await connectionsAPI.getAllAccepted();
+      const list = Array.isArray(users) ? users : [];
+      console.log('[BubblesPage] loadConnections → returned', list.length, 'users:', list.map(u => u.name));
+      setConnections(list);
     } catch (e) {
       console.error('[BubblesPage] loadConnections error:', e.message);
+      toast.error('Failed to load connections');
     }
   };
 
@@ -631,10 +606,18 @@ export default function BubblesPage() {
 
       {/* Invite Modal */}
       <Modal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} title="Invite to Bubble" maxWidth="420px">
+        <div style={{ fontSize: '0.78rem', color: '#6B7280', marginBottom: '0.5rem' }}>
+          {connections.length === 0 ? 'Loading connections…' : `${connections.length} connection${connections.length === 1 ? '' : 's'} found`}
+        </div>
         <input className="form-input" placeholder="Search connections…" value={inviteSearch} onChange={e => setInviteSearch(e.target.value)} style={{ marginBottom: '0.75rem' }} />
         <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {filteredConn.length === 0 ? (
-            <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '1.5rem 0' }}>No connections found.</p>
+          {connections.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '1.5rem 0' }}>
+              You have no accepted connections yet.<br/>
+              <span style={{ fontSize: '0.75rem' }}>Connect with people first to invite them.</span>
+            </p>
+          ) : filteredConn.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '1.5rem 0' }}>No match for "{inviteSearch}"</p>
           ) : filteredConn.map(person => {
             const uid = person?._id?.toString();
             const inBubble = alreadyInBubble(uid);
