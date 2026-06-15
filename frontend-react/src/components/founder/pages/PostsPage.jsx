@@ -219,8 +219,8 @@ async function uploadChunked(file, sigData, onProgress, isVideo) {
   return lastResult;
 }
 
-// ─── Post comments inline component ──────────────────────────────────────────
-function PostComments({ postId, initialCount = 0 }) {
+// ─── Post comments — Instagram-style fullscreen overlay ──────────────────────
+function PostComments({ postId, initialCount = 0, authorId }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [comments, setComments] = useState([]);
@@ -228,21 +228,26 @@ function PostComments({ postId, initialCount = 0 }) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [count, setCount] = useState(initialCount);
+  const inputRef = useRef(null);
+  const endRef   = useRef(null);
+
+  const fb = (name, pic) => pic || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'U')}&background=84CC16&color=fff&size=64`;
 
   const load = async () => {
     setLoading(true);
     try {
       const data = await postsAPI.getComments(postId);
-      setComments(data);
-      setCount(data.length);
+      setComments(data); setCount(data.length);
     } catch { /* ignore */ }
     finally { setLoading(false); }
   };
 
-  const toggle = () => {
-    if (!open) load();
-    setOpen(v => !v);
-  };
+  const openComments = () => { load(); setOpen(true); document.body.style.overflow = 'hidden'; };
+  const closeComments = () => { setOpen(false); document.body.style.overflow = ''; };
+
+  useEffect(() => {
+    if (open) setTimeout(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); inputRef.current?.focus(); }, 200);
+  }, [open, comments.length]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -250,7 +255,7 @@ function PostComments({ postId, initialCount = 0 }) {
     setSending(true);
     try {
       const c = await postsAPI.addComment(postId, text.trim());
-      setComments(prev => [c, ...prev]);
+      setComments(prev => [...prev, c]);
       setCount(n => n + 1);
       setText('');
     } catch (err) { toast.error(err.message || 'Failed to comment'); }
@@ -265,57 +270,104 @@ function PostComments({ postId, initialCount = 0 }) {
     } catch { /* ignore */ }
   };
 
-  const fb = (name) => `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'U')}&background=84CC16&color=fff&size=64`;
-
   return (
-    <div>
-      {/* Trigger */}
-      <button onClick={toggle} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', color: '#6b7280', fontSize: '0.9rem', padding: '4px 0' }}>
+    <>
+      {/* Trigger button */}
+      <button onClick={openComments} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', color: '#6b7280', fontSize: '0.9rem', padding: '4px 0' }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
         <span style={{ fontWeight: 600 }}>{count}</span>
       </button>
 
-      {/* Expanded comments */}
+      {/* Instagram-style fullscreen overlay */}
       {open && (
-        <div style={{ marginTop: '0.75rem', borderTop: '1px solid #F3F4F6', paddingTop: '0.75rem' }}>
-          {/* Add comment */}
-          <form onSubmit={submit} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <img src={fb(user?.name)} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-            <input
-              value={text} onChange={e => setText(e.target.value)}
-              placeholder="Add a comment…"
-              maxLength={500}
-              style={{ flex: 1, border: '1px solid #E5E7EB', borderRadius: 20, padding: '6px 14px', fontSize: '0.875rem', outline: 'none', background: '#F9FAFB' }}
-            />
-            <button type="submit" disabled={!text.trim() || sending}
-              style={{ padding: '6px 14px', background: '#84CC16', color: 'white', border: 'none', borderRadius: 20, fontWeight: 700, fontSize: '0.8rem', cursor: text.trim() && !sending ? 'pointer' : 'not-allowed', opacity: text.trim() && !sending ? 1 : 0.5 }}>
-              Post
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'white', display: 'flex', flexDirection: 'column' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', padding: '0.875rem 1rem', borderBottom: '1px solid #F3F4F6', flexShrink: 0, background: 'white' }}>
+            <button onClick={closeComments} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#111827', marginRight: '0.75rem', display: 'flex', alignItems: 'center', padding: '4px' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
             </button>
-          </form>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#111827' }}>
+              Comments {count > 0 && <span style={{ color: '#9CA3AF', fontWeight: 400, fontSize: '0.9rem' }}>({count})</span>}
+            </h3>
+          </div>
 
-          {/* List */}
-          {loading ? <p style={{ color: '#9CA3AF', fontSize: '0.85rem', margin: 0 }}>Loading…</p> : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {comments.map(c => (
-                <div key={c._id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-                  <img src={c.authorImage || fb(c.authorName)} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                  <div style={{ flex: 1, background: '#F9FAFB', borderRadius: 12, padding: '6px 10px' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#111827', marginRight: 6 }}>{c.authorName}</span>
-                    <span style={{ fontSize: '0.85rem', color: '#374151' }}>{c.content}</span>
+          {/* Comments list */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#9CA3AF' }}>Loading comments…</div>
+            ) : comments.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💬</div>
+                <p style={{ color: '#9CA3AF', fontSize: '0.9rem' }}>No comments yet. Be the first!</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {comments.map(c => (
+                  <div key={c._id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                    <img
+                      src={fb(c.authorName, c.authorImage)}
+                      alt={c.authorName}
+                      style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, aspectRatio: '1/1' }}
+                      onError={e => { e.target.src = fb(c.authorName); }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ background: '#F9FAFB', borderRadius: 12, padding: '8px 12px', display: 'inline-block', maxWidth: '100%' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.82rem', color: '#111827', marginRight: 6 }}>{c.authorName}</span>
+                        <span style={{ fontSize: '0.875rem', color: '#374151', wordBreak: 'break-word' }}>{c.content}</span>
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#9CA3AF', marginTop: 3, paddingLeft: 4 }}>
+                        {new Date(c.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                        {(c.authorId === user?._id || c.authorId?.toString() === user?._id?.toString()) && (
+                          <button onClick={() => del(c._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: '0.72rem', marginLeft: 8, padding: 0 }}>Delete</button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  {c.authorId === user?._id && (
-                    <button onClick={() => del(c._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: '0.75rem', flexShrink: 0, padding: '4px' }}>✕</button>
-                  )}
-                </div>
-              ))}
-              {comments.length === 0 && <p style={{ color: '#9CA3AF', fontSize: '0.82rem', margin: 0 }}>No comments yet. Be the first!</p>}
+                ))}
+                <div ref={endRef} />
+              </div>
+            )}
+          </div>
+
+          {/* Comment input — pinned to bottom */}
+          <form onSubmit={submit} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', padding: '0.75rem 1rem', borderTop: '1px solid #F3F4F6', background: 'white', flexShrink: 0, paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+            <img
+              src={fb(user?.name, user?.profilePicture)}
+              alt={user?.name}
+              style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, aspectRatio: '1/1' }}
+              onError={e => { e.target.src = fb(user?.name); }}
+            />
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: '#F3F4F6', borderRadius: 24, padding: '8px 14px', gap: '0.5rem' }}>
+              <input
+                ref={inputRef}
+                value={text}
+                onChange={e => setText(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(e); } }}
+                placeholder="Add a comment…"
+                maxLength={500}
+                style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '0.9rem', color: '#111827' }}
+              />
+              {/* Send icon button */}
+              <button
+                type="submit"
+                disabled={!text.trim() || sending}
+                style={{ background: 'none', border: 'none', cursor: text.trim() && !sending ? 'pointer' : 'not-allowed', padding: 0, display: 'flex', alignItems: 'center', flexShrink: 0, opacity: text.trim() && !sending ? 1 : 0.4, transition: 'opacity 0.15s' }}
+                aria-label="Send comment"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#84CC16" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
             </div>
-          )}
+          </form>
         </div>
       )}
-    </div>
+    </>
   );
 }
 const CAPTION_LIMIT = 150;
@@ -724,7 +776,9 @@ const PostsPage = () => {
         {media.map((item, index) => {
           const isVideo = typeof item === 'string' ? item.includes('.mp4') || item.includes('video') : item.type === 'video';
           const url = typeof item === 'string' ? item : item.url;
-          const opt = url?.includes('cloudinary') ? url.replace('/upload/', '/upload/f_auto,q_auto/') : url;
+          const opt = url?.includes('cloudinary') && !isVideo
+            ? url.replace('/upload/', '/upload/f_auto,q_auto/')
+            : url; // Never apply Cloudinary transforms to video — breaks playback
           if (isVideo) {
             return (
               <div key={index} style={{ position: 'relative', cursor: 'pointer', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: '#000' }}

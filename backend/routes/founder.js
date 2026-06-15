@@ -848,6 +848,44 @@ function verifiedFirst(arr, getUser) {
     .map(({ item }) => item);
 }
 
+// @route   GET /api/founder/founders
+// @desc    List all founders (available to ALL authenticated users — no validation gate)
+router.get('/founders', protect, async (req, res) => {
+  try {
+    const { search } = req.query;
+    let query = { role: 'founder', isDeleted: { $ne: true } };
+    if (search) { query.$or = [{ name: { $regex: search, $options: 'i' } }]; }
+
+    const Connection   = require('../models/Connection');
+    const IntroRequest = require('../models/IntroRequest');
+    let founders = await User.find(query)
+      .select('name email createdAt profilePicture rewardPoints state ratings isVerified verifiedSource verifiedUntil')
+      .lean();
+    const founderIds = founders.map(u => u._id);
+    const [connections, introRequests] = await Promise.all([
+      Connection.find({ $or: [{ from: req.user._id, to: { $in: founderIds } }, { from: { $in: founderIds }, to: req.user._id }] }).select('from to status').lean(),
+      IntroRequest.find({ $or: [{ founderId: req.user._id, providerId: { $in: founderIds } }, { providerId: req.user._id, founderId: { $in: founderIds } }] }).select('founderId providerId status').lean(),
+    ]);
+    const statusMap = {};
+    const prio = { accepted: 3, pending: 2, rejected: 1 };
+    const upsert = (uid, s) => { if (!statusMap[uid] || (prio[s]||0) > (prio[statusMap[uid]]||0)) statusMap[uid] = s; };
+    connections.forEach(c => { upsert(c.from.toString() === req.user._id.toString() ? c.to.toString() : c.from.toString(), c.status); });
+    introRequests.forEach(r => { const o = r.founderId?.toString() === req.user._id.toString() ? r.providerId?.toString() : r.founderId?.toString(); if (o) upsert(o, r.status); });
+    let results = founders.map(u => ({
+      _id: u._id, name: u.name, email: u.email, joinedAt: u.createdAt,
+      profilePicture: u.profilePicture || '', rewardPoints: u.rewardPoints || 0,
+      state: u.state, rating: '0.0',
+      requestStatus: statusMap[u._id.toString()] || null,
+      isVerified: u.isVerified || false, verifiedSource: u.verifiedSource || null, verifiedUntil: u.verifiedUntil || null,
+    }));
+    results = verifiedFirst(results, r => r);
+    res.json(results);
+  } catch (err) {
+    console.error('Error fetching founders:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   GET /api/founder/investors
 // @desc    List all investors (Restricted to Validated Founders)
 // @access  Private (Requires 70% Validation Score)

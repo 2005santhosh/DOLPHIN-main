@@ -41,7 +41,8 @@ const InfoRow = ({ label, value }) => {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function InvestorsProvidersPage({ startup }) {
-  const [tab, setTab] = useState('investors');
+  const [tab, setTab] = useState('founders');  // start on founders tab
+  const [founders, setFounders] = useState([]);
   const [investors, setInvestors] = useState([]);
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,11 +65,19 @@ export default function InvestorsProvidersPage({ startup }) {
   const isLocked = validationScore < 70;
 
   const loadData = useCallback(async () => {
-    if (isLocked) { setLoading(false); return; }
+    if (isLocked && tab !== 'founders') { setLoading(false); return; }
     setLoading(true);
     try {
       let profiles = [];
-      if (tab === 'investors') {
+      if (tab === 'founders') {
+        // Fetch all founders via the dedicated founders endpoint
+        const API_BASE = import.meta.env.VITE_API_URL || '/api';
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+        const res = await fetch(`${API_BASE}/founder/founders?search=${encodeURIComponent(search)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) { const d = await res.json(); profiles = Array.isArray(d) ? d : []; }
+      } else if (tab === 'investors') {
         const data = await founderAPI.getInvestors(search);
         profiles = Array.isArray(data) ? data : [];
       } else {
@@ -76,8 +85,7 @@ export default function InvestorsProvidersPage({ startup }) {
         profiles = Array.isArray(data) ? data : [];
       }
 
-      // Merge Connection model status (direct connect) with IntroRequest status
-      // so profiles show "Connected/Pending" regardless of which flow was used
+      // Merge Connection model status with IntroRequest status
       if (profiles.length > 0) {
         const userIds = profiles.map(p => (p.userId || p._id)?.toString()).filter(Boolean);
         try {
@@ -86,7 +94,6 @@ export default function InvestorsProvidersPage({ startup }) {
             const uid = (p.userId || p._id)?.toString();
             const connStatus = connStatusMap[uid];
             const introStatus = p.requestStatus;
-            // Prefer 'accepted' > 'pending' > introRequest status
             const priority = { accepted: 3, pending: 2 };
             let finalStatus = introStatus;
             if (connStatus && (!finalStatus || (priority[connStatus] || 0) > (priority[finalStatus] || 0))) {
@@ -94,10 +101,11 @@ export default function InvestorsProvidersPage({ startup }) {
             }
             return { ...p, requestStatus: finalStatus };
           });
-        } catch { /* ignore — fall back to IntroRequest status only */ }
+        } catch { /* ignore */ }
       }
 
-      if (tab === 'investors') setInvestors(profiles);
+      if (tab === 'founders')  setFounders(profiles);
+      else if (tab === 'investors') setInvestors(profiles);
       else setProviders(profiles);
     } catch (err) {
       console.error('Load error:', err);
@@ -154,11 +162,11 @@ export default function InvestorsProvidersPage({ startup }) {
 
   const handleSearch = (e) => { e.preventDefault(); loadData(); };
 
-  const list = tab === 'investors' ? investors : providers;
+  const list = tab === 'founders' ? founders : tab === 'investors' ? investors : providers;
   const providerCategories = ['all', 'Legal', 'Tech', 'Design', 'Marketing', 'Finance', 'HR', 'Operations', 'General'];
 
-  // ── Locked state ─────────────────────────────────────────────────────────────
-  if (isLocked) {
+  // ── Locked state — only for investors/providers tabs ─────────────────────────
+  if (isLocked && (tab === 'investors' || tab === 'providers')) {
     return (
       <div>
         <PageHeader title="Investors & Providers" subtitle="Connect with investors and service providers" />
@@ -188,6 +196,7 @@ export default function InvestorsProvidersPage({ startup }) {
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
         {[
+          { key: 'founders', label: 'Founders', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
           { key: 'investors', label: 'Investors', icon: <TrendingUp size={16} /> },
           { key: 'providers', label: 'Service Providers', icon: <Puzzle size={16} /> },
         ].map(({ key, label, icon }) => (

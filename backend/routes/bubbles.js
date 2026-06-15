@@ -8,13 +8,22 @@ const { protect } = require('../middleware/authMiddleware');
 const Bubble = require('../models/Bubble');
 const User   = require('../models/User');
 const { upload, cloudinary } = require('../config/cloudinary');
+const sendEmail = require('../utils/sendEmail');
 
 // ── Helper: check if user is admin of a bubble ────────────────────────────────
 function isAdmin(bubble, userId) {
-  return bubble.members.some(m => m.userId.toString() === userId.toString() && m.role === 'admin');
+  const uid = userId?.toString();
+  return bubble.members.some(m => {
+    const mid = m.userId?._id?.toString() || m.userId?.toString();
+    return mid === uid && m.role === 'admin';
+  });
 }
 function isMember(bubble, userId) {
-  return bubble.members.some(m => m.userId.toString() === userId.toString());
+  const uid = userId?.toString();
+  return bubble.members.some(m => {
+    const mid = m.userId?._id?.toString() || m.userId?.toString();
+    return mid === uid;
+  });
 }
 
 // ── POST /api/bubbles — Create a new bubble ───────────────────────────────────
@@ -155,6 +164,29 @@ router.post('/:id/invite', protect, async (req, res) => {
     }
 
     res.json({ message: `${user.name} added to ${bubble.name}` });
+
+    // Fire-and-forget invite email
+    setImmediate(async () => {
+      try {
+        const invitee = await User.findById(userId).select('email name emailNotifications').lean();
+        if (invitee?.email && invitee.emailNotifications !== false) {
+          await sendEmail({
+            email: invitee.email,
+            subject: `🫧 You've been invited to "${bubble.name}" on Dolphin`,
+            message: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;border:1px solid #E5E7EB;border-radius:12px;">
+              <h2 style="color:#1E3A8A;">🐬 Dolphin</h2>
+              <p>Hi <strong>${invitee.name}</strong>,</p>
+              <p><strong>${req.user.name}</strong> has invited you to join the Bubble <strong>"${bubble.name}"</strong> on Dolphin.</p>
+              <p>Bubbles are group conversations where you can collaborate with multiple people at once.</p>
+              <div style="text-align:center;margin:24px 0;">
+                <a href="https://www.dolphinorg.in" style="display:inline-block;padding:12px 28px;background:#84CC16;color:#0F172A;text-decoration:none;border-radius:8px;font-weight:700;">Open Dolphin</a>
+              </div>
+              <p style="color:#9CA3AF;font-size:0.8rem;">Go to the Bubbles section in your dashboard to start chatting.</p>
+            </div>`,
+          });
+        }
+      } catch (e) { console.error('[Bubbles] Invite email error:', e.message); }
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }

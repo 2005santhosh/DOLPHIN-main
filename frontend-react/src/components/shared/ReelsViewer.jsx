@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Heart, MessageCircle } from './Icons';
 import VerifiedBadge from './VerifiedBadge';
+import toast from 'react-hot-toast';
+import { postsAPI } from '../../services/api';
 
 function getVideoUrl(post) {
   const vid = post.media?.find(m =>
@@ -51,6 +53,12 @@ export default function ReelsViewer({
   const [currentIdx, setCurrentIdx] = useState(startIndex < total ? startIndex : 0);
   const [muted, setMuted] = useState(false);
   const [videoErrors, setVideoErrors] = useState({});
+  // Comments overlay state
+  const [commentPostId, setCommentPostId] = useState(null);
+  const [comments, setComments]           = useState([]);
+  const [commentText, setCommentText]     = useState('');
+  const [commentLoading, setCL]           = useState(false);
+  const [commentSending, setCS]           = useState(false);
   const containerRef = useRef(null);
   // videoRefs[listIdx] = <video element>
   const videoRefs = useRef({});
@@ -312,34 +320,56 @@ export default function ReelsViewer({
                 )}
               </div>
 
-              {/* Right side: like + views + connect/chat */}
+              {/* Right side: like + views + comment + share + connect/chat */}
               <div style={{
                 position: 'absolute', bottom: 80, right: 12, zIndex: 10,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem',
               }}>
                 {/* Like */}
-                <button
-                  onClick={() => onToggleLike(post._id)}
-                  disabled={stateLocks[post._id]}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: 0 }}
-                >
+                <button onClick={() => onToggleLike(post._id)} disabled={stateLocks[post._id]}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: 0 }}>
                   {post.isLikedByMe
                     ? <Heart size={28} fill="#EF4444" color="#EF4444" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.9))' }} />
                     : <Heart size={28} color="white" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.9))' }} />}
-                  <span style={{ color: 'white', fontSize: '0.72rem', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
-                    {post.likeCount || 0}
-                  </span>
+                  <span style={{ color: 'white', fontSize: '0.72rem', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>{post.likeCount || 0}</span>
+                </button>
+
+                {/* Comment */}
+                <button
+                  onClick={async () => {
+                    setCommentPostId(post._id);
+                    setCL(true);
+                    try { const d = await postsAPI.getComments(post._id); setComments(d); } catch {}
+                    finally { setCL(false); }
+                  }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: 0 }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.9))' }}>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  <span style={{ color: 'white', fontSize: '0.72rem', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>Comment</span>
+                </button>
+
+                {/* Share */}
+                <button
+                  onClick={() => {
+                    const url = window.location.href;
+                    if (navigator.share) navigator.share({ title: `${post.authorName}'s video on Dolphin`, url }).catch(() => {});
+                    else navigator.clipboard.writeText(url).then(() => toast.success('Link copied!')).catch(() => {});
+                  }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: 0 }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.9))' }}>
+                    <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                  </svg>
+                  <span style={{ color: 'white', fontSize: '0.72rem', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>Share</span>
                 </button>
 
                 {/* Views */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.9))' }}>
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                   </svg>
-                  <span style={{ color: 'white', fontSize: '0.72rem', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
-                    {post.viewCount || 0}
-                  </span>
+                  <span style={{ color: 'white', fontSize: '0.72rem', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>{post.viewCount || 0}</span>
                 </div>
 
                 {/* Connect / Chat */}
@@ -374,6 +404,54 @@ export default function ReelsViewer({
       <style>{`
         div[style*="overflow-y: scroll"]::-webkit-scrollbar { display: none; }
       `}</style>
+
+      {/* Comments overlay — slides up from bottom */}
+      {commentPostId && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100002, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }} onClick={() => setCommentPostId(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px 20px 0 0', maxHeight: '75vh', display: 'flex', flexDirection: 'column', boxShadow: '0 -4px 24px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', borderBottom: '1px solid #F3F4F6' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Comments</h3>
+              <button onClick={() => setCommentPostId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: '1.25rem', lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
+              {commentLoading ? <p style={{ color: '#9CA3AF', textAlign: 'center' }}>Loading…</p>
+                : comments.length === 0 ? <p style={{ color: '#9CA3AF', textAlign: 'center', padding: '1rem' }}>No comments yet.</p>
+                : comments.map(c => (
+                  <div key={c._id} style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.875rem' }}>
+                    <img src={c.authorImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.authorName || 'U')}&background=84CC16&color=fff&size=64`} alt=""
+                      style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, aspectRatio: '1/1' }} />
+                    <div>
+                      <div style={{ background: '#F9FAFB', borderRadius: 12, padding: '7px 12px', display: 'inline-block' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.82rem', color: '#111827', marginRight: 6 }}>{c.authorName}</span>
+                        <span style={{ fontSize: '0.875rem', color: '#374151' }}>{c.content}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!commentText.trim() || commentSending) return;
+              setCS(true);
+              try {
+                const c = await postsAPI.addComment(commentPostId, commentText.trim());
+                setComments(prev => [...prev, c]);
+                setCommentText('');
+              } catch { toast.error('Failed'); }
+              finally { setCS(false); }
+            }} style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem 1rem', borderTop: '1px solid #F3F4F6', alignItems: 'center', paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+              <input value={commentText} onChange={e => setCommentText(e.target.value)} placeholder="Add a comment…" maxLength={500}
+                style={{ flex: 1, border: '1px solid #E5E7EB', borderRadius: 20, padding: '8px 14px', fontSize: '0.9rem', outline: 'none', background: '#F9FAFB' }} />
+              <button type="submit" disabled={!commentText.trim() || commentSending}
+                style={{ background: 'none', border: 'none', cursor: commentText.trim() ? 'pointer' : 'not-allowed', padding: 0, opacity: commentText.trim() ? 1 : 0.4 }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#84CC16" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

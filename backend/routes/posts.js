@@ -8,6 +8,7 @@ const { protect } = require('../middleware/authMiddleware');
 const { cloudinary } = require('../config/cloudinary');
 const rateLimit = require('express-rate-limit');
 const { recordActivity } = require('../services/gamificationService');
+const sendEmail = require('../utils/sendEmail');
 
 const feedLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 300 });
 const createLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 30 });
@@ -330,14 +331,15 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
             });
 
             // Also check IntroRequest model (founder/provider flow) — only if not already found
+            // Only check requests where current user is the SENDER (founderId or providerId with initiator)
+            // to avoid showing "pending" for users who sent requests TO us
             const missingIds = authorIds.filter(id => !connectionMap[id]);
             if (missingIds.length > 0) {
                 const requests = await IntroRequest.find({
+                    status: { $in: ['accepted', 'pending'] },
                     $or: [
                         { founderId: req.user._id, providerId: { $in: missingIds } },
                         { providerId: req.user._id, founderId: { $in: missingIds } },
-                        { founderId: { $in: missingIds }, providerId: req.user._id },
-                        { providerId: { $in: missingIds }, founderId: req.user._id },
                     ]
                 }).select('founderId providerId status').lean();
 
@@ -495,6 +497,27 @@ router.post('/:id/like', protect, likeLimiter, async (req, res) => {
 
         await post.save();
         res.json({ isLikedByMe: !isLiked, likeCount: post.likes.length });
+
+        // Fire-and-forget: notify post author when someone likes their post
+        if (!isLiked && post.authorId.toString() !== req.user._id.toString()) {
+            setImmediate(async () => {
+                try {
+                    const author = await User.findById(post.authorId).select('email name emailNotifications').lean();
+                    if (author?.email && author.emailNotifications !== false) {
+                        await sendEmail({
+                            email: author.email,
+                            subject: `❤️ ${req.user.name} liked your post on Dolphin`,
+                            message: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;border:1px solid #E5E7EB;border-radius:12px;">
+                                <h2 style="color:#1E3A8A;">🐬 Dolphin</h2>
+                                <p>Hi <strong>${author.name}</strong>,</p>
+                                <p><strong>${req.user.name}</strong> liked your post${post.content ? `: <em>"${post.content.slice(0, 80)}${post.content.length > 80 ? '…' : ''}"</em>` : '.'}
+                                <div style="text-align:center;margin:20px 0;"><a href="https://www.dolphinorg.in" style="display:inline-block;padding:12px 28px;background:#84CC16;color:#0F172A;text-decoration:none;border-radius:8px;font-weight:700;">View Post</a></div>
+                            </div>`,
+                        });
+                    }
+                } catch (e) { console.error('[Posts] Like email error:', e.message); }
+            });
+        }
     } catch (error) {
         res.status(500).json({ message: 'Error liking post' });
     }
@@ -546,6 +569,27 @@ router.post('/:id/comments', protect, commentLimiter, async (req, res) => {
         });
 
         res.status(201).json(comment);
+
+        // Notify post author about the new comment
+        setImmediate(async () => {
+            try {
+                if (post.authorId.toString() === req.user._id.toString()) return; // own post
+                const author = await User.findById(post.authorId).select('email name emailNotifications').lean();
+                if (author?.email && author.emailNotifications !== false) {
+                    await sendEmail({
+                        email: author.email,
+                        subject: `💬 ${req.user.name} commented on your post`,
+                        message: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;border:1px solid #E5E7EB;border-radius:12px;">
+                            <h2 style="color:#1E3A8A;">🐬 Dolphin</h2>
+                            <p>Hi <strong>${author.name}</strong>,</p>
+                            <p><strong>${req.user.name}</strong> commented on your post:</p>
+                            <blockquote style="background:#F9FAFB;border-left:4px solid #84CC16;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#374151;font-style:italic;">"${content.trim().slice(0, 200)}"</blockquote>
+                            <div style="text-align:center;margin:20px 0;"><a href="https://www.dolphinorg.in" style="display:inline-block;padding:12px 28px;background:#84CC16;color:#0F172A;text-decoration:none;border-radius:8px;font-weight:700;">View Post</a></div>
+                        </div>`,
+                    });
+                }
+            } catch (e) { console.error('[Posts] Comment email error:', e.message); }
+        });
     } catch (err) {
         res.status(500).json({ message: 'Error creating comment' });
     }
