@@ -253,20 +253,22 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
         // Get total count for pagination
         const totalPosts = await Post.countDocuments(filter);
 
-        // Fetch posts with Instagram-like engagement sorting
-        // Score = verified_boost + likes*3 + views*1 + recency (newer = higher)
-        // Using aggregation pipeline for score-based sort with pagination
-        const posts = await Post.aggregate([
+        // Fetch a larger pool for engagement scoring + author diversity interleaving.
+        // We need more than `limit` posts so the interleave algorithm has enough
+        // posts from different authors to fill a full page without gaps.
+        // Pool size: fetch enough to cover this page and the interleave buffer.
+        // For page N: we need to re-score from scratch and re-interleave, so we
+        // fetch ALL scored posts up to (skip + limit * 3) and slice after interleave.
+        const poolSize = Math.min(skip + limit * 4, 200); // cap at 200 to limit DB load
+
+        const rawPosts = await Post.aggregate([
             { $match: filter },
             {
                 $addFields: {
-                    // Engagement score: verified gets 200 point boost (handled post-query),
-                    // likes weighted 3x, views 1x, recency: posts in last 24h get +50, last 7d +20
                     engagementScore: {
                         $add: [
                             { $multiply: [{ $size: { $ifNull: ['$likes', []] } }, 3] },
                             { $ifNull: ['$viewCount', 0] },
-                            // Recency bonus: 50 pts if < 24h, 20 pts if < 7d
                             {
                                 $cond: {
                                     if: { $gte: ['$createdAt', new Date(Date.now() - 24 * 60 * 60 * 1000)] },
@@ -285,8 +287,7 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
                 }
             },
             { $sort: { engagementScore: -1, createdAt: -1 } },
-            { $skip: skip },
-            { $limit: limit },
+            { $limit: poolSize },  // No $skip here — we slice after interleave
             {
                 $project: {
                     authorId: 1, authorName: 1, authorRole: 1, authorImage: 1,
@@ -295,6 +296,10 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
                 }
             }
         ]);
+
+        // We'll do the verified-author lookup on this pool, then interleave,
+        // then slice [skip .. skip+limit] for the correct page window.
+        const posts = rawPosts; // rename for compatibility with code below
 
         const formattedPosts = posts.map(post => ({
             _id: post._id,
@@ -458,7 +463,7 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
             return result;
         }
 
-        const diverseFeed = interleaveByAuthor(boostedPosts);
+        const diverseFeed = interleaveByAuthor(boostedPosts).slice(skip, skip + limit);
 
         res.json({
             posts: diverseFeed,
@@ -466,7 +471,7 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
                 currentPage: page,
                 totalPages: Math.ceil(totalPosts / limit),
                 totalPosts,
-                hasMore: skip + posts.length < totalPosts
+                hasMore: skip + diverseFeed.length < totalPosts
             }
         });
     } catch (error) {
