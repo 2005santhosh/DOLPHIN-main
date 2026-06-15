@@ -479,17 +479,14 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
     }
 });
 
-// Add comments routes to posts
-const Comment = require('./models/Comment');
-
-// GET /api/posts/:id/comments
-router.get = router.get; // placeholder — comments defined below in posts.js
+// POST /api/posts/:id/like
+router.post('/:id/like', protect, likeLimiter, async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);
         if (!post) return res.status(404).json({ message: 'Post not found' });
 
         const isLiked = post.likes.some(id => id.toString() === req.user._id.toString());
-        
+
         if (isLiked) {
             post.likes.pull(req.user._id);
         } else {
@@ -497,11 +494,7 @@ router.get = router.get; // placeholder — comments defined below in posts.js
         }
 
         await post.save();
-
-        res.json({ 
-            isLikedByMe: !isLiked, 
-            likeCount: post.likes.length 
-        });
+        res.json({ isLikedByMe: !isLiked, likeCount: post.likes.length });
     } catch (error) {
         res.status(500).json({ message: 'Error liking post' });
     }
