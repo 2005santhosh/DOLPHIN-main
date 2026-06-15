@@ -561,26 +561,53 @@ export default function BubblesPage() {
           {/* Permissions — admin only */}
           {isMyAdmin && (
             <div style={{ marginBottom: '1rem', background: '#F0FDF4', borderRadius: 10, padding: '0.75rem', border: '1px solid #BBF7D0' }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#374151', marginBottom: '0.6rem' }}>🛡️ Group Permissions</div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#374151', marginBottom: '0.75rem' }}>🛡️ Group Permissions</div>
               {[
                 { key: 'allowMembersToInvite',   label: 'Allow all members to invite people' },
                 { key: 'allowMembersToEditInfo',  label: 'Allow all members to edit group info' },
-              ].map(({ key, label }) => (
-                <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={!!(selected?.permissions?.[key])}
-                    onChange={async (e) => {
-                      try {
-                        const result = await bubblesAPI.updatePermissions(selected._id, { [key]: e.target.checked });
-                        setSelected(prev => ({ ...prev, permissions: result.permissions }));
-                        toast.success('Permission updated');
-                      } catch { toast.error('Failed to update permission'); }
-                    }}
-                  />
-                  <span style={{ fontSize: '0.82rem', color: '#374151' }}>{label}</span>
-                </label>
-              ))}
+              ].map(({ key, label }) => {
+                const checked = !!(selected?.permissions?.[key]);
+                return (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                    <span style={{ fontSize: '0.82rem', color: '#374151' }}>{label}</span>
+                    {/* Custom toggle switch */}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const result = await bubblesAPI.updatePermissions(selected._id, { [key]: !checked });
+                          setSelected(prev => ({ ...prev, permissions: result.permissions }));
+                          toast.success('Permission updated');
+                        } catch { toast.error('Failed to update permission'); }
+                      }}
+                      style={{
+                        position: 'relative',
+                        width: 44, height: 24,
+                        borderRadius: 12,
+                        background: checked ? '#16A34A' : '#D1D5DB',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s',
+                        flexShrink: 0,
+                        outline: 'none',
+                        padding: 0,
+                      }}
+                      aria-checked={checked}
+                      role="switch"
+                    >
+                      <span style={{
+                        position: 'absolute',
+                        top: 3, left: checked ? 23 : 3,
+                        width: 18, height: 18,
+                        borderRadius: '50%',
+                        background: 'white',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                        transition: 'left 0.2s',
+                      }} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
           <div style={{ display: 'flex', gap: '0.75rem' }}>
