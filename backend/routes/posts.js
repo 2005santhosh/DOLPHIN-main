@@ -416,20 +416,15 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
             });
 
         // ── Author diversity interleave (Instagram-style) ──────────────────────
-        // Prevents consecutive posts from the same author by round-robin
-        // distributing posts across unique authors.
-        //
-        // Algorithm:
-        //   1. Group posts by authorId into buckets (preserving score order within each bucket)
-        //   2. Round-robin pick one post from each bucket in turn
-        //   3. Result: A → B → C → A → B → C pattern, never A → A → A
-        //
-        // Verified authors' buckets are placed first so their posts get higher
-        // slots in the round-robin, giving them natural priority without clustering.
+        // Prevents consecutive posts from the same author.
+        // Two-pass approach:
+        //   Pass 1: round-robin by author bucket (verified first)
+        //   Pass 2: strict scan — if any consecutive pair shares an author,
+        //           find the next different-author post and swap it in
         function interleaveByAuthor(posts) {
-            if (posts.length === 0) return posts;
+            if (posts.length <= 1) return posts;
 
-            // Build ordered bucket list — verified authors first
+            // Pass 1: Build buckets, round-robin
             const authorOrder = [];
             const buckets = {};
             for (const p of posts) {
@@ -441,14 +436,13 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
                 buckets[aid].push(p);
             }
 
-            // Sort author order: verified first, then by their best post score
+            // Verified authors first in the round-robin order
             authorOrder.sort((a, b) => {
-                const aVerified = buckets[a][0]?.isAuthorVerified ? 1 : 0;
-                const bVerified = buckets[b][0]?.isAuthorVerified ? 1 : 0;
-                return bVerified - aVerified;
+                const aV = buckets[a][0]?.isAuthorVerified ? 1 : 0;
+                const bV = buckets[b][0]?.isAuthorVerified ? 1 : 0;
+                return bV - aV;
             });
 
-            // Round-robin interleave
             const result = [];
             let hasMore = true;
             while (hasMore) {
@@ -460,6 +454,31 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
                     }
                 }
             }
+
+            // Pass 2: strict consecutive-author fix
+            // Walk the result; if result[i] and result[i+1] share an author,
+            // scan forward for the nearest post from a different author and swap it in.
+            for (let i = 0; i < result.length - 1; i++) {
+                const currAuthor = result[i].authorId?.toString();
+                if (result[i + 1].authorId?.toString() === currAuthor) {
+                    // Find next post from a different author
+                    let swapIdx = -1;
+                    for (let j = i + 2; j < result.length; j++) {
+                        if (result[j].authorId?.toString() !== currAuthor) {
+                            swapIdx = j;
+                            break;
+                        }
+                    }
+                    if (swapIdx !== -1) {
+                        // Swap result[i+1] with result[swapIdx]
+                        const tmp = result[i + 1];
+                        result[i + 1] = result[swapIdx];
+                        result[swapIdx] = tmp;
+                    }
+                    // If no different author exists, we can't avoid consecutive — leave as-is
+                }
+            }
+
             return result;
         }
 

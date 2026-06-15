@@ -662,7 +662,11 @@ const PostsPage = () => {
                   };
                   openReels();
                 }}>
-                <video src={opt} preload="metadata" playsInline muted style={{ width: '100%', display: 'block', maxHeight: 320, objectFit: 'cover' }} />
+                <video src={opt} poster={
+                    url?.includes('cloudinary') && url?.includes('/video/upload/')
+                      ? url.replace('/video/upload/', '/video/upload/so_0,f_jpg,q_auto:low/').replace(/\.(mp4|mov|avi|mkv|webm)(\?.*)?$/, '.jpg')
+                      : (item?.thumbnail || undefined)
+                  } preload="metadata" playsInline muted style={{ width: '100%', display: 'block', maxHeight: 320, objectFit: 'cover', background: '#000' }} />
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)' }}>
                   <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="#111827"><path d="M8 5v14l11-7z" /></svg>

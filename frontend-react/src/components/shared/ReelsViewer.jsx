@@ -8,11 +8,29 @@ function getVideoUrl(post) {
   );
   const url = typeof vid === 'string' ? vid : vid?.url;
   if (!url) return null;
-  // For Cloudinary videos: serve original URL without transformation.
-  // Video transformations (f_auto, q_auto:best) can cause playback failures
-  // because the browser may not support the auto-selected format/codec.
-  // The original uploaded video quality is preserved as-is.
   return url;
+}
+
+// Get a thumbnail/poster image for a video — used to prevent black screen
+// while the video is loading. Uses Cloudinary's auto-generated thumbnail.
+function getVideoPoster(post) {
+  const vid = post.media?.find(m =>
+    typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video'
+  );
+  // Check if there's an explicit thumbnail stored
+  const thumbnail = typeof vid === 'object' ? vid?.thumbnail : null;
+  if (thumbnail) return thumbnail;
+
+  const url = typeof vid === 'string' ? vid : vid?.url;
+  if (!url) return null;
+
+  // Generate Cloudinary thumbnail: swap resource type video→image, replace extension
+  if (url.includes('cloudinary') && url.includes('/video/upload/')) {
+    return url
+      .replace('/video/upload/', '/video/upload/so_0,f_jpg,q_auto:low/')
+      .replace(/\.(mp4|mov|avi|mkv|webm)(\?.*)?$/, '.jpg');
+  }
+  return null;
 }
 
 export default function ReelsViewer({
@@ -196,6 +214,7 @@ export default function ReelsViewer({
       >
         {renderList.map((post, listIdx) => {
           const videoUrl = getVideoUrl(post);
+          const videoPoster = getVideoPoster(post);
           const isOwn = post.authorId?.toString() === currentUserId?.toString();
           const connStatus = post.connectionStatus;
           const avatarSrc = post.authorImage ||
@@ -219,17 +238,27 @@ export default function ReelsViewer({
                 <video
                   ref={el => { videoRefs.current[listIdx] = el; }}
                   src={videoUrl}
+                  poster={videoPoster || undefined}
                   playsInline
                   loop
                   muted={muted}
-                  preload="auto"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  preload="metadata"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', background: '#000' }}
                   onClick={() => {
                     const vid = videoRefs.current[listIdx];
                     if (vid) { vid.paused ? vid.play().catch(() => {}) : vid.pause(); }
                   }}
                   onError={() => {
                     setVideoErrors(prev => ({ ...prev, [listIdx]: true }));
+                  }}
+                  onCanPlay={(e) => {
+                    // As soon as the video can play, start it if it's the current one
+                    const realCurrent = currentIdx % total;
+                    const isCorrectCopy = (currentIdx < total) ? (listIdx < total) : (listIdx >= total);
+                    if ((listIdx % total) === realCurrent && isCorrectCopy) {
+                      e.target.muted = muted;
+                      e.target.play().catch(() => {});
+                    }
                   }}
                 />
               ) : (
