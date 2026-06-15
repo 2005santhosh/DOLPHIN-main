@@ -158,7 +158,7 @@ router.get('/:id/upload-signature', protect, async (req, res) => {
   }
 });
 
-// ── POST /api/bubbles/:id/invite — Admin invites a user ───────────────────────
+// ── POST /api/bubbles/:id/invite — Invite a user (admin, or member if allowed) ──
 router.post('/:id/invite', protect, async (req, res) => {
   try {
     const { userId } = req.body;
@@ -166,26 +166,25 @@ router.post('/:id/invite', protect, async (req, res) => {
 
     const bubble = await Bubble.findById(req.params.id);
     if (!bubble) return res.status(404).json({ message: 'Bubble not found' });
-    if (!isAdmin(bubble, req.user._id)) return res.status(403).json({ message: 'Only admins can invite' });
+
+    // Check permission: admin always can invite; members can if allowMembersToInvite is true
+    const canInvite = isAdmin(bubble, req.user._id) || bubble.permissions?.allowMembersToInvite;
+    if (!canInvite) return res.status(403).json({ message: 'Only admins can invite members' });
+    if (!isMember(bubble, req.user._id)) return res.status(403).json({ message: 'Not a member' });
 
     if (isMember(bubble, userId)) return res.status(400).json({ message: 'User is already a member' });
 
-    // Verify user exists
     const user = await User.findById(userId).select('name').lean();
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     bubble.members.push({ userId, role: 'member', joinedAt: new Date() });
     await bubble.save();
 
-    // Notify invited user via socket
     const io = req.app.get('socketio');
-    if (io) {
-      io.to(`user:${userId}`).emit('bubbleInvite', { bubbleId: bubble._id, bubbleName: bubble.name });
-    }
+    if (io) io.to(`user:${userId}`).emit('bubbleInvite', { bubbleId: bubble._id, bubbleName: bubble.name });
 
     res.json({ message: `${user.name} added to ${bubble.name}` });
 
-    // Fire-and-forget invite email
     setImmediate(async () => {
       try {
         const invitee = await User.findById(userId).select('email name emailNotifications').lean();
@@ -237,12 +236,35 @@ router.delete('/:id/members/:userId', protect, async (req, res) => {
   }
 });
 
-// ── PUT /api/bubbles/:id — Admin updates name/description/picture ─────────────
+// ── PUT /api/bubbles/:id/permissions — Admin updates group permissions ─────────
+router.put('/:id/permissions', protect, async (req, res) => {
+  try {
+    const { allowMembersToInvite, allowMembersToEditInfo } = req.body;
+    const bubble = await Bubble.findById(req.params.id);
+    if (!bubble) return res.status(404).json({ message: 'Bubble not found' });
+    if (!isAdmin(bubble, req.user._id)) return res.status(403).json({ message: 'Only admins can change permissions' });
+
+    if (!bubble.permissions) bubble.permissions = {};
+    if (typeof allowMembersToInvite   === 'boolean') bubble.permissions.allowMembersToInvite   = allowMembersToInvite;
+    if (typeof allowMembersToEditInfo === 'boolean') bubble.permissions.allowMembersToEditInfo = allowMembersToEditInfo;
+    bubble.markModified('permissions');
+    await bubble.save();
+
+    res.json({ permissions: bubble.permissions });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── PUT /api/bubbles/:id — Updates name/description (admin or if editInfo allowed) ──
 router.put('/:id', protect, async (req, res) => {
   try {
     const bubble = await Bubble.findById(req.params.id);
     if (!bubble) return res.status(404).json({ message: 'Bubble not found' });
-    if (!isAdmin(bubble, req.user._id)) return res.status(403).json({ message: 'Only admins can edit' });
+
+    const canEdit = isAdmin(bubble, req.user._id) || bubble.permissions?.allowMembersToEditInfo;
+    if (!canEdit) return res.status(403).json({ message: 'Only admins can edit this bubble' });
+    if (!isMember(bubble, req.user._id)) return res.status(403).json({ message: 'Not a member' });
 
     const { name, description } = req.body;
     if (name?.trim()) bubble.name = name.trim().slice(0, 100);

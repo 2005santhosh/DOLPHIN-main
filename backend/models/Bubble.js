@@ -38,6 +38,12 @@ const BubbleSchema = new mongoose.Schema({
   // Last activity — for sorting conversations
   lastMessageAt: { type: Date, default: Date.now },
   lastMessage:   { type: String, default: '' },
+
+  // Permissions — WhatsApp-style group settings
+  permissions: {
+    allowMembersToInvite: { type: Boolean, default: false }, // only admins can invite by default
+    allowMembersToEditInfo: { type: Boolean, default: false }, // only admins can edit name/desc by default
+  },
 }, { timestamps: true });
 
 // Index for fetching bubbles a user belongs to

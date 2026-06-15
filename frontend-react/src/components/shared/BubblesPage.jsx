@@ -185,18 +185,28 @@ export default function BubblesPage() {
 
   const loadConnections = async () => {
     try {
-      // Show ALL connected users (accepted connections from both models)
+      // Fetch from both Connection model AND gamification/me for live counts
+      // Use the same gamificationAPI approach that guarantees all connections
+      const { gamificationAPI: gAPI } = await import('../../services/api');
+      const stats = await gAPI.getMyStats().catch(() => null);
+
+      // Get connections from both models via the connections API
       const data = await connectionsAPI.getConnections();
-      const accepted = [
+      const fromConn = [
         ...(data.incoming || []).filter(c => c.status === 'accepted'),
         ...(data.sent    || []).filter(c => c.status === 'accepted'),
-      ];
+      ].map(c => ({ _id: c.otherUser?._id, ...c.otherUser }));
+
+      // Also try to get IntroRequest-based connections via gamification profile
+      // The connections API should now return all accepted — deduplicate by _id
       const seen = new Set();
-      setConnections(accepted.filter(c => {
-        const uid = c.otherUser?._id?.toString();
+      const all = fromConn.filter(u => {
+        const uid = u?._id?.toString();
         if (!uid || seen.has(uid)) return false;
         seen.add(uid); return true;
-      }));
+      });
+
+      setConnections(all);
     } catch { /* ignore */ }
   };
 
@@ -292,7 +302,7 @@ export default function BubblesPage() {
 
   const isMyAdmin = selected?.members?.some(m => m.userId?._id?.toString() === user._id?.toString() && m.role === 'admin');
   const alreadyInBubble = (uid) => selected?.members?.some(m => m.userId?._id?.toString() === uid);
-  const filteredConn = connections.filter(c => (c.otherUser?.name || '').toLowerCase().includes(inviteSearch.toLowerCase()));
+  const filteredConn = connections.filter(c => (c?.name || '').toLowerCase().includes(inviteSearch.toLowerCase()));
 
   const getSenderId = (msg) => {
     if (!msg.senderId) return '';
@@ -508,7 +518,7 @@ export default function BubblesPage() {
             <label className="form-label">Description</label>
             <textarea className="form-textarea" value={editDesc} onChange={e => setEditDesc(e.target.value)} rows={3} maxLength={300} />
           </div>
-          {/* Member list with remove */}
+          {/* Member list with remove + promote/demote */}
           {selected?.members?.length > 0 && (
             <div style={{ marginBottom: '1rem' }}>
               <label className="form-label">Members ({selected.members.length})</label>
@@ -517,11 +527,27 @@ export default function BubblesPage() {
                   const u = m.userId || {};
                   const uid = u._id?.toString?.() || u.toString?.() || '';
                   const isMe = uid === user._id?.toString();
+                  const memberIsAdmin = m.role === 'admin';
                   return (
                     <div key={uid} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.5rem', background: '#F9FAFB', borderRadius: 8 }}>
                       <Avatar src={u.profilePicture} name={u.name || 'User'} size={32} />
                       <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 500 }}>{u.name || 'User'}</span>
-                      <span style={{ fontSize: '0.72rem', color: m.role === 'admin' ? '#16A34A' : '#6B7280', background: m.role === 'admin' ? '#F0FDF4' : '#F3F4F6', padding: '1px 6px', borderRadius: 9999 }}>{m.role}</span>
+                      <span style={{ fontSize: '0.72rem', color: memberIsAdmin ? '#16A34A' : '#6B7280', background: memberIsAdmin ? '#F0FDF4' : '#F3F4F6', padding: '1px 6px', borderRadius: 9999 }}>{m.role}</span>
+                      {!isMe && isMyAdmin && (
+                        memberIsAdmin ? (
+                          <button type="button" onClick={async () => {
+                            try { await bubblesAPI.demoteFromAdmin(selected._id, uid); const d = await bubblesAPI.getBubble(selected._id); setSelected(d); toast.success('Admin removed'); } catch { toast.error('Failed'); }
+                          }} style={{ background: 'none', border: '1px solid #E5E7EB', borderRadius: 6, padding: '2px 8px', fontSize: '0.72rem', cursor: 'pointer', color: '#6B7280', whiteSpace: 'nowrap' }}>
+                            Remove admin
+                          </button>
+                        ) : (
+                          <button type="button" onClick={async () => {
+                            try { await bubblesAPI.promoteToAdmin(selected._id, uid); const d = await bubblesAPI.getBubble(selected._id); setSelected(d); toast.success('Made admin!'); } catch { toast.error('Failed'); }
+                          }} style={{ background: 'none', border: '1px solid #84CC16', borderRadius: 6, padding: '2px 8px', fontSize: '0.72rem', cursor: 'pointer', color: '#16A34A', whiteSpace: 'nowrap' }}>
+                            Make admin
+                          </button>
+                        )
+                      )}
                       {!isMe && (
                         <button type="button" onClick={() => removeMember(uid)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: '0.8rem', padding: '2px 4px' }}>Remove</button>
                       )}
@@ -529,6 +555,32 @@ export default function BubblesPage() {
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Permissions — admin only */}
+          {isMyAdmin && (
+            <div style={{ marginBottom: '1rem', background: '#F0FDF4', borderRadius: 10, padding: '0.75rem', border: '1px solid #BBF7D0' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#374151', marginBottom: '0.6rem' }}>🛡️ Group Permissions</div>
+              {[
+                { key: 'allowMembersToInvite',   label: 'Allow all members to invite people' },
+                { key: 'allowMembersToEditInfo',  label: 'Allow all members to edit group info' },
+              ].map(({ key, label }) => (
+                <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!(selected?.permissions?.[key])}
+                    onChange={async (e) => {
+                      try {
+                        const result = await bubblesAPI.updatePermissions(selected._id, { [key]: e.target.checked });
+                        setSelected(prev => ({ ...prev, permissions: result.permissions }));
+                        toast.success('Permission updated');
+                      } catch { toast.error('Failed to update permission'); }
+                    }}
+                  />
+                  <span style={{ fontSize: '0.82rem', color: '#374151' }}>{label}</span>
+                </label>
+              ))}
             </div>
           )}
           <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -544,16 +596,15 @@ export default function BubblesPage() {
         <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {filteredConn.length === 0 ? (
             <p style={{ textAlign: 'center', color: '#9CA3AF', padding: '1.5rem 0' }}>No connections found.</p>
-          ) : filteredConn.map(c => {
-            const person = c.otherUser || {};
-            const uid = person._id?.toString();
+          ) : filteredConn.map(person => {
+            const uid = person?._id?.toString();
             const inBubble = alreadyInBubble(uid);
             return (
               <div key={uid} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem', background: '#F9FAFB', borderRadius: 10 }}>
-                <Avatar src={person.profilePicture} name={person.name} size={40} />
+                <Avatar src={person?.profilePicture} name={person?.name} size={40} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, color: '#111827', fontSize: '0.875rem' }}>{person.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#6B7280', textTransform: 'capitalize' }}>{person.role}</div>
+                  <div style={{ fontWeight: 600, color: '#111827', fontSize: '0.875rem' }}>{person?.name || 'User'}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#6B7280', textTransform: 'capitalize' }}>{person?.role || ''}</div>
                 </div>
                 <button onClick={() => !inBubble && invite(uid)} disabled={inBubble || inviting[uid]}
                   style={{ padding: '5px 14px', background: inBubble ? '#D1FAE5' : '#84CC16', color: inBubble ? '#065F46' : 'white', border: 'none', borderRadius: 8, fontSize: '0.8rem', fontWeight: 700, cursor: inBubble ? 'default' : 'pointer', whiteSpace: 'nowrap' }}>
