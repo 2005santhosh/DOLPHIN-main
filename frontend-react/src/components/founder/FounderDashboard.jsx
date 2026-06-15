@@ -21,6 +21,7 @@ const RequestsPage          = lazy(() => import('./pages/RequestsPage'));
 const ChatPage              = lazy(() => import('./pages/ChatPage'));
 const SettingsPage          = lazy(() => import('./pages/SettingsPage'));
 const GamificationPage      = lazy(() => import('../shared/GamificationPage'));
+const BubblesPage           = lazy(() => import('../shared/BubblesPage'));
 
 export default function FounderDashboard() {
   const { user } = useAuth();
@@ -125,6 +126,8 @@ export default function FounderDashboard() {
           return <ChatPage {...pageProps} setChatCount={setChatCount} openUserId={getOpenUserId()} />;
         case 'settings':
           return <SettingsPage {...pageProps} />;
+        case 'bubbles':
+          return <BubblesPage />;
         case 'gamification':
           return <GamificationPage />;
         default:
