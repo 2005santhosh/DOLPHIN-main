@@ -37,90 +37,18 @@ api.interceptors.request.use((config) => {
 
 // ─── Response interceptor: unwrap data, normalise errors ──────────────────────
 // IMPORTANT: We do NOT redirect on 401 here.
-// AuthContext.refreshProfile() handles 401 → clearAuth.
-// On 401, we attempt one token refresh before rejecting.
-let _isRefreshing = false;
-let _refreshQueue = []; // pending requests waiting for token refresh
-
-function processRefreshQueue(newToken, error) {
-  _refreshQueue.forEach(({ resolve, reject }) => {
-    if (error) reject(error);
-    else resolve(newToken);
-  });
-  _refreshQueue = [];
-}
-
+// AuthContext handles 401 → token refresh → clearAuth via refreshProfile().
 api.interceptors.response.use(
   (res) => res.data,
-  async (error) => {
+  (error) => {
     // AbortError — request was intentionally cancelled; don't show error toast
     if (axios.isCancel(error)) {
       const cancelled = new Error('Request cancelled');
       cancelled.cancelled = true;
       return Promise.reject(cancelled);
     }
-
-    const status = error.response?.status;
-    const originalRequest = error.config;
-
-    // Auto-refresh on 401 — but only once per original request (prevent infinite loop)
-    if (status === 401 && !originalRequest._retried) {
-      originalRequest._retried = true;
-
-      if (_isRefreshing) {
-        // Queue this request until the in-flight refresh completes
-        return new Promise((resolve, reject) => {
-          _refreshQueue.push({ resolve, reject });
-        }).then(newToken => {
-          originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
-          return api(originalRequest);
-        });
-      }
-
-      _isRefreshing = true;
-      try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        if (!token) throw new Error('No token');
-
-        const refreshRes = await fetch(`${API_URL}/auth/refresh-token`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (!refreshRes.ok) throw new Error('Refresh failed');
-        const refreshData = await refreshRes.json();
-        const newToken = refreshData.token;
-
-        if (!newToken) throw new Error('No token in refresh response');
-
-        // Store new token
-        try { localStorage.setItem('token', newToken); } catch { /* blocked */ }
-        try { sessionStorage.setItem('token', newToken); } catch { /* blocked */ }
-
-        api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-        processRefreshQueue(newToken, null);
-
-        // Retry the original request with the new token
-        originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
-        return api(originalRequest);
-      } catch (refreshError) {
-        processRefreshQueue(null, refreshError);
-        // Refresh failed — let AuthContext handle cleanup on next background tick
-        const data = error.response?.data;
-        const err = new Error(data?.message || error.message || `HTTP ${status}`);
-        err.status = status;
-        err.data = data;
-        return Promise.reject(err);
-      } finally {
-        _isRefreshing = false;
-      }
-    }
-
     const data   = error.response?.data;
+    const status = error.response?.status;
     const err    = new Error(data?.message || error.message || `HTTP ${status}`);
     err.status   = status;
     err.data     = data;
