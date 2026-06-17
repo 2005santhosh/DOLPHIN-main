@@ -853,7 +853,7 @@ function verifiedFirst(arr, getUser) {
 router.get('/founders', protect, async (req, res) => {
   try {
     const { search } = req.query;
-    let query = { role: 'founder', isDeleted: { $ne: true } };
+    let query = { role: 'founder', _id: { $ne: req.user._id }, isDeleted: { $ne: true } };
     if (search) { query.$or = [{ name: { $regex: search, $options: 'i' } }]; }
 
     const Connection   = require('../models/Connection');
@@ -894,7 +894,8 @@ router.get('/investors', protect, requireFounderValidationScore, async (req, res
     const { search, sort } = req.query;
     
     let query = { 
-      role: 'investor', 
+      role: 'investor',
+      _id: { $ne: req.user._id },
       isDeleted: { $ne: true } 
     };
     
@@ -1095,7 +1096,7 @@ router.get('/providers', protect, async (req, res) => {
       return res.json([]);
     }
 
-    providers = providers.filter(p => p.userId); 
+    providers = providers.filter(p => p.userId && p.userId._id?.toString() !== req.user._id.toString());
 
     const providerUserIds = providers.map(p => p.userId?._id).filter(id => id);
     

@@ -101,6 +101,12 @@ router.post('/register', registerLimiter, sanitizeBody(['name', 'email']), async
     if (!name || !email || !password)
       return res.status(400).json({ message: 'Name, email and password are required' });
 
+    // Type guards — reject object injection payloads (NoSQL / type confusion attacks)
+    if (typeof name !== 'string' || typeof email !== 'string' ||
+        typeof password !== 'string' || typeof role !== 'string') {
+      return res.status(400).json({ message: 'Invalid request format' });
+    }
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
@@ -227,6 +233,11 @@ router.post('/login', loginLimiter, sanitizeBody(['email']), async (req, res) =>
     const { email, password } = req.body;
 
     if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    // Guard: email must be a string — reject object/array payloads (NoSQL/type injection)
+    if (typeof email !== 'string' || typeof password !== 'string') {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 

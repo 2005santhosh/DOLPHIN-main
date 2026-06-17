@@ -1,10 +1,30 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const { protect } = require('../middleware/authMiddleware');
+const rateLimit = require('express-rate-limit');
 const Message = require('../models/Message');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
 const { getNewMessageEmail } = require('../utils/emailTemplates');
+
+// Rate limiter: max 60 messages/min per user (prevent spam)
+const chatSendLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  keyGenerator: (req) => req.user?._id?.toString() || req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many messages. Please slow down.' },
+});
+
+// Per-user email throttle: track last email time to avoid spamming on every message
+const lastEmailSent = new Map(); // userId → timestamp
+const EMAIL_THROTTLE_MS = 5 * 60 * 1000; // at most one email per 5 min per conversation
+
+function isValidObjectId(id) {
+  return mongoose.Types.ObjectId.isValid(id) && String(new mongoose.Types.ObjectId(id)) === String(id);
+}
 // @route   GET /api/chat/online/:userId
 // @desc    Check if a specific user is currently online
 router.get('/online/:userId', protect, (req, res) => {
@@ -22,11 +42,16 @@ router.post('/online-status', protect, async (req, res) => {
   userIds.forEach(id => { result[id] = isUserOnline(String(id)); });
   res.json(result);
 });
-router.post('/send', protect, async (req, res) => {
+router.post('/send', protect, chatSendLimiter, async (req, res) => {
   const { receiverId, content } = req.body;
 
   if (!receiverId || !content) {
     return res.status(400).json({ message: 'Missing data' });
+  }
+
+  // Validate receiverId is a valid ObjectId to prevent CastError 500s
+  if (!isValidObjectId(receiverId)) {
+    return res.status(400).json({ message: 'Invalid receiver ID' });
   }
 
   // Sanitise: trim and cap content length
@@ -53,14 +78,19 @@ router.post('/send', protect, async (req, res) => {
     // Respond immediately — don't block on email
     res.json(populatedMsg);
 
-    // Fire-and-forget email notification
+    // Fire-and-forget email — throttled to once per 5 min per conversation pair
     setImmediate(async () => {
       try {
+        const convKey = `${req.user.id}:${receiverId}`;
+        const lastSent = lastEmailSent.get(convKey) || 0;
+        if (Date.now() - lastSent < EMAIL_THROTTLE_MS) return; // throttled
+        lastEmailSent.set(convKey, Date.now());
+
         const [sender, recipient] = await Promise.all([
           User.findById(req.user.id).select('name').lean(),
-          User.findById(receiverId).select('email name').lean(),
+          User.findById(receiverId).select('email name emailNotifications').lean(),
         ]);
-        if (recipient?.email && sender?.name) {
+        if (recipient?.email && recipient.emailNotifications !== false && sender?.name) {
           const msgTemplate = getNewMessageEmail(sender.name, sanitisedContent);
           await sendEmail({
             email: recipient.email,
@@ -208,6 +238,11 @@ router.get('/conversations', protect, async (req, res) => {
 // ✅ This comes LAST so it doesn't override '/conversations'
 router.get('/:userId', protect, async (req, res) => {
   try {
+    // Validate ObjectId to prevent CastError 500
+    if (!isValidObjectId(req.params.userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
     const limit = Math.min(100, parseInt(req.query.limit) || 50);
     const before = req.query.before; // cursor-based pagination: before=<timestamp>
 

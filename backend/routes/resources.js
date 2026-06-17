@@ -2,11 +2,12 @@
 const express = require('express');
 const router = express.Router();
 const Resource = require('../models/Resource');
+const { protect } = require('../middleware/authMiddleware');
 
 // @route   GET /api/resources
 // @desc    Get all resources
-// @access  Public (or Protected if you want)
-router.get('/', async (req, res) => {
+// @access  Private — authenticated users only
+router.get('/', protect, async (req, res) => {
   try {
     let resources = await Resource.find().sort({ createdAt: -1 });
 

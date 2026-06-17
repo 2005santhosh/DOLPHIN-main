@@ -4,11 +4,22 @@
  */
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const { protect } = require('../middleware/authMiddleware');
 const Bubble = require('../models/Bubble');
 const User   = require('../models/User');
 const { upload, cloudinary } = require('../config/cloudinary');
 const sendEmail = require('../utils/sendEmail');
+
+// Rate limit: 120 messages/min per user in bubbles
+const bubbleMsgLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  keyGenerator: (req) => req.user?._id?.toString() || req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many messages. Please slow down.' },
+});
 
 // ── Helper: check if user is admin of a bubble ────────────────────────────────
 function isAdmin(bubble, userId) {
@@ -90,7 +101,7 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // ── POST /api/bubbles/:id/messages — Send a message ──────────────────────────
-router.post('/:id/messages', protect, async (req, res) => {
+router.post('/:id/messages', protect, bubbleMsgLimiter, async (req, res) => {
   try {
     const { content, mediaUrl, mediaType } = req.body;
     if (!content?.trim() && !mediaUrl) return res.status(400).json({ message: 'Message is empty' });

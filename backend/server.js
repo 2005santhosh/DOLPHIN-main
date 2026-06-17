@@ -1,11 +1,12 @@
 const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first');
-// build: 2026-06-03-cache-bust
+// build: 2026-06-16-qa-hardening
 const express = require('express');
 const http = require('http');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const helmet = require('helmet');
+const hpp = require('hpp');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const compression = require('compression');
@@ -88,6 +89,8 @@ const io = initializeSocket(server, corsOptions);
 app.use(mongoSanitize({ replaceWith: '_' }));
 // Apply CORS to Express
 app.use(cors(corsOptions));
+// Prevent HTTP Parameter Pollution attacks
+app.use(hpp());
 app.use(compression());
 
 // 2. USE COOKIE PARSER (Enables reading HTTP-only cookies for security)

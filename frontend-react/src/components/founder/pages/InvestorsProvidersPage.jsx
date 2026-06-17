@@ -5,6 +5,7 @@ import Modal from '../../shared/Modal';
 import LoadingSpinner from '../../shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 import { founderAPI, connectionsAPI } from '../../../services/api';
+import { useAuth } from '../../../context/AuthContext';
 import { Lock, TrendingUp, Puzzle, Star } from '../../shared/Icons';
 import VerifiedBadge from '../../shared/VerifiedBadge';
 import FeaturedBadge from '../../shared/FeaturedBadge';
@@ -41,6 +42,8 @@ const InfoRow = ({ label, value }) => {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function InvestorsProvidersPage({ startup }) {
+  const { user } = useAuth();
+  const myId = user?._id?.toString();
   const [tab, setTab] = useState('founders');  // start on founders tab
   const [founders, setFounders] = useState([]);
   const [investors, setInvestors] = useState([]);
@@ -85,6 +88,13 @@ export default function InvestorsProvidersPage({ startup }) {
         profiles = Array.isArray(data) ? data : [];
       }
 
+      // Strip the current user's own profile from results (backend already does this,
+      // but this is a safety net in case the userId field is different)
+      profiles = profiles.filter(p => {
+        const uid = (p.userId || p._id)?.toString();
+        return uid !== myId;
+      });
+
       // Merge Connection model status with IntroRequest status
       if (profiles.length > 0) {
         const userIds = profiles.map(p => (p.userId || p._id)?.toString()).filter(Boolean);
@@ -113,7 +123,7 @@ export default function InvestorsProvidersPage({ startup }) {
     } finally {
       setLoading(false);
     }
-  }, [tab, isLocked, search, category]);
+  }, [tab, isLocked, search, category, myId]);
 
   useEffect(() => { loadData(); }, [tab, isLocked]);
 

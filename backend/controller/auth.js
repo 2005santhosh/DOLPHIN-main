@@ -147,6 +147,11 @@ exports.getMe = async (req, res, next) => {
 exports.forgotPassword = async (req, res, next) => {
   const { email } = req.body;
 
+  // Validate email is present
+  if (!email || typeof email !== 'string' || !email.trim()) {
+    return res.status(400).json({ message: 'Email is required' });
+  }
+
   try {
     const user = await User.findOne({ email });
 
