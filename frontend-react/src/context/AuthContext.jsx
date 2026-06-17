@@ -306,7 +306,6 @@ export const AuthProvider = ({ children }) => {
 
       setLoading(false);
       initDoneRef.current = true;
-      consecutiveRef401Reset();
 
       toast.success(`Welcome back, ${data.user?.name || 'User'}!`);
 
@@ -352,7 +351,6 @@ export const AuthProvider = ({ children }) => {
 
       setLoading(false);
       initDoneRef.current = true;
-      consecutiveRef401Reset();
 
       toast.success(`Welcome, ${data.user?.name || 'User'}!`);
 
@@ -375,7 +373,6 @@ export const AuthProvider = ({ children }) => {
   // ── logout ────────────────────────────────────────────────────────────────
   const logout = async (silent = false) => {
     loginActiveRef.current = false;
-    consecutiveRef401Reset();
     try { await apiFetch('/auth/logout', { method: 'POST' }); } catch (_) {}
     _clearAuth();
     if (!silent) toast.success('Logged out successfully');
