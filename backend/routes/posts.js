@@ -303,10 +303,9 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
         // Fetch a larger pool for engagement scoring + author diversity interleaving.
         // We need more than `limit` posts so the interleave algorithm has enough
         // posts from different authors to fill a full page without gaps.
-        // Pool size: fetch enough to cover this page and the interleave buffer.
-        // For page N: we need to re-score from scratch and re-interleave, so we
-        // fetch ALL scored posts up to (skip + limit * 3) and slice after interleave.
-        const poolSize = Math.min(skip + limit * 4, 200); // cap at 200 to limit DB load
+        // Pool size: must be at least skip+limit so the slice [skip..skip+limit] has data.
+        // Cap at 500 to limit DB load (interleave algo is in-memory anyway).
+        const poolSize = Math.min(Math.max(skip + limit * 2, 80), 500);
 
         const rawPosts = await Post.aggregate([
             { $match: filter },
@@ -568,7 +567,8 @@ router.get('/feed', protect, feedLimiter, async (req, res) => {
                 currentPage: page,
                 totalPages: Math.ceil(totalPosts / limit),
                 totalPosts,
-                hasMore: skip + diverseFeed.length < totalPosts
+                // hasMore: true only when there are more posts beyond this page's window
+                hasMore: skip + limit < totalPosts && diverseFeed.length > 0
             }
         });
     } catch (error) {

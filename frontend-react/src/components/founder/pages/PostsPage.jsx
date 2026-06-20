@@ -478,11 +478,21 @@ const PostsPage = () => {
         allVideoPostsRef.current = [...allVideoPostsRef.current, ...newVideos];
       }
 
-      setHasMore(response.pagination?.hasMore || newPosts.length === 20);
+      // hasMore: only true if server says so AND we actually got posts
+      const serverHasMore = response.pagination?.hasMore ?? (newPosts.length === 20);
+      setHasMore(newPosts.length > 0 && serverHasMore);
+
       newPosts.forEach(post => {
         if (post.authorId !== user?._id) postsAPI.trackView(post._id).catch(() => {});
       });
-    } catch { toast.error('Failed to load posts'); }
+    } catch (err) {
+      // Don't show error on rate-limit (429) — just stop loading more
+      if (err?.status === 429) {
+        setHasMore(false);
+      } else {
+        toast.error('Failed to load posts');
+      }
+    }
     finally { setLoading(false); }
   };
 
@@ -793,33 +803,42 @@ const PostsPage = () => {
                     try {
                       const allVideos = await postsAPI.getVideoFeed();
                       if (allVideos.length > 0) {
-                        // Merge live connectionStatus from current feed posts into video list
+                        // Merge live connectionStatus from current feed posts
                         const liveMap = {};
                         (livePostsRef.current || []).forEach(p => { liveMap[p._id?.toString()] = p.connectionStatus; });
                         const merged = allVideos.map(v => {
                           const live = liveMap[v._id?.toString()];
                           return live !== undefined ? { ...v, connectionStatus: live } : v;
                         });
-                        const idx = merged.findIndex(p => p._id?.toString() === postId?.toString());
-                        setReelsPosts(merged);
-                        setReelsStartIndex(idx >= 0 ? idx : 0);
+
+                        const clickedIdx = merged.findIndex(p => p._id?.toString() === postId?.toString());
+                        const targetIdx = clickedIdx >= 0 ? clickedIdx : 0;
+
+                        // Window the video list: take up to 30 before + 30 after the clicked video.
+                        // This prevents the browser from choking on 400 simultaneous video elements.
+                        const WINDOW = 30;
+                        const start = Math.max(0, targetIdx - WINDOW);
+                        const windowed = merged.slice(start, targetIdx + WINDOW + 1);
+                        const newStartIndex = targetIdx - start;
+
+                        setReelsPosts(windowed);
+                        setReelsStartIndex(newStartIndex);
                       } else {
                         // Fallback to local accumulated videos
                         const vp = allVideoPostsRef.current.length > 0
                           ? allVideoPostsRef.current
                           : posts.filter(p => p.media?.some(m => typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video'));
                         const idx = vp.findIndex(p => p._id?.toString() === postId?.toString());
-                        setReelsPosts(vp);
-                        setReelsStartIndex(idx >= 0 ? idx : 0);
+                        setReelsPosts(vp.slice(0, 60));
+                        setReelsStartIndex(idx >= 0 ? Math.min(idx, 59) : 0);
                       }
                     } catch {
-                      // Fallback on error
                       const vp = allVideoPostsRef.current.length > 0
                         ? allVideoPostsRef.current
                         : posts.filter(p => p.media?.some(m => typeof m === 'string' ? m.includes('.mp4') || m.includes('video') : m.type === 'video'));
                       const idx = vp.findIndex(p => p._id?.toString() === postId?.toString());
-                      setReelsPosts(vp);
-                      setReelsStartIndex(idx >= 0 ? idx : 0);
+                      setReelsPosts(vp.slice(0, 60));
+                      setReelsStartIndex(idx >= 0 ? Math.min(idx, 59) : 0);
                     }
                     setReelsOpen(true);
                   };

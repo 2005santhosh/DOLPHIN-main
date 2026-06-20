@@ -99,29 +99,30 @@ export default function ReelsViewer({
       if (!vid) return;
       const k = Number(key);
       const realKey = k % total;
+      const dist = Math.abs(realKey - realCurrent);
+
+      // Lazy-load src: assign from data-src when within 3 positions
+      if (dist <= 3 && !vid.src && vid.dataset.src) {
+        vid.src = vid.dataset.src;
+      }
 
       if (realKey === realCurrent) {
-        // Only play the copy that matches the current scroll position
-        // If currentIdx < total → play copy 0 (listIdx 0..total-1)
-        // If currentIdx >= total → play copy 1 (listIdx total..2*total-1)
         const isCorrectCopy = (currentIdx < total) ? (k < total) : (k >= total);
         if (isCorrectCopy) {
+          // Ensure src is set before playing
+          if (!vid.src && vid.dataset.src) vid.src = vid.dataset.src;
           vid.muted = muted;
-          if (vid.paused) {
-            vid.play().catch(() => {});
-          }
+          if (vid.paused) vid.play().catch(() => {});
         } else {
-          // Wrong copy — pause it
-          if (!vid.paused) {
-            vid.pause();
-            vid.currentTime = 0;
-          }
+          if (!vid.paused) { vid.pause(); vid.currentTime = 0; }
         }
       } else {
-        // Different video — always pause
-        if (!vid.paused) {
+        if (!vid.paused) { vid.pause(); vid.currentTime = 0; }
+        // Unload src for far-away videos to free memory
+        if (dist > 5 && vid.src && vid.dataset.src) {
           vid.pause();
-          vid.currentTime = 0;
+          vid.removeAttribute('src');
+          vid.load(); // reset the media element
         }
       }
     });
@@ -253,12 +254,19 @@ export default function ReelsViewer({
               {videoUrl && !hasError ? (
                 <video
                   ref={el => { videoRefs.current[listIdx] = el; }}
-                  src={videoUrl}
+                  src={Math.abs((listIdx % total) - (currentIdx % total)) <= 3 ? videoUrl : undefined}
+                  data-src={videoUrl}
                   poster={videoPoster || undefined}
                   playsInline
                   loop
                   muted={muted}
-                  preload={Math.abs(listIdx - currentIdx) <= 1 ? 'auto' : 'metadata'}
+                  preload={
+                    (listIdx % total) === (currentIdx % total)
+                      ? 'auto'
+                      : Math.abs((listIdx % total) - (currentIdx % total)) === 1
+                        ? 'metadata'
+                        : 'none'
+                  }
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', background: '#000' }}
                   onClick={() => {
                     const vid = videoRefs.current[listIdx];
